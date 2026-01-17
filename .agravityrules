@@ -1,0 +1,27 @@
+# ANTIGRAVITY RULES
+
+## 1. Monorepo & File Structure
+- **Workspace Tool:** Use **Melos** for workspace management.
+- **Shared Logic:** **NEVER** duplicate logic. If code is used by 2+ apps, move it to `packages/shared_core`.
+- **Feature Structure:** Adopt a feature-first directory structure: `lib/features/feature_name/{data, domain, presentation}`.
+
+## 2. Coding Standards
+- **Strict Typing:** No `dynamic` types allowed unless absolutely necessary and documented.
+- **Linter:** strict usage of `very_good_analysis` or equivalent strong linter rules.
+- **State Management:** **Riverpod** with code generation (`@riverpod`). No `setState` for complex business logic.
+- **UI:** Use strict composition. Break widgets down into smaller components if they exceed 100 lines.
+
+## 3. The "Think" Protocol
+- **Plan First:** Before writing code for a complex task, output a plan inside `<thinking>` tags.
+- **Architecture Check:** After writing code, run a mental check: "Does this violate Multi-tenancy isolation?"
+
+## 4. Documentation
+- **Public API:** Every public method in `shared_core` must have documentation comments (`///`).
+- **Memory Update:** You must update `.cursor/rules/learned-memories.mdc` if a new architectural decision is made during development.
+
+## 5. Quality Assurance (The "Zero Trust" Protocol)
+- **Mandatory TDD:** You cannot mark a task as "Complete" without accompanying tests.
+- **Unit Tests:** Required for all Logic/Providers (e.g., `test/features/...`).
+- **Widget Tests:** Required for all new UI Components.
+- **Integration Tests:** EVERY Phase must end with an E2E Integration Test (`integration_test/`) that simulates a real user flow (clicks, scrolls, navigation).
+- **Verification:** You must run the tests and report the results. If a test fails, the task is incomplete.

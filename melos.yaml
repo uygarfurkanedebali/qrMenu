@@ -1,0 +1,10 @@
+name: qr_infinity_workspace
+repository: https://github.com/aristiq/qr-infinity
+
+packages:
+  - apps/*
+  - packages/*
+
+command:
+  bootstrap:
+    usePubspecOverrides: true
