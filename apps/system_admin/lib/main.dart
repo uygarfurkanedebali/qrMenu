@@ -4,7 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/features/tenants/presentation/create_tenant_screen.dart';
+import 'src/features/auth/presentation/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +44,27 @@ class SystemAdminApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const SystemAdminHome(),
+      home: StreamBuilder<AuthState>(
+        stream: AuthService().onAuthStateChange,
+        builder: (context, snapshot) {
+          // If waiting for initial connection
+          if (snapshot.connectionState == ConnectionState.waiting) {
+             // Check if we have a current session already
+             if (AuthService().currentUser != null) {
+               return const SystemAdminHome();
+             }
+             return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          
+          final session = snapshot.data?.session;
+          // Also check explicit current user if snapshot is not emitting yet but we have storage
+          if (session != null || AuthService().currentUser != null) {
+            return const SystemAdminHome();
+          }
+          
+          return const LoginScreen();
+        },
+      ),
     );
   }
 }

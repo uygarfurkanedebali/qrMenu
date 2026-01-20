@@ -21,6 +21,11 @@ WORKDIR /app/apps/client_panel
 RUN flutter pub get
 RUN flutter build web --release
 
+# Build Landing Page
+WORKDIR /app/apps/landing_page
+RUN flutter pub get
+RUN flutter build web --release
+
 # Stage 2: Serve with Python
 FROM python:3.10-slim
 
@@ -40,12 +45,14 @@ COPY main.py .
 # Create necessary directories
 RUN mkdir -p apps/system_admin/build/web \
     && mkdir -p apps/shop_admin/build/web \
-    && mkdir -p apps/client_panel/build/web
+    && mkdir -p apps/client_panel/build/web \
+    && mkdir -p apps/landing_page/build/web
 
 # Copy files
 COPY --from=builder /app/apps/system_admin/build/web ./apps/system_admin/build/web
 COPY --from=builder /app/apps/shop_admin/build/web ./apps/shop_admin/build/web
 COPY --from=builder /app/apps/client_panel/build/web ./apps/client_panel/build/web
+COPY --from=builder /app/apps/landing_page/build/web ./apps/landing_page/build/web
 
 EXPOSE 80
 

@@ -21,6 +21,11 @@ timeout /t 5 /nobreak > nul
 echo Starting Client Panel (port 3002)...
 start "Client Panel" cmd /c "cd apps\client_panel && flutter run -d chrome --web-port=3002"
 
+timeout /t 5 /nobreak > nul
+
+echo Starting Landing Page (port 3003)...
+start "Landing Page" cmd /c "cd apps\landing_page && flutter run -d chrome --web-port=3003"
+
 timeout /t 10 /nobreak > nul
 
 echo.

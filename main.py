@@ -24,6 +24,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 SYSTEM_ADMIN_BUILD = os.path.join(PROJECT_ROOT, 'apps', 'system_admin', 'build', 'web')
 SHOP_ADMIN_BUILD = os.path.join(PROJECT_ROOT, 'apps', 'shop_admin', 'build', 'web')
 CLIENT_PANEL_BUILD = os.path.join(PROJECT_ROOT, 'apps', 'client_panel', 'build', 'web')
+LANDING_PAGE_BUILD = os.path.join(PROJECT_ROOT, 'apps', 'landing_page', 'build', 'web')
 
 # Reserved paths that are not tenant slugs
 RESERVED_PATHS = {'systemadmin', 'api', 'static', 'assets', 'favicon.ico', 'flutter_bootstrap.js', 'main.dart.js'}
@@ -137,12 +138,40 @@ def client_menu_files(slug, path):
     return serve_flutter_app(CLIENT_PANEL_BUILD, path, base_href=base_href)
 
 
-# Client default (/{slug} -> client panel)
+# ========================================
+# ROOT (LANDING PAGE)
+# ========================================
+
+@app.route('/')
+def root():
+    return serve_flutter_app(LANDING_PAGE_BUILD, base_href='/')
+
+# ========================================
+# CLIENT DEFAULT (/{slug}) & LANDING PAGE ASSETS
+# ========================================
+
+# The problem: /foo can be a tenant "foo" or a landing page route "foo".
+# But standard pattern is /slug for tenant.
+# Dockerfile assets are usually at root for landing page.
+
+# Let's define:
+# 1. Root / -> Landing Page
+# 2. Files for Landing Page (flutter_bootstrap.js, etc.) -> served if exist in LANDING_PAGE_BUILD
+# 3. Everything else -> Client Panel (Tenant)
+
 @app.route('/<slug>')
 @app.route('/<slug>/')
-def client_default(slug):
+def client_default_or_landing_asset(slug):
+    # Check if this slug is actually a file in landing page
+    path = slug
+    file_path = os.path.join(LANDING_PAGE_BUILD, path)
+    if os.path.exists(file_path):
+         return serve_flutter_app(LANDING_PAGE_BUILD, path, base_href='/')
+    
     if slug in RESERVED_PATHS:
         return Response("Not found", status=404)
+        
+    # Tenant Slug
     base_href = f'/{slug}/'
     return serve_flutter_app(CLIENT_PANEL_BUILD, base_href=base_href)
 
@@ -165,9 +194,7 @@ def client_default_files(slug, path):
 # ROOT
 # ========================================
 
-@app.route('/')
-def root():
-    return redirect('/systemadmin')
+
 
 
 # ========================================
@@ -185,7 +212,7 @@ if __name__ == '__main__':
     # Check if builds exist
     print("\n📦 Checking builds...")
     builds_ok = True
-    for name, path in [('System Admin', SYSTEM_ADMIN_BUILD), ('Shop Admin', SHOP_ADMIN_BUILD), ('Client Panel', CLIENT_PANEL_BUILD)]:
+    for name, path in [('System Admin', SYSTEM_ADMIN_BUILD), ('Shop Admin', SHOP_ADMIN_BUILD), ('Client Panel', CLIENT_PANEL_BUILD), ('Landing Page', LANDING_PAGE_BUILD)]:
         if os.path.exists(path):
             print(f"  ✅ {name}: {path}")
         else:
