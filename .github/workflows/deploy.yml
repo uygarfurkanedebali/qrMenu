@@ -54,5 +54,5 @@ jobs:
             docker rm benim-app-container || true
 
             # Run the new container
-            # Mapping Host Port 8000 -> Container Port 8000
-            docker run -d --name benim-app-container -p 8000:8000 ${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest
+            # Mapping Host Port 80 -> Container Port 80
+            docker run -d --name benim-app-container -p 80:80 ${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest

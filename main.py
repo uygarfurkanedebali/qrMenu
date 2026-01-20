@@ -177,7 +177,7 @@ def root():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='QR Menu Production Server')
     parser.add_argument('--host', default='0.0.0.0', help='Host (default: 0.0.0.0)')
-    parser.add_argument('--port', type=int, default=8000, help='Port (default: 80)')
+    parser.add_argument('--port', type=int, default=80, help='Port (default: 80)')
     parser.add_argument('--debug', action='store_true', help='Debug mode')
     
     args = parser.parse_args()

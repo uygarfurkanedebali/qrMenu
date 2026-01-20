@@ -31,6 +31,6 @@ echo ========================================
 echo.
 
 REM Start Python reverse proxy (foreground)
-python main.py --port 8000
+python main.py --port 80
 
 pause

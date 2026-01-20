@@ -1,18 +1,52 @@
-# Python'un hafif bir sürümünü baz alıyoruz
-FROM python:3.10-slim
+# Stage 1: Build Flutter Web Apps
+FROM ghcr.io/cirruslabs/flutter:stable AS builder
 
-# Çalışma dizinini ayarla
 WORKDIR /app
 
-# Gereksinimleri kopyala ve yükle
+# Copy all files (including packages and apps)
+COPY . .
+
+# Build System Admin
+WORKDIR /app/apps/system_admin
+RUN flutter pub get
+RUN flutter build web --release
+
+# Build Shop Admin
+WORKDIR /app/apps/shop_admin
+RUN flutter pub get
+RUN flutter build web --release
+
+# Build Client Panel
+WORKDIR /app/apps/client_panel
+RUN flutter pub get
+RUN flutter build web --release
+
+# Stage 2: Serve with Python
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Tüm proje dosyalarını kopyala
-COPY . .
+# Copy Python server file
+COPY main.py .
 
-# Uygulamanın çalışacağı portu belirt (Örn: Flask/FastAPI genelde 5000 veya 8000 kullanır)
-EXPOSE 8000
+# Copy build artifacts from builder stage
+# We deliberately maintain the directory structure expected by main.py variables:
+# SYSTEM_ADMIN_BUILD = ... 'apps', 'system_admin', 'build', 'web'
 
-# Uygulamayı başlat (Örnek: app.py çalıştırılıyor)
-CMD ["python", "main.py", "--port", "8000"]
+# Create necessary directories
+RUN mkdir -p apps/system_admin/build/web \
+    && mkdir -p apps/shop_admin/build/web \
+    && mkdir -p apps/client_panel/build/web
+
+# Copy files
+COPY --from=builder /app/apps/system_admin/build/web ./apps/system_admin/build/web
+COPY --from=builder /app/apps/shop_admin/build/web ./apps/shop_admin/build/web
+COPY --from=builder /app/apps/client_panel/build/web ./apps/client_panel/build/web
+
+EXPOSE 80
+
+CMD ["python", "main.py", "--port", "80"]
