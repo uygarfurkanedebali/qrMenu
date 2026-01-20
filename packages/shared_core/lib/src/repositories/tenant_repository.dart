@@ -26,6 +26,22 @@ class TenantRepository {
     }
   }
 
+  /// Fetch tenant by owner email
+  Future<Tenant?> getTenantByOwnerEmail(String email) async {
+    try {
+      final response = await _client
+          .from('tenants')
+          .select()
+          .eq('owner_email', email)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Tenant.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to fetch tenant for owner: $e');
+    }
+  }
+
   /// Fetch all tenants (for System Admin)
   Future<List<Tenant>> getAllTenants() async {
     try {

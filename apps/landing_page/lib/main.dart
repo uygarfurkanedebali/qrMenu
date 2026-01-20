@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -43,6 +44,35 @@ class _LandingHomeState extends State<LandingHome> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  Future<void> _handleAuthSuccess() async {
+    final user = AuthService().currentUser;
+    if (user == null) return;
+
+    try {
+      // Check if they own a tenant
+      final tenant = await TenantRepository().getTenantByOwnerEmail(user.email!);
+      
+      if (mounted) {
+        if (tenant != null) {
+          // Redirect to Shop Admin
+          // Use window.location.href to perform a full page reload/redirect
+          html.window.location.href = '/${tenant.slug}/shopadmin';
+        } else {
+          // No shop found.
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Logged in! No shop found for this account. Please contact support.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Error fetching shop: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     setState(() {
       _isLoading = true;
@@ -58,14 +88,10 @@ class _LandingHomeState extends State<LandingHome> {
       } else {
         await AuthService().signUp(email: email, password: password);
       }
-      // If success, user is logged in. 
-      // Supabase listener or routing should handle redirection to Dashboard/ShopAdmin.
-      // For now we just show success message.
-      if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text(_isLogin ? 'Logged In!' : 'Registered! Please check your email.')),
-         );
-      }
+      
+      // Handle success and redirect
+      await _handleAuthSuccess();
+
     } catch (e) {
       if (mounted) {
         setState(() => _errorMessage = e.toString());
@@ -75,6 +101,13 @@ class _LandingHomeState extends State<LandingHome> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -106,10 +139,7 @@ class _LandingHomeState extends State<LandingHome> {
                  Text('Welcome ${AuthService().currentUser?.email}'),
                  const SizedBox(height: 16),
                  FilledButton(
-                   onPressed: () {
-                     // Navigate to shop admin
-                     // In web, might need real navigation or just a link 
-                   }, 
+                   onPressed: () => _handleAuthSuccess(),
                    child: const Text('Go to Shop Admin')
                  )
                ] else ...[
