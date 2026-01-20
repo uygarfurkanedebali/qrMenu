@@ -15,4 +15,4 @@ COPY . .
 EXPOSE 8000
 
 # Uygulamayı başlat (Örnek: app.py çalıştırılıyor)
-CMD ["python", "main.py", "--port", "80"]
+CMD ["python", "main.py", "--port", "8000"]

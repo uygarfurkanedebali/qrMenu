@@ -30,4 +30,4 @@ echo "========================================"
 echo
 
 # Start Python reverse proxy (foreground)
-sudo python3 main.py --port 80
+sudo python3 main.py --port 8000
