@@ -1,5 +1,5 @@
 -- ============================================================
--- FIX PERMISSIONS SQL SCRIPT
+-- FIX PERMISSIONS SQL SCRIPT (Idempotent — safe to re-run)
 -- Run in Supabase SQL Editor
 -- ============================================================
 
@@ -11,6 +11,12 @@
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('products', 'products', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Drop existing policies first (idempotent)
+DROP POLICY IF EXISTS "Public can view product images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload product images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can update product images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete product images" ON storage.objects;
 
 -- Policy: Anyone can VIEW product images (public menu)
 CREATE POLICY "Public can view product images"
@@ -71,10 +77,17 @@ CREATE TABLE IF NOT EXISTS public.order_items (
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies (idempotent)
+DROP POLICY IF EXISTS "Anyone can create orders" ON public.orders;
+DROP POLICY IF EXISTS "Owners can view their orders" ON public.orders;
+DROP POLICY IF EXISTS "Owners can update their orders" ON public.orders;
+DROP POLICY IF EXISTS "Anyone can create order items" ON public.order_items;
+DROP POLICY IF EXISTS "Owners can view their order items" ON public.order_items;
+DROP POLICY IF EXISTS "Anon can view order items by order_id" ON public.order_items;
+
 -- ── Orders Policies ──
 
--- Anyone (anon customer) can INSERT orders  
--- (they just scanned a QR code and placed an order)
+-- Anyone (anon customer) can INSERT orders
 CREATE POLICY "Anyone can create orders"
 ON public.orders FOR INSERT
 TO anon, authenticated
@@ -125,8 +138,7 @@ USING (
   )
 );
 
--- Customers can also view their own order items (by order_id)
--- (Anonymous read of specific order items for order confirmation)
+-- Anon can view order items (for order confirmation screen)
 CREATE POLICY "Anon can view order items by order_id"
 ON public.order_items FOR SELECT
 TO anon
