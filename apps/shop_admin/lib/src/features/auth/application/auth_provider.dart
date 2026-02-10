@@ -1,4 +1,4 @@
-// Shop Admin Auth Provider
+// Shop Admin Auth Provider — SIMPLIFIED FOR DEBUGGING
 // Manages authentication state and current tenant context
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,47 +63,73 @@ final currentTenantSlugProvider = Provider<String?>((ref) {
   return tenant?.slug;
 });
 
-/// Auth service for shop login/logout operations
+/// Simplified Auth service — NO RPC CALLS for now
 class ShopAuthService {
-  /// Sign in and fetch associated tenant
-  /// If skipAuth is true, skip the signIn step (already authenticated)
-  static Future<TenantState?> signInAndFetchTenant({
+  /// SIMPLIFIED: Just sign in and fetch tenant
+  /// Returns tenant if successful, throws exception otherwise
+  static Future<TenantState> signIn({
     required String email,
     required String password,
-    bool skipAuth = false,
   }) async {
-    if (!skipAuth) {
-      // 1. Authenticate with Supabase
-      final response = await SupabaseService.client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+    print('🔐 [AUTH] Starting login for: $email');
+    
+    // 1. Authenticate with Supabase
+    final response = await SupabaseService.client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
 
-      if (response.user == null) {
-        throw Exception('Authentication failed');
-      }
+    if (response.user == null) {
+      print('❌ [AUTH] Login failed - no user returned');
+      throw Exception('Giriş başarısız');
     }
 
-    // 2. Fetch tenant associated with this email
+    print('✅ [AUTH] Login successful - User ID: ${response.user!.id}');
+
+    // 2. Fetch user role
+    final profileResponse = await SupabaseService.client
+        .from('profiles')
+        .select('role')
+        .eq('id', response.user!.id)
+        .maybeSingle();
+
+    if (profileResponse == null) {
+      print('❌ [AUTH] No profile found');
+      await SupabaseService.client.auth.signOut();
+      throw Exception('Profil bulunamadı');
+    }
+
+    final role = profileResponse['role'] as String?;
+    print('👤 [AUTH] User role: $role');
+
+    if (role != 'shop_owner') {
+      print('⛔ [AUTH] Access denied - wrong role: $role');
+      await SupabaseService.client.auth.signOut();
+      throw Exception('⛔ Yetkisiz Erişim!\n\nBu panel yalnızca Dükkan Sahipleri içindir.\nHesap rolünüz: "${role ?? 'tanımsız'}"');
+    }
+
+    // 3. Fetch tenant associated with this email
+    print('🏪 [AUTH] Fetching tenant for: $email');
     final tenants = await SupabaseService.client
         .from('tenants')
         .select()
         .eq('owner_email', email);
 
     if (tenants.isEmpty) {
-      if (!skipAuth) {
-        // Sign out since no tenant found
-        await SupabaseService.client.auth.signOut();
-      }
+      print('❌ [AUTH] No tenant found for this email');
+      await SupabaseService.client.auth.signOut();
       throw Exception('Bu hesaba bağlı dükkan bulunamadı');
     }
 
-    // 3. Return tenant state
-    return TenantState.fromJson(tenants.first);
+    final tenant = TenantState.fromJson(tenants.first);
+    print('✅ [AUTH] Tenant loaded: ${tenant.name} (${tenant.slug})');
+    
+    return tenant;
   }
 
   /// Sign out
   static Future<void> signOut() async {
+    print('👋 [AUTH] Signing out');
     await SupabaseService.client.auth.signOut();
   }
 }

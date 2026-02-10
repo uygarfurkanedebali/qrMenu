@@ -1,11 +1,9 @@
-// Shop Admin Login Screen — Dark Theme with Role Guard
-// Authenticates shop owners and loads their tenant context
-// Rejects non-shop_owner roles (admin, customer)
+// Shop Admin Login Screen — SIMPLIFIED WITH FORCED NAVIGATION
+// Direct navigation to /products after successful login
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_core/shared_core.dart';
 import '../../../routing/app_router.dart';
 import '../application/auth_provider.dart';
 
@@ -39,79 +37,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _isLoading = true;
       _error = null;
     });
-    // Clear any previous role errors
-    ref.read(roleErrorProvider.notifier).state = null;
 
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      // Step 1: Sign in with Supabase
-      await SupabaseService.client.auth.signInWithPassword(
+      print('🚀 [LOGIN] Attempting login...');
+      
+      // Call simplified auth service
+      final tenant = await ShopAuthService.signIn(
         email: email,
         password: password,
       );
 
-      final user = SupabaseService.client.auth.currentUser;
-      if (user == null) {
-        throw Exception('Giriş başarısız');
-      }
-
-      // Step 2: Check role from profiles
-      final profileResponse = await SupabaseService.client
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
-
-      if (profileResponse == null) {
-        await SupabaseService.client.auth.signOut();
-        setState(() {
-          _isLoading = false;
-          _error = '⛔ Profil bulunamadı. Yetkisiz erişim.';
-        });
-        return;
-      }
-
-      final role = profileResponse['role'] as String?;
-
-      if (role != 'shop_owner') {
-        // NOT a shop owner → sign out immediately
-        await SupabaseService.client.auth.signOut();
-        setState(() {
-          _isLoading = false;
-          _error = '⛔ Yetkisiz Erişim!\n\n'
-              'Bu panel yalnızca Dükkan Sahipleri içindir.\n'
-              'Hesap rolünüz: "${role ?? 'tanımsız'}"';
-        });
-        return;
-      }
-
-      // Step 3: Role is shop_owner → fetch tenant
-      final tenantState = await ShopAuthService.signInAndFetchTenant(
-        email: email,
-        password: password,
-        skipAuth: true,  // Already signed in
-      );
-
-      if (tenantState == null) {
-        throw Exception('Dükkan bilgisi yüklenemedi');
-      }
-
+      print('✅ [LOGIN] Login successful!');
+      
       // Store tenant in provider
-      ref.read(currentTenantProvider.notifier).state = tenantState;
+      ref.read(currentTenantProvider.notifier).state = tenant;
       ref.read(roleVerifiedProvider.notifier).state = true;
       
+      print('🧭 [LOGIN] Navigating to /products...');
+      
+      // FORCE NAVIGATION
       if (mounted) {
         context.go('/products');
+        print('✅ [LOGIN] Navigation complete!');
       }
     } catch (e) {
+      print('❌ [LOGIN] Login failed: $e');
+      
       String errorMsg = e.toString();
       if (errorMsg.contains('Invalid login credentials')) {
         errorMsg = 'Geçersiz e-posta veya şifre.';
       } else if (errorMsg.contains('Exception:')) {
         errorMsg = errorMsg.split('Exception:').last.trim();
       }
+      
       setState(() {
         _error = errorMsg;
       });
@@ -124,10 +85,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for role errors from router redirect
-    final roleError = ref.watch(roleErrorProvider);
-    final displayError = _error ?? roleError;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: Center(
@@ -182,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Error Banner
-                if (displayError != null) ...[
+                if (_error != null) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -198,7 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            displayError,
+                            _error!,
                             style: TextStyle(color: Colors.red.shade200, fontSize: 14, height: 1.5),
                           ),
                         ),
