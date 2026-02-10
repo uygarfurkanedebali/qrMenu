@@ -51,6 +51,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
   }
 
   /// Add a new product (uses tenant ID from auth state)
+  /// CRITICAL: Uses currentTenantProvider directly for reliable tenant_id
   Future<void> addProduct({
     required String name,
     required double price,
@@ -58,10 +59,20 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     String? imageUrl,
     String? categoryId,
   }) async {
-    final tenantId = ref.read(currentTenantIdProvider);
-    if (tenantId == null) {
-      throw Exception('Not logged in');
+    // 1. Get tenant directly from the state provider (most reliable)
+    final currentTenant = ref.read(currentTenantProvider);
+    
+    print('📦 [PRODUCT] addProduct called');
+    print('   currentTenantProvider value: ${currentTenant?.id ?? "NULL"}');
+    print('   currentTenantIdProvider value: ${ref.read(currentTenantIdProvider) ?? "NULL"}');
+    
+    if (currentTenant == null) {
+      print('❌ [PRODUCT] TENANT IS NULL - Cannot add product!');
+      throw Exception('⚠️ Dükkan bilgisi bulunamadı! Lütfen tekrar giriş yapın.');
     }
+
+    final tenantId = currentTenant.id;
+    print('✅ [PRODUCT] Using tenant_id: $tenantId for product: $name');
 
     final previousState = state.valueOrNull ?? [];
     
@@ -79,6 +90,9 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
       updatedAt: DateTime.now(),
     );
     
+    print('📤 [PRODUCT] Sending to Supabase:');
+    print('   ${product.toJsonForInsert()}');
+    
     // Optimistic update
     state = AsyncData([...previousState, product]);
     
@@ -86,9 +100,12 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
       final repository = ref.read(productRepositoryProvider);
       await repository.addProduct(product);
       
+      print('✅ [PRODUCT] Product added successfully!');
+      
       // Refresh from server to ensure consistency
       ref.invalidateSelf();
     } catch (e) {
+      print('❌ [PRODUCT] addProduct FAILED: $e');
       // Rollback on failure
       state = AsyncData(previousState);
       rethrow;
