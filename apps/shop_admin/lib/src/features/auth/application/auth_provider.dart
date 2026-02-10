@@ -66,115 +66,144 @@ final currentTenantSlugProvider = Provider<String?>((ref) {
   return tenant?.slug;
 });
 
-/// Auth service - TOLERANT VERSION
+/// Auth service - TOLERANT VERSION WITH LOGIN SHIELD
 /// NEVER calls signOut() automatically
 /// Throws exceptions for UI to handle
+/// Includes shield to prevent ghost signedOut events during login
 class ShopAuthService {
+  /// Login shield flag - prevents ghost signedOut events during login
+  static bool _isPerformingLogin = false;
+  
+  /// Manual session cache - buffers against Supabase race conditions
+  static Session? _manualSession;
+  
+  /// Check if login is currently in progress (for AuthNotifier)
+  static bool get isPerformingLogin => _isPerformingLogin;
+  
+  /// Get current session (prioritizes manual cache during race conditions)
+  static Session? get currentSession => _manualSession ?? SupabaseService.client.auth.currentSession;
+  
   /// Sign in and fetch tenant
   /// IMPORTANT: Does NOT auto-logout on validation failure
   /// Throws exceptions with user-friendly messages
+  /// PROTECTED: Ignores ghost signedOut events during execution
   static Future<TenantState> signIn({
     required String email,
     required String password,
   }) async {
     final startTime = DateTime.now();
-    print('═══════════════════════════════════════════════════════');
-    print('� [AUTH] ${startTime.toIso8601String()}');
-    print('🔐 [AUTH] signIn() STARTED for: $email');
-    print('═══════════════════════════════════════════════════════');
     
-    // 1. Authenticate with Supabase
-    print('⏳ [AUTH] Step 1/3: Calling Supabase signInWithPassword...');
-    final response = await SupabaseService.client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
-
-    if (response.user == null) {
-      print('❌ [AUTH] FAILED - No user returned from Supabase');
-      throw Exception('Giriş başarısız - kullanıcı bilgisi alınamadı');
-    }
-
-    print('✅ [AUTH] Supabase signIn SUCCESS');
-    print('   User ID: ${response.user!.id}');
-    print('   Session exists: ${response.session != null}');
-    print('   Session token: ${response.session?.accessToken?.substring(0, 20) ?? "NULL"}...');
-
-    // CRITICAL: Wait for Supabase internal state to propagate
-    print('⏳ [AUTH] Waiting 50ms for Supabase state propagation...');
-    await Future.delayed(const Duration(milliseconds: 50));
-    
-    // Verify session is set
-    final session = SupabaseService.client.auth.currentSession;
-    print('🔍 [AUTH] Session verification after delay:');
-    print('   currentSession exists: ${session != null}');
-    print('   currentUser exists: ${SupabaseService.client.auth.currentUser != null}');
-
-    // 2. Fetch user role (NO AUTO-LOGOUT if fails)
-    print('⏳ [AUTH] Step 2/3: Fetching user profile...');
     try {
-      final profileResponse = await SupabaseService.client
-          .from('profiles')
-          .select('role')
-          .eq('id', response.user!.id)
-          .maybeSingle();
-
-      if (profileResponse == null) {
-        print('❌ [AUTH] Profile fetch FAILED - NULL response (NOT signing out)');
-        throw Exception('Profil bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
-      }
-
-      final role = profileResponse['role'] as String?;
-      print('✅ [AUTH] Profile fetched successfully');
-      print('   User role: $role');
-
-      if (role != 'shop_owner') {
-        print('⛔ [AUTH] Access DENIED - Wrong role: $role (NOT signing out)');
-        throw Exception('⛔ Yetkisiz Erişim!\n\nBu panel yalnızca Dükkan Sahipleri içindir.\nHesap rolünüz: "${role ?? 'tanımsız'}"\n\nLütfen doğru hesapla giriş yapın.');
-      }
-      
-      print('✅ [AUTH] Role verification PASSED - user is shop_owner');
-    } catch (e) {
-      if (e is Exception && e.toString().contains('Exception:')) {
-        rethrow;
-      }
-      print('❌ [AUTH] Profile check exception: $e');
-      throw Exception('Profil doğrulaması başarısız: ${e.toString()}');
-    }
-
-    // 3. Fetch tenant (NO AUTO-LOGOUT if fails)
-    print('⏳ [AUTH] Step 3/3: Fetching tenant for email: $email');
-    try {
-      final tenants = await SupabaseService.client
-          .from('tenants')
-          .select()
-          .eq('owner_email', email);
-
-      if (tenants.isEmpty) {
-        print('❌ [AUTH] Tenant fetch FAILED - Empty result (NOT signing out)');
-        throw Exception('Bu hesaba bağlı dükkan bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
-      }
-
-      final tenant = TenantState.fromJson(tenants.first);
-      final endTime = DateTime.now();
-      final duration = endTime.difference(startTime);
-      
-      print('✅ [AUTH] Tenant loaded successfully!');
-      print('   Tenant ID: ${tenant.id}');
-      print('   Tenant name: ${tenant.name}');
-      print('   Tenant slug: ${tenant.slug}');
-      print('   Owner email: ${tenant.ownerEmail}');
-      print('💡 [AUTH] Auth state fully synchronized - SAFE TO NAVIGATE');
-      print('⏱️  [AUTH] Total signIn duration: ${duration.inMilliseconds}ms');
+      // 🛡️ ACTIVATE LOGIN SHIELD
+      _isPerformingLogin = true;
+      print('═══════════════════════════════════════════════════════');
+      print('🛡️ [AUTH SHIELD] LOGIN SHIELD ACTIVATED');
+      print('🕒 [AUTH] ${startTime.toIso8601String()}');
+      print('🔐 [AUTH] signIn() STARTED for: $email');
       print('═══════════════════════════════════════════════════════');
       
-      return tenant;
-    } catch (e) {
-      if (e is Exception && e.toString().contains('Exception:')) {
-        rethrow;
+      // 1. Authenticate with Supabase
+      print('⏳ [AUTH] Step 1/3: Calling Supabase signInWithPassword...');
+      final response = await SupabaseService.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user == null) {
+        print('❌ [AUTH] FAILED - No user returned from Supabase');
+        throw Exception('Giriş başarısız - kullanıcı bilgisi alınamadı');
       }
-      print('❌ [AUTH] Tenant fetch exception: $e');
-      throw Exception('Dükkan bilgisi yüklenemedi: ${e.toString()}');
+
+      // 🛡️ FORCE SESSION UPDATE
+      // Manually ensuring session is set to override any ghost events
+      _manualSession = response.session;
+      print('🛡️ [AUTH SHIELD] Manual session cached: ${_manualSession?.user.id}');
+
+      print('✅ [AUTH] Supabase signIn SUCCESS');
+      print('   User ID: ${response.user!.id}');
+      print('   Session exists: ${response.session != null}');
+      print('   Session token: ${response.session?.accessToken?.substring(0, 20) ?? "NULL"}...');
+
+      // CRITICAL: Wait for Supabase internal state to propagate
+      print('⏳ [AUTH] Waiting 50ms for Supabase state propagation...');
+      await Future.delayed(const Duration(milliseconds: 50));
+      
+      // Verify session is set (checking our getter now)
+      final session = ShopAuthService.currentSession;
+      print('🔍 [AUTH] Session verification after delay:');
+      print('   currentSession exists: ${session != null}');
+      print('   currentUser exists: ${SupabaseService.client.auth.currentUser != null}');
+
+      // 2. Fetch user role (NO AUTO-LOGOUT if fails)
+      print('⏳ [AUTH] Step 2/3: Fetching user profile...');
+      try {
+        final profileResponse = await SupabaseService.client
+            .from('profiles')
+            .select('role')
+            .eq('id', response.user!.id)
+            .maybeSingle();
+
+        if (profileResponse == null) {
+          print('❌ [AUTH] Profile fetch FAILED - NULL response (NOT signing out)');
+          throw Exception('Profil bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
+        }
+
+        final role = profileResponse['role'] as String?;
+        print('✅ [AUTH] Profile fetched successfully');
+        print('   User role: $role');
+
+        if (role != 'shop_owner') {
+          print('⛔ [AUTH] Access DENIED - Wrong role: $role (NOT signing out)');
+          throw Exception('⛔ Yetkisiz Erişim!\n\nBu panel yalnızca Dükkan Sahipleri içindir.\nHesap rolünüz: "${role ?? 'tanımsız'}"\n\nLütfen doğru hesapla giriş yapın.');
+        }
+        
+        print('✅ [AUTH] Role verification PASSED - user is shop_owner');
+      } catch (e) {
+        if (e is Exception && e.toString().contains('Exception:')) {
+          rethrow;
+        }
+        print('❌ [AUTH] Profile check exception: $e');
+        throw Exception('Profil doğrulaması başarısız: ${e.toString()}');
+      }
+
+      // 3. Fetch tenant (NO AUTO-LOGOUT if fails)
+      print('⏳ [AUTH] Step 3/3: Fetching tenant for email: $email');
+      try {
+        final tenants = await SupabaseService.client
+            .from('tenants')
+            .select()
+            .eq('owner_email', email);
+
+        if (tenants.isEmpty) {
+          print('❌ [AUTH] Tenant fetch FAILED - Empty result (NOT signing out)');
+          throw Exception('Bu hesaba bağlı dükkan bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
+        }
+
+        final tenant = TenantState.fromJson(tenants.first);
+        final endTime = DateTime.now();
+        final duration = endTime.difference(startTime);
+        
+        print('✅ [AUTH] Tenant loaded successfully!');
+        print('   Tenant ID: ${tenant.id}');
+        print('   Tenant name: ${tenant.name}');
+        print('   Tenant slug: ${tenant.slug}');
+        print('   Owner email: ${tenant.ownerEmail}');
+        print('💡 [AUTH] Auth state fully synchronized - SAFE TO NAVIGATE');
+        print('⏱️  [AUTH] Total signIn duration: ${duration.inMilliseconds}ms');
+        print('═══════════════════════════════════════════════════════');
+        
+        return tenant;
+      } catch (e) {
+        if (e is Exception && e.toString().contains('Exception:')) {
+          rethrow;
+        }
+        print('❌ [AUTH] Tenant fetch exception: $e');
+        throw Exception('Dükkan bilgisi yüklenemedi: ${e.toString()}');
+      }
+    } finally {
+      // 🛡️ DEACTIVATE LOGIN SHIELD - Always runs, even on error
+      print('🛡️ [AUTH SHIELD] LOGIN SHIELD DEACTIVATED');
+      _isPerformingLogin = false;
     }
   }
 
@@ -183,6 +212,10 @@ class ShopAuthService {
     print('═══════════════════════════════════════════════════════');
     print('👋 [AUTH] MANUAL SIGN OUT initiated');
     print('═══════════════════════════════════════════════════════');
+    
+    // Clear manual session cache
+    _manualSession = null;
+    
     await SupabaseService.client.auth.signOut();
     print('✅ [AUTH] Sign out complete');
   }

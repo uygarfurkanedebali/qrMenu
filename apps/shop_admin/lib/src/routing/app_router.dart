@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
@@ -21,11 +22,21 @@ final roleVerifiedProvider = StateProvider<bool>((ref) => false);
 final roleErrorProvider = StateProvider<String?>((ref) => null);
 
 /// Auth change notifier for router refresh
+/// PROTECTED: Ignores ghost signedOut events during login
 class AuthNotifier extends ChangeNotifier {
   AuthNotifier() {
     // Listen to Supabase auth state changes
     SupabaseService.client.auth.onAuthStateChange.listen((event) {
       print('🔔 [AUTH NOTIFIER] Auth state changed: ${event.event}');
+      
+      // 🛡️ LOGIN SHIELD: Ignore ghost signedOut during active login
+      if (ShopAuthService.isPerformingLogin && event.event == AuthChangeEvent.signedOut) {
+        print('🛡️ [AUTH SHIELD] BLOCKED ghost signedOut event!');
+        print('   Login in progress - ignoring premature logout signal');
+        return; // DO NOT notifyListeners - prevents router kick
+      }
+      
+      print('🔔 [AUTH NOTIFIER] Notifying listeners (router will refresh)');
       notifyListeners(); // Trigger router refresh
     });
   }
@@ -46,8 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       print('╠═══════════════════════════════════════════════════════╣');
       print('║ Time: ${DateTime.now().toIso8601String()}');
       
-      // ROBUST CHECK: Use both Supabase session AND provider state
-      final session = SupabaseService.client.auth.currentSession;
+      // ROBUST CHECK: Use both Supabase session (via wrapper) AND provider state
+      // Using ShopAuthService.currentSession handles race conditions where Supabase
+      // might temporarily show null session during ghost events.
+      final session = ShopAuthService.currentSession;
       final roleVerified = ref.read(roleVerifiedProvider);
       
       final isLoggedIn = session != null;
@@ -59,7 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       print('║ STATE CHECKS:');
       print('║   • Session exists: ${isLoggedIn ? "✅ YES" : "❌ NO"}');
       if (session != null) {
-        print('║     - User ID: ${session.user?.id ?? "NULL"}');
+        print('║     - User ID: ${session.user.id}');
         print('║     - Expires: ${session.expiresAt != null ? DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000).toIso8601String() : "NULL"}');
       }
       print('║   • Role verified: ${roleVerified ? "✅ TRUE" : "❌ FALSE"}');
