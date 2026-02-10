@@ -44,7 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       print('🚀 [LOGIN] Attempting login...');
       
-      // Call simplified auth service
+      // Call simplified auth service (includes state propagation delay)
       final tenant = await ShopAuthService.signIn(
         email: email,
         password: password,
@@ -56,12 +56,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ref.read(currentTenantProvider.notifier).state = tenant;
       ref.read(roleVerifiedProvider.notifier).state = true;
       
+      print('🔄 [LOGIN] State updated, waiting for router refresh...');
+      
+      // Give router a moment to process the auth state change
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       print('🧭 [LOGIN] Navigating to /products...');
       
-      // FORCE NAVIGATION
+      // Navigation - router should now see authenticated state
       if (mounted) {
         context.go('/products');
-        print('✅ [LOGIN] Navigation complete!');
+        print('✅ [LOGIN] Navigation triggered!');
       }
     } catch (e) {
       print('❌ [LOGIN] Login failed: $e');

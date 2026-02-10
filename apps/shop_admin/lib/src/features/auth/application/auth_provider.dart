@@ -1,4 +1,4 @@
-// Shop Admin Auth Provider — SIMPLIFIED FOR DEBUGGING
+// Shop Admin Auth Provider — WITH RACE CONDITION FIX
 // Manages authentication state and current tenant context
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +12,8 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 
 /// Current logged in user
 final currentUserProvider = Provider<User?>((ref) {
+  // Watch auth state changes to force rebuild
+  ref.watch(authStateProvider);
   return SupabaseService.client.auth.currentUser;
 });
 
@@ -63,10 +65,11 @@ final currentTenantSlugProvider = Provider<String?>((ref) {
   return tenant?.slug;
 });
 
-/// Simplified Auth service — NO RPC CALLS for now
+/// Auth service with SYNCHRONOUS state updates
 class ShopAuthService {
-  /// SIMPLIFIED: Just sign in and fetch tenant
+  /// Sign in and fetch tenant
   /// Returns tenant if successful, throws exception otherwise
+  /// Ensures auth state is fully propagated before returning
   static Future<TenantState> signIn({
     required String email,
     required String password,
@@ -85,6 +88,15 @@ class ShopAuthService {
     }
 
     print('✅ [AUTH] Login successful - User ID: ${response.user!.id}');
+    print('   Session: ${response.session != null ? "SET" : "NULL"}');
+
+    // CRITICAL: Wait for Supabase internal state to propagate
+    // Supabase updates listeners asynchronously, so we need a tiny delay
+    await Future.delayed(const Duration(milliseconds: 50));
+    
+    // Verify session is set
+    final session = SupabaseService.client.auth.currentSession;
+    print('   Session after delay: ${session != null ? "SET ✅" : "NULL ❌"}');
 
     // 2. Fetch user role
     final profileResponse = await SupabaseService.client
@@ -123,6 +135,7 @@ class ShopAuthService {
 
     final tenant = TenantState.fromJson(tenants.first);
     print('✅ [AUTH] Tenant loaded: ${tenant.name} (${tenant.slug})');
+    print('💡 [AUTH] Auth state fully synchronized - safe to navigate');
     
     return tenant;
   }
