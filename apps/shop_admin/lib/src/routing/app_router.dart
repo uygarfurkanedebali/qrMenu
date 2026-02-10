@@ -41,6 +41,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
     redirect: (context, state) {
+      print('╔═══════════════════════════════════════════════════════╗');
+      print('║ 🧭 [ROUTER] REDIRECT CHECK                            ║');
+      print('╠═══════════════════════════════════════════════════════╣');
+      print('║ Time: ${DateTime.now().toIso8601String()}');
+      
       // ROBUST CHECK: Use both Supabase session AND provider state
       final session = SupabaseService.client.auth.currentSession;
       final roleVerified = ref.read(roleVerifiedProvider);
@@ -48,32 +53,47 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = session != null;
       final isOnLoginPage = state.matchedLocation == '/login';
 
-      print('🧭 [ROUTER] Redirect check:');
-      print('   location: ${state.matchedLocation}');
-      print('   session: ${session != null ? "EXISTS ✅" : "NULL ❌"}');
-      print('   roleVerified: $roleVerified');
+      print('║ Location: ${state.matchedLocation}');
+      print('║ Target URI: ${state.uri}');
+      print('╠═══════════════════════════════════════════════════════╣');
+      print('║ STATE CHECKS:');
+      print('║   • Session exists: ${isLoggedIn ? "✅ YES" : "❌ NO"}');
+      if (session != null) {
+        print('║     - User ID: ${session.user?.id ?? "NULL"}');
+        print('║     - Expires: ${session.expiresAt != null ? DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000).toIso8601String() : "NULL"}');
+      }
+      print('║   • Role verified: ${roleVerified ? "✅ TRUE" : "❌ FALSE"}');
+      print('║   • On login page: ${isOnLoginPage ? "YES" : "NO"}');
+      print('╠═══════════════════════════════════════════════════════╣');
+
+      String? decision;
 
       // Rule 1: Not logged in → force login page
       if (!isLoggedIn && !isOnLoginPage) {
-        print('   ➡️  Redirecting to /login (no session)');
-        return '/login';
+        decision = '/login';
+        print('║ DECISION RULE 1: Not authenticated');
+        print('║   → Redirecting to: /login');
       }
-
       // Rule 2: Logged in + on login page + role verified → go to products
-      if (isLoggedIn && isOnLoginPage && roleVerified) {
-        print('   ➡️  Redirecting to /products (authenticated & verified)');
-        return '/products';
+      else if (isLoggedIn && isOnLoginPage && roleVerified) {
+        decision = '/products';
+        print('║ DECISION RULE 2: Authenticated & verified');
+        print('║   → Redirecting to: /products');
       }
-
       // Rule 3: Logged in but trying to access protected route without role verification
-      if (isLoggedIn && !isOnLoginPage && !roleVerified) {
-        print('   ➡️  Redirecting to /login (session exists but role not verified)');
-        return '/login';
+      else if (isLoggedIn && !isOnLoginPage && !roleVerified) {
+        decision = '/login';
+        print('║ DECISION RULE 3: Session exists but role NOT verified');
+        print('║   → Redirecting to: /login (need verification)');
+      }
+      // No redirect needed
+      else {
+        print('║ DECISION: No redirect needed');
+        print('║   ✅ Allowing navigation to: ${state.matchedLocation}');
       }
 
-      // No redirect needed
-      print('   ✅ No redirect needed');
-      return null;
+      print('╚═══════════════════════════════════════════════════════╝');
+      return decision;
     },
     routes: [
       // Login route (outside shell)

@@ -77,30 +77,41 @@ class ShopAuthService {
     required String email,
     required String password,
   }) async {
-    print('🔐 [AUTH] Starting login for: $email');
+    final startTime = DateTime.now();
+    print('═══════════════════════════════════════════════════════');
+    print('� [AUTH] ${startTime.toIso8601String()}');
+    print('🔐 [AUTH] signIn() STARTED for: $email');
+    print('═══════════════════════════════════════════════════════');
     
     // 1. Authenticate with Supabase
+    print('⏳ [AUTH] Step 1/3: Calling Supabase signInWithPassword...');
     final response = await SupabaseService.client.auth.signInWithPassword(
       email: email,
       password: password,
     );
 
     if (response.user == null) {
-      print('❌ [AUTH] Login failed - no user returned');
+      print('❌ [AUTH] FAILED - No user returned from Supabase');
       throw Exception('Giriş başarısız - kullanıcı bilgisi alınamadı');
     }
 
-    print('✅ [AUTH] Login successful - User ID: ${response.user!.id}');
-    print('   Session: ${response.session != null ? "SET" : "NULL"}');
+    print('✅ [AUTH] Supabase signIn SUCCESS');
+    print('   User ID: ${response.user!.id}');
+    print('   Session exists: ${response.session != null}');
+    print('   Session token: ${response.session?.accessToken?.substring(0, 20) ?? "NULL"}...');
 
     // CRITICAL: Wait for Supabase internal state to propagate
+    print('⏳ [AUTH] Waiting 50ms for Supabase state propagation...');
     await Future.delayed(const Duration(milliseconds: 50));
     
     // Verify session is set
     final session = SupabaseService.client.auth.currentSession;
-    print('   Session after delay: ${session != null ? "SET ✅" : "NULL ❌"}');
+    print('🔍 [AUTH] Session verification after delay:');
+    print('   currentSession exists: ${session != null}');
+    print('   currentUser exists: ${SupabaseService.client.auth.currentUser != null}');
 
     // 2. Fetch user role (NO AUTO-LOGOUT if fails)
+    print('⏳ [AUTH] Step 2/3: Fetching user profile...');
     try {
       final profileResponse = await SupabaseService.client
           .from('profiles')
@@ -109,62 +120,70 @@ class ShopAuthService {
           .maybeSingle();
 
       if (profileResponse == null) {
-        print('❌ [AUTH] No profile found - throwing exception (NOT signing out)');
-        // DON'T SIGN OUT - let UI handle it
+        print('❌ [AUTH] Profile fetch FAILED - NULL response (NOT signing out)');
         throw Exception('Profil bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
       }
 
       final role = profileResponse['role'] as String?;
-      print('👤 [AUTH] User role: $role');
+      print('✅ [AUTH] Profile fetched successfully');
+      print('   User role: $role');
 
       if (role != 'shop_owner') {
-        print('⛔ [AUTH] Access denied - wrong role: $role (NOT signing out)');
-        // DON'T SIGN OUT - let UI handle it and user can manually logout
+        print('⛔ [AUTH] Access DENIED - Wrong role: $role (NOT signing out)');
         throw Exception('⛔ Yetkisiz Erişim!\n\nBu panel yalnızca Dükkan Sahipleri içindir.\nHesap rolünüz: "${role ?? 'tanımsız'}"\n\nLütfen doğru hesapla giriş yapın.');
       }
+      
+      print('✅ [AUTH] Role verification PASSED - user is shop_owner');
     } catch (e) {
-      // If it's already our formatted exception, re-throw it
       if (e is Exception && e.toString().contains('Exception:')) {
         rethrow;
       }
-      // Otherwise, wrap it
-      print('❌ [AUTH] Profile check failed: $e');
+      print('❌ [AUTH] Profile check exception: $e');
       throw Exception('Profil doğrulaması başarısız: ${e.toString()}');
     }
 
     // 3. Fetch tenant (NO AUTO-LOGOUT if fails)
+    print('⏳ [AUTH] Step 3/3: Fetching tenant for email: $email');
     try {
-      print('🏪 [AUTH] Fetching tenant for: $email');
       final tenants = await SupabaseService.client
           .from('tenants')
           .select()
           .eq('owner_email', email);
 
       if (tenants.isEmpty) {
-        print('❌ [AUTH] No tenant found (NOT signing out)');
-        // DON'T SIGN OUT - let UI handle it
+        print('❌ [AUTH] Tenant fetch FAILED - Empty result (NOT signing out)');
         throw Exception('Bu hesaba bağlı dükkan bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
       }
 
       final tenant = TenantState.fromJson(tenants.first);
-      print('✅ [AUTH] Tenant loaded: ${tenant.name} (${tenant.slug})');
-      print('💡 [AUTH] Auth state fully synchronized - safe to navigate');
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      
+      print('✅ [AUTH] Tenant loaded successfully!');
+      print('   Tenant ID: ${tenant.id}');
+      print('   Tenant name: ${tenant.name}');
+      print('   Tenant slug: ${tenant.slug}');
+      print('   Owner email: ${tenant.ownerEmail}');
+      print('💡 [AUTH] Auth state fully synchronized - SAFE TO NAVIGATE');
+      print('⏱️  [AUTH] Total signIn duration: ${duration.inMilliseconds}ms');
+      print('═══════════════════════════════════════════════════════');
       
       return tenant;
     } catch (e) {
-      // If it's already our formatted exception, re-throw it
       if (e is Exception && e.toString().contains('Exception:')) {
         rethrow;
       }
-      // Otherwise, wrap it
-      print('❌ [AUTH] Tenant fetch failed: $e');
+      print('❌ [AUTH] Tenant fetch exception: $e');
       throw Exception('Dükkan bilgisi yüklenemedi: ${e.toString()}');
     }
   }
 
   /// Sign out (manual only)
   static Future<void> signOut() async {
-    print('👋 [AUTH] Manual sign out');
+    print('═══════════════════════════════════════════════════════');
+    print('👋 [AUTH] MANUAL SIGN OUT initiated');
+    print('═══════════════════════════════════════════════════════');
     await SupabaseService.client.auth.signOut();
+    print('✅ [AUTH] Sign out complete');
   }
 }

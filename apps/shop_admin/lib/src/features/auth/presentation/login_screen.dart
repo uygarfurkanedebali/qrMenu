@@ -31,20 +31,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
+    print('╔═══════════════════════════════════════════════════════╗');
+    print('║ 👆 [LOGIN UI] Submit Button PRESSED                   ║');
+    print('║ Time: ${DateTime.now().toIso8601String()}');
+    print('╚═══════════════════════════════════════════════════════╝');
+    
     if (!_formKey.currentState!.validate()) {
+      print('❌ [LOGIN UI] Form validation FAILED');
       return;
     }
 
+    print('✅ [LOGIN UI] Form validation PASSED');
     setState(() {
       _isLoading = true;
       _error = null;
     });
+    print('⏳ [LOGIN UI] Loading state SET to true');
 
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      print('🚀 [LOGIN] Attempting login...');
+      print('═══════════════════════════════════════════════════════');
+      print('🚀 [LOGIN UI] Calling ShopAuthService.signIn()...');
+      print('   Email: $email');
+      print('═══════════════════════════════════════════════════════');
       
       // Call simplified auth service (includes state propagation delay)
       final tenant = await ShopAuthService.signIn(
@@ -52,41 +63,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: password,
       );
 
+      print('═══════════════════════════════════════════════════════');
+      print('✅ [LOGIN UI] ShopAuthService.signIn() COMPLETED');
+      print('   Tenant: ${tenant.name} (${tenant.slug})');
+      print('═══════════════════════════════════════════════════════');
+
       // CRITICAL: Check if widget is still mounted after async
       if (!mounted) {
-        print('⚠️ [LOGIN] Widget disposed during login - stopping execution');
+        print('⚠️  [LOGIN UI] Widget DISPOSED during signIn - STOPPING execution');
+        print('   This is normal if router already navigated away');
         return;
       }
 
-      print('✅ [LOGIN] Login successful!');
+      print('✅ [LOGIN UI] Widget still MOUNTED - proceeding with state updates');
       
       // Store tenant in provider
+      print('📝 [LOGIN UI] Setting currentTenantProvider state...');
       ref.read(currentTenantProvider.notifier).state = tenant;
+      
+      print('📝 [LOGIN UI] Setting roleVerifiedProvider to TRUE...');
       ref.read(roleVerifiedProvider.notifier).state = true;
       
-      print('🔄 [LOGIN] State updated, waiting for router refresh...');
+      print('🔄 [LOGIN UI] State updated, waiting 100ms for router refresh...');
       
       // Give router a moment to process the auth state change
       await Future.delayed(const Duration(milliseconds: 100));
       
       // CRITICAL: Check mounted again after second async
       if (!mounted) {
-        print('⚠️ [LOGIN] Widget disposed after delay - stopping execution');
+        print('⚠️  [LOGIN UI] Widget DISPOSED after delay - STOPPING execution');
+        print('   Router likely already handled navigation');
         return;
       }
       
-      print('🧭 [LOGIN] Navigating to /products...');
+      print('🧭 [LOGIN UI] Calling context.go(\'/products\')...');
       
       // Navigation - router should now see authenticated state
       context.go('/products');
-      print('✅ [LOGIN] Navigation triggered!');
+      print('✅ [LOGIN UI] Navigation triggered to /products!');
+      print('   Waiting for router redirect logic to run...');
       
     } catch (e) {
-      print('❌ [LOGIN] Login failed: $e');
+      print('═══════════════════════════════════════════════════════');
+      print('❌ [LOGIN UI] Exception caught in _login()');
+      print('   Error type: ${e.runtimeType}');
+      print('   Error message: $e');
+      print('═══════════════════════════════════════════════════════');
       
       // CRITICAL: Check mounted before using setState or showing errors
       if (!mounted) {
-        print('⚠️ [LOGIN] Widget disposed during error handling - stopping execution');
+        print('⚠️  [LOGIN UI] Widget DISPOSED during error handling');
         return;
       }
       
@@ -97,6 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         errorMsg = errorMsg.split('Exception:').last.trim();
       }
       
+      print('📝 [LOGIN UI] Setting error state: $errorMsg');
       setState(() {
         _error = errorMsg;
         _isLoading = false;
@@ -104,6 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       // Show error in SnackBar
       if (mounted) {
+        print('📢 [LOGIN UI] Showing error SnackBar');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
@@ -115,9 +143,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       // CRITICAL: Check mounted before setState
       if (mounted) {
+        print('🔄 [LOGIN UI] Finally block - setting loading to FALSE');
         setState(() {
           _isLoading = false;
         });
+      } else {
+        print('⚠️  [LOGIN UI] Finally block - widget disposed, skipping setState');
       }
     }
   }
