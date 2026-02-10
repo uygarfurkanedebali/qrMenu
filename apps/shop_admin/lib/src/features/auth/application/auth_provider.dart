@@ -30,12 +30,27 @@ class TenantState {
   final String name;
   final String slug;
   final String ownerEmail;
+  // Shop Settings
+  final String primaryColor;
+  final String fontFamily;
+  final String currencySymbol;
+  final String? phoneNumber;
+  final String? instagramHandle;
+  final String? wifiName;
+  final String? wifiPassword;
 
   const TenantState({
     required this.id,
     required this.name,
     required this.slug,
     required this.ownerEmail,
+    this.primaryColor = '#FF5722',
+    this.fontFamily = 'Roboto',
+    this.currencySymbol = '₺',
+    this.phoneNumber,
+    this.instagramHandle,
+    this.wifiName,
+    this.wifiPassword,
   });
 
   /// Client Panel URL for this tenant
@@ -47,6 +62,13 @@ class TenantState {
       name: json['name'] as String,
       slug: json['slug'] as String,
       ownerEmail: json['owner_email'] as String? ?? '',
+      primaryColor: json['primary_color'] as String? ?? '#FF5722',
+      fontFamily: json['font_family'] as String? ?? 'Roboto',
+      currencySymbol: json['currency_symbol'] as String? ?? '₺',
+      phoneNumber: json['phone_number'] as String?,
+      instagramHandle: json['instagram_handle'] as String?,
+      wifiName: json['wifi_name'] as String?,
+      wifiPassword: json['wifi_password'] as String?,
     );
   }
 }

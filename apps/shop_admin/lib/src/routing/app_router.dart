@@ -13,6 +13,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/auth/application/auth_provider.dart';
 
 /// Tracks whether role has been verified for the current session
@@ -161,7 +162,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: _PlaceholderParams(title: 'Shop Settings'),
+              child: SettingsScreen(),
             ),
           ),
         ],
