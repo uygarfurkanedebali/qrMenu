@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../auth/application/auth_provider.dart';
 import '../application/settings_provider.dart';
 
@@ -293,17 +294,99 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: DropdownButtonFormField<String>(
-                  value: _fontFamilies.contains(_selectedFont) ? _selectedFont : 'Roboto',
-                  decoration: const InputDecoration(
-                    labelText: 'Yazı Tipi',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.text_fields),
-                  ),
-                  items: _fontFamilies
-                      .map((f) => DropdownMenuItem(value: f, child: Text(f)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedFont = v ?? 'Roboto'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: _fontFamilies.contains(_selectedFont) ? _selectedFont : 'Roboto',
+                      decoration: const InputDecoration(
+                        labelText: 'Yazı Tipi',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.text_fields),
+                      ),
+                      items: _fontFamilies.map((f) {
+                        TextStyle fontStyle;
+                        try {
+                          fontStyle = GoogleFonts.getFont(f, fontSize: 16);
+                        } catch (_) {
+                          fontStyle = const TextStyle(fontSize: 16);
+                        }
+                        return DropdownMenuItem(
+                          value: f,
+                          child: Text(f, style: fontStyle),
+                        );
+                      }).toList(),
+                      selectedItemBuilder: (context) {
+                        return _fontFamilies.map((f) {
+                          TextStyle fontStyle;
+                          try {
+                            fontStyle = GoogleFonts.getFont(f, fontSize: 16);
+                          } catch (_) {
+                            fontStyle = const TextStyle(fontSize: 16);
+                          }
+                          return Text(f, style: fontStyle);
+                        }).toList();
+                      },
+                      onChanged: (v) => setState(() => _selectedFont = v ?? 'Roboto'),
+                    ),
+                    const SizedBox(height: 12),
+                    // Font preview
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Önizleme',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Builder(builder: (context) {
+                            TextStyle previewStyle;
+                            try {
+                              previewStyle = GoogleFonts.getFont(
+                                _selectedFont,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                              );
+                            } catch (_) {
+                              previewStyle = const TextStyle(fontSize: 24, fontWeight: FontWeight.w600);
+                            }
+                            return Text(
+                              'Merhaba Dünya! 🍽️',
+                              style: previewStyle,
+                            );
+                          }),
+                          const SizedBox(height: 4),
+                          Builder(builder: (context) {
+                            TextStyle previewStyle;
+                            try {
+                              previewStyle = GoogleFonts.getFont(
+                                _selectedFont,
+                                fontSize: 14,
+                              );
+                            } catch (_) {
+                              previewStyle = const TextStyle(fontSize: 14);
+                            }
+                            return Text(
+                              'Menümüzden en lezzetli seçenekleri keşfedin.',
+                              style: previewStyle,
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

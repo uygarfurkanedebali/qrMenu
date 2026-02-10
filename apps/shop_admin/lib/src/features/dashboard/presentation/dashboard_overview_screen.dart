@@ -1,8 +1,11 @@
 /// Dashboard Overview Screen
 ///
-/// Shows QR Code for the menu URL, quick stats, and action shortcuts.
+/// Shows QR Code for the menu URL, live preview, quick stats, and action shortcuts.
 library;
 
+import 'dart:ui_web' as ui_web;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,17 +14,48 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../auth/application/auth_provider.dart';
 
-class DashboardOverviewScreen extends ConsumerWidget {
+class DashboardOverviewScreen extends ConsumerStatefulWidget {
   const DashboardOverviewScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardOverviewScreen> createState() => _DashboardOverviewScreenState();
+}
+
+class _DashboardOverviewScreenState extends ConsumerState<DashboardOverviewScreen> {
+  bool _iframeRegistered = false;
+  String _viewType = '';
+
+  void _registerIframe(String url) {
+    if (_iframeRegistered) return;
+    _viewType = 'menu-preview-${DateTime.now().millisecondsSinceEpoch}';
+    
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry.registerViewFactory(
+      _viewType,
+      (int viewId) {
+        final iframe = html.IFrameElement()
+          ..src = url
+          ..style.border = 'none'
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.borderRadius = '16px'
+          ..allow = 'clipboard-read; clipboard-write';
+        return iframe;
+      },
+    );
+    _iframeRegistered = true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tenant = ref.watch(currentTenantProvider);
     final theme = Theme.of(context);
 
     if (tenant == null) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    _registerIframe(tenant.clientUrl);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -45,25 +79,35 @@ class DashboardOverviewScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
 
-          // QR Code Card + Quick Actions Row
+          // Main content: QR + Quick Actions + Preview
           LayoutBuilder(
             builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 700;
+              final isWide = constraints.maxWidth > 900;
               
               if (isWide) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // QR Code Card
+                    // Left column: QR + Quick Actions
                     Expanded(
                       flex: 3,
-                      child: _QrCodeCard(tenant: tenant, theme: theme),
+                      child: Column(
+                        children: [
+                          _QrCodeCard(tenant: tenant, theme: theme),
+                          const SizedBox(height: 24),
+                          _QuickActions(theme: theme),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 24),
-                    // Quick Actions
+                    // Right column: Live Preview
                     Expanded(
                       flex: 2,
-                      child: _QuickActions(theme: theme),
+                      child: _LivePreviewCard(
+                        viewType: _viewType,
+                        menuUrl: tenant.clientUrl,
+                        theme: theme,
+                      ),
                     ),
                   ],
                 );
@@ -73,12 +117,108 @@ class DashboardOverviewScreen extends ConsumerWidget {
                 children: [
                   _QrCodeCard(tenant: tenant, theme: theme),
                   const SizedBox(height: 24),
+                  _LivePreviewCard(
+                    viewType: _viewType,
+                    menuUrl: tenant.clientUrl,
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 24),
                   _QuickActions(theme: theme),
                 ],
               );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// LIVE PREVIEW CARD
+// ═══════════════════════════════════════════════════════
+
+class _LivePreviewCard extends StatelessWidget {
+  final String viewType;
+  final String menuUrl;
+  final ThemeData theme;
+
+  const _LivePreviewCard({
+    required this.viewType,
+    required this.menuUrl,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.phone_android, color: Colors.green, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Canlı Önizleme',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Müşterilerinizin gördüğü menü',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Phone-style iframe container
+            Center(
+              child: Container(
+                width: 320,
+                height: 580,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: HtmlElementView(viewType: viewType),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
