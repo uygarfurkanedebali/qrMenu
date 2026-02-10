@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_core/shared_core.dart';
 import '../data/mock_storage_service.dart';
 import '../application/products_provider.dart';
+import '../application/categories_provider.dart';
 import '../../auth/application/auth_provider.dart';
 
 class ProductEditScreen extends ConsumerStatefulWidget {
@@ -261,18 +262,63 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
               ),
               const SizedBox(height: 16),
 
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                   DropdownMenuItem(value: 'c1', child: Text('Main Dishes')),
-                   DropdownMenuItem(value: 'c2', child: Text('Drinks')),
-                   DropdownMenuItem(value: 'c3', child: Text('Desserts')),
-                ],
-                onChanged: (v) => setState(() => _selectedCategory = v),
+              // Real categories from Supabase
+              Consumer(
+                builder: (context, ref, _) {
+                  final categoriesAsync = ref.watch(categoriesProvider);
+                  return categoriesAsync.when(
+                    loading: () => const InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          SizedBox(width: 8),
+                          Text('Loading categories...'),
+                        ],
+                      ),
+                    ),
+                    error: (err, _) => InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      child: Text('Error: $err', style: const TextStyle(color: Colors.red)),
+                    ),
+                    data: (categories) {
+                      // Validate that _selectedCategory is still valid
+                      if (_selectedCategory != null &&
+                          !categories.any((c) => c.id == _selectedCategory)) {
+                        // Selected category no longer exists, reset
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _selectedCategory = null);
+                        });
+                      }
+                      return DropdownButtonFormField<String>(
+                        value: _selectedCategory != null &&
+                                categories.any((c) => c.id == _selectedCategory)
+                            ? _selectedCategory
+                            : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: categories
+                            .map((cat) => DropdownMenuItem(
+                                  value: cat.id,  // Real UUID from database
+                                  child: Text(cat.name),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setState(() => _selectedCategory = v),
+                        hint: categories.isEmpty
+                            ? const Text('No categories yet')
+                            : const Text('Select a category'),
+                      );
+                    },
+                  );
+                },
               ),
               
               const SizedBox(height: 16),
