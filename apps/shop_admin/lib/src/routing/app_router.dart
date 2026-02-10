@@ -11,6 +11,7 @@ import 'package:shared_core/shared_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
+import '../features/dashboard/presentation/dashboard_overview_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -131,7 +132,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: _PlaceholderParams(title: 'Dashboard Overview'),
+              child: DashboardOverviewScreen(),
             ),
           ),
           GoRoute(

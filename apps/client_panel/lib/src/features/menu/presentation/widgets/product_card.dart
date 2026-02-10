@@ -10,11 +10,13 @@ import '../../domain/menu_models.dart';
 /// Card widget for displaying a single menu product
 class ProductCard extends StatelessWidget {
   final MenuProduct product;
+  final String currencySymbol;
   final VoidCallback? onAddToCart;
 
   const ProductCard({
     super.key,
     required this.product,
+    this.currencySymbol = '₺',
     this.onAddToCart,
   });
 
@@ -137,7 +139,7 @@ class ProductCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          product.formattedPrice,
+                          '$currencySymbol${product.price.toStringAsFixed(2)}',
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.primary,
