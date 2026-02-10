@@ -63,21 +63,25 @@ final currentTenantSlugProvider = Provider<String?>((ref) {
   return tenant?.slug;
 });
 
-/// Auth service for login/logout operations
-class AuthService {
+/// Auth service for shop login/logout operations
+class ShopAuthService {
   /// Sign in and fetch associated tenant
+  /// If skipAuth is true, skip the signIn step (already authenticated)
   static Future<TenantState?> signInAndFetchTenant({
     required String email,
     required String password,
+    bool skipAuth = false,
   }) async {
-    // 1. Authenticate with Supabase
-    final response = await SupabaseService.client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    if (!skipAuth) {
+      // 1. Authenticate with Supabase
+      final response = await SupabaseService.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
-    if (response.user == null) {
-      throw Exception('Authentication failed');
+      if (response.user == null) {
+        throw Exception('Authentication failed');
+      }
     }
 
     // 2. Fetch tenant associated with this email
@@ -87,9 +91,11 @@ class AuthService {
         .eq('owner_email', email);
 
     if (tenants.isEmpty) {
-      // Sign out since no tenant found
-      await SupabaseService.client.auth.signOut();
-      throw Exception('No shop associated with this account');
+      if (!skipAuth) {
+        // Sign out since no tenant found
+        await SupabaseService.client.auth.signOut();
+      }
+      throw Exception('Bu hesaba bağlı dükkan bulunamadı');
     }
 
     // 3. Return tenant state

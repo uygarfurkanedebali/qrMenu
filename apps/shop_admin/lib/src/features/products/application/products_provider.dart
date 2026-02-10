@@ -30,8 +30,24 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
       return [];
     }
     
-    final repository = ref.read(productRepositoryProvider);
-    return repository.getProducts(tenantId);
+    try {
+      final repository = ref.read(productRepositoryProvider);
+      return await repository.getProducts(tenantId);
+    } catch (e) {
+      final errorStr = e.toString();
+      // Check for auth/permission errors (RLS violations, 401, 403)
+      if (errorStr.contains('401') || 
+          errorStr.contains('403') ||
+          errorStr.contains('JWT') ||
+          errorStr.contains('permission denied') ||
+          errorStr.contains('row-level security')) {
+        // Auth error — don't auto-logout here, just return empty
+        // The router guard will handle the redirect
+        return [];
+      }
+      // Re-throw other errors so they show in the UI
+      rethrow;
+    }
   }
 
   /// Add a new product (uses tenant ID from auth state)
