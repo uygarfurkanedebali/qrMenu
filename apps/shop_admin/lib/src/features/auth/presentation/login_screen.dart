@@ -31,7 +31,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -50,6 +52,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: password,
       );
 
+      // CRITICAL: Check if widget is still mounted after async
+      if (!mounted) {
+        print('⚠️ [LOGIN] Widget disposed during login - stopping execution');
+        return;
+      }
+
       print('✅ [LOGIN] Login successful!');
       
       // Store tenant in provider
@@ -61,15 +69,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Give router a moment to process the auth state change
       await Future.delayed(const Duration(milliseconds: 100));
       
+      // CRITICAL: Check mounted again after second async
+      if (!mounted) {
+        print('⚠️ [LOGIN] Widget disposed after delay - stopping execution');
+        return;
+      }
+      
       print('🧭 [LOGIN] Navigating to /products...');
       
       // Navigation - router should now see authenticated state
-      if (mounted) {
-        context.go('/products');
-        print('✅ [LOGIN] Navigation triggered!');
-      }
+      context.go('/products');
+      print('✅ [LOGIN] Navigation triggered!');
+      
     } catch (e) {
       print('❌ [LOGIN] Login failed: $e');
+      
+      // CRITICAL: Check mounted before using setState or showing errors
+      if (!mounted) {
+        print('⚠️ [LOGIN] Widget disposed during error handling - stopping execution');
+        return;
+      }
       
       String errorMsg = e.toString();
       if (errorMsg.contains('Invalid login credentials')) {
@@ -80,10 +99,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       setState(() {
         _error = errorMsg;
+        _isLoading = false;
       });
-    } finally {
+
+      // Show error in SnackBar
       if (mounted) {
-        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      // CRITICAL: Check mounted before setState
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
