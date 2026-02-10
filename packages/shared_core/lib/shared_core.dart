@@ -1,5 +1,5 @@
 /// Shared Core Library
-/// 
+/// v1
 /// Contains shared models, themes, services and repositories.
 library shared_core;
 
