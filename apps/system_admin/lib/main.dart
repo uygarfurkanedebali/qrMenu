@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/features/tenants/presentation/create_tenant_screen.dart';
+import 'src/features/tenants/presentation/tenants_list_screen.dart';
 import 'src/features/auth/presentation/login_screen.dart';
 
 void main() async {
@@ -334,11 +335,13 @@ class SystemAdminHome extends StatelessWidget {
               
               const SizedBox(height: 16),
               
-              // View Tenants Button (Placeholder)
+              // View Tenants Button
               OutlinedButton.icon(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tenant list coming soon')),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const TenantsListScreen(),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.list),

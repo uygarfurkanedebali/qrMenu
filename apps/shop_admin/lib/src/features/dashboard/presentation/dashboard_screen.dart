@@ -60,7 +60,7 @@ class DashboardScreen extends ConsumerWidget {
                 // Route Content
                 Expanded(
                   child: Container(
-                    color: theme.colorScheme.surfaceContainerLowest,
+                    color: const Color(0xFF0F172A), // Slate 900 - force dark theme
                     child: child,
                   ),
                 ),

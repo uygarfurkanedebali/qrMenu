@@ -141,66 +141,78 @@ class _CreateTenantScreenState extends State<CreateTenantScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.green.shade50, Colors.green.shade100]),
+        color: const Color(0xFF064E3B), // Dark green for success
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.green.shade300, width: 2),
+        border: Border.all(color: const Color(0xFF047857), width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 32),
+              const Icon(Icons.check_circle, color: Colors.white, size: 32),
               const SizedBox(width: 12),
-              Text('🎉 Shop & Auth User Created!', 
+              Text(
+                '🎉 Shop & Auth User Created!',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
-          const Divider(height: 24),
-          
+          const Divider(height: 24, color: Colors.white24),
+
           _infoRow('Shop', d['shopName']),
           _infoRow('Slug', d['slug']),
           _infoRow('Email', d['email']),
           _infoRow('Password', d['password']),
-          
+
           const SizedBox(height: 16),
-          
+
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.black26,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('🔗 Links (click to open in new tab):', 
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  '🔗 Links (click to open in new tab):',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
                 const SizedBox(height: 8),
                 _linkRow('Shop Admin', d['adminUrl']),
                 _linkRow('Client Menu', d['clientUrl']),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.purple.shade50,
+              color: Colors.black26,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('✅ Ready to Login!', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  '✅ Ready to Login!',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
                 SizedBox(height: 4),
-                Text('Auth user was created automatically. Go to Shop Admin and login!'),
+                Text(
+                  'Auth user was created automatically. Go to Shop Admin and login!',
+                  style: TextStyle(color: Colors.white70),
+                ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: () => setState(() {
@@ -224,7 +236,13 @@ class _CreateTenantScreenState extends State<CreateTenantScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 100, child: Text('$label: ')),
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label: ',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ),
           Expanded(
             child: InkWell(
               onTap: () => _openInNewTab(url),
@@ -232,19 +250,19 @@ class _CreateTenantScreenState extends State<CreateTenantScreen> {
                 url,
                 style: const TextStyle(
                   fontFamily: 'monospace',
-                  color: Colors.blue,
+                  color: Color(0xFF60A5FA), // Light blue for links
                   decoration: TextDecoration.underline,
                 ),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.open_in_new, size: 18),
+            icon: const Icon(Icons.open_in_new, size: 18, color: Colors.white70),
             onPressed: () => _openInNewTab(url),
             tooltip: 'Open in new tab',
           ),
           IconButton(
-            icon: const Icon(Icons.copy, size: 18),
+            icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
             onPressed: () => _copy(url),
             tooltip: 'Copy',
           ),
@@ -258,10 +276,31 @@ class _CreateTenantScreenState extends State<CreateTenantScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 80, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w500))),
-          Expanded(child: Text(value, style: const TextStyle(fontFamily: 'monospace'))),
-          IconButton(icon: const Icon(Icons.copy, size: 18), onPressed: () => _copy(value),
-            padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 32, minHeight: 32)),
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label: ',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: Colors.white,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
+            onPressed: () => _copy(value),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
         ],
       ),
     );
