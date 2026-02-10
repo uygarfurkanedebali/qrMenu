@@ -1,4 +1,9 @@
-name: Deploy to Production
+name: Deploy to Production (Optimized)
+
+# Cancel in-progress deployments when new commits are pushed
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
 
 on:
   push:
@@ -6,53 +11,281 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  # =====================================================
+  # PARALLEL BUILD JOBS (3 apps in parallel)
+  # =====================================================
+  
+  build-system-admin:
+    name: Build System Admin
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true  # Cache Flutter SDK
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-system-admin-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-system-admin-
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies (shared_core)
+        run: |
+          cd packages/shared_core
+          flutter pub get
+
+      - name: Install dependencies (system_admin)
+        run: |
+          cd apps/system_admin
+          flutter pub get
+
+      - name: Build System Admin (Web - Release)
+        run: |
+          cd apps/system_admin
+          flutter build web --release --no-tree-shake-icons
+
+      - name: Upload System Admin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-admin-web
+          path: apps/system_admin/build/web
+          retention-days: 1
+
+  build-shop-admin:
+    name: Build Shop Admin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-shop-admin-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-shop-admin-
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies (shared_core)
+        run: |
+          cd packages/shared_core
+          flutter pub get
+
+      - name: Install dependencies (shop_admin)
+        run: |
+          cd apps/shop_admin
+          flutter pub get
+
+      - name: Build Shop Admin (Web - Release)
+        run: |
+          cd apps/shop_admin
+          flutter build web --release --no-tree-shake-icons
+
+      - name: Upload Shop Admin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shop-admin-web
+          path: apps/shop_admin/build/web
+          retention-days: 1
+
+  build-client-panel:
+    name: Build Client Panel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-client-panel-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-client-panel-
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies (shared_core)
+        run: |
+          cd packages/shared_core
+          flutter pub get
+
+      - name: Install dependencies (client_panel)
+        run: |
+          cd apps/client_panel
+          flutter pub get
+
+      - name: Build Client Panel (Web - Release)
+        run: |
+          cd apps/client_panel
+          flutter build web --release --no-tree-shake-icons
+
+      - name: Upload Client Panel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-panel-web
+          path: apps/client_panel/build/web
+          retention-days: 1
+
+  build-landing-page:
+    name: Build Landing Page
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-landing-page-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-landing-page-
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies (shared_core)
+        run: |
+          cd packages/shared_core
+          flutter pub get
+
+      - name: Install dependencies (landing_page)
+        run: |
+          cd apps/landing_page
+          flutter pub get
+
+      - name: Build Landing Page (Web - Release)
+        run: |
+          cd apps/landing_page
+          flutter build web --release --no-tree-shake-icons
+
+      - name: Upload Landing Page artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-page-web
+          path: apps/landing_page/build/web
+          retention-days: 1
+
+  # =====================================================
+  # BUILD DOCKER IMAGE WITH ARTIFACTS
+  # =====================================================
+  
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [build-system-admin, build-shop-admin, build-client-panel, build-landing-page]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download System Admin build
+        uses: actions/download-artifact@v4
+        with:
+          name: system-admin-web
+          path: apps/system_admin/build/web
+
+      - name: Download Shop Admin build
+        uses: actions/download-artifact@v4
+        with:
+          name: shop-admin-web
+          path: apps/shop_admin/build/web
+
+      - name: Download Client Panel build
+        uses: actions/download-artifact@v4
+        with:
+          name: client-panel-web
+          path: apps/client_panel/build/web
+
+      - name: Download Landing Page build
+        uses: actions/download-artifact@v4
+        with:
+          name: landing-page-web
+          path: apps/landing_page/build/web
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # Replace 'benim-python-app' with your desired image name if needed
-          # Ensure it matches secrets.DOCKER_USERNAME if you want to push to your user repo
           tags: ${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
+  # =====================================================
+  # DEPLOYMENT STAGE
+  # =====================================================
+  
   deploy:
+    name: Deploy to Production Server
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: build-docker
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }} # Default is 22
+          port: ${{ secrets.SSH_PORT }}
           script: |
-            # Login to Docker Hub on server (optional if repo is public, but good practice)
+            # Login to Docker Hub
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
             # Pull the latest image
             docker pull ${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest
             
-            # Stop and remove the existing container
-            docker stop $(docker ps -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest) || true
-            docker rm $(docker ps -a -q --filter ancestor=${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest) || true
-            
-            # Also try to stop by name if relevant (fallback)
+            # Stop and remove existing container
             docker stop benim-app-container || true
             docker rm benim-app-container || true
-
+            
             # Run the new container
-            # Mapping Host Port 80 -> Container Port 80
             docker run -d --name benim-app-container -p 80:80 ${{ secrets.DOCKER_USERNAME }}/benim-python-app:latest
+            
+            # Clean up old images to save disk space
+            docker image prune -f
