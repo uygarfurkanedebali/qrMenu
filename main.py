@@ -27,7 +27,7 @@ CLIENT_PANEL_BUILD = os.path.join(PROJECT_ROOT, 'apps', 'client_panel', 'build',
 LANDING_PAGE_BUILD = os.path.join(PROJECT_ROOT, 'apps', 'landing_page', 'build', 'web')
 
 # Reserved paths that are not tenant slugs
-RESERVED_PATHS = {'systemadmin', 'api', 'static', 'assets', 'favicon.ico', 'flutter_bootstrap.js', 'main.dart.js'}
+RESERVED_PATHS = {'root', 'api', 'static', 'assets', 'favicon.ico', 'flutter_bootstrap.js', 'main.dart.js'}
 
 
 def serve_flutter_app(build_dir, path='', base_href=None):
@@ -82,18 +82,18 @@ def serve_flutter_app(build_dir, path='', base_href=None):
 
 
 # ========================================
-# SYSTEM ADMIN ROUTES
+# SYSTEM ADMIN ROUTES (/root)
 # ========================================
 
-@app.route('/systemadmin')
-@app.route('/systemadmin/')
+@app.route('/root')
+@app.route('/root/')
 def system_admin_index():
-    return serve_flutter_app(SYSTEM_ADMIN_BUILD, base_href='/systemadmin/')
+    return serve_flutter_app(SYSTEM_ADMIN_BUILD, base_href='/root/')
 
 
-@app.route('/systemadmin/<path:path>')
+@app.route('/root/<path:path>')
 def system_admin_files(path):
-    return serve_flutter_app(SYSTEM_ADMIN_BUILD, path, base_href='/systemadmin/')
+    return serve_flutter_app(SYSTEM_ADMIN_BUILD, path, base_href='/root/')
 
 
 # ========================================
@@ -229,7 +229,7 @@ if __name__ == '__main__':
 ║  Server: http://{args.host}:{args.port}                           
 ║                                                          ║
 ║  Routes (with dynamic base-href injection):              ║
-║    /systemadmin/*       → System Admin                   ║
+║    /root/*              → System Admin (RBAC)            ║
 ║    /{{slug}}/shopadmin/* → Shop Admin                     ║
 ║    /{{slug}}/menu/*      → Client Menu                    ║
 ║    /{{slug}}/*           → Client Menu                    ║

@@ -1,21 +1,45 @@
+/// Admin Login Screen — Strict Mode
+/// 
+/// Dark, military-grade login for System Admin.
+/// On login: checks profiles.role → if not admin → signOut immediately.
 import 'package:flutter/material.dart';
 import 'package:shared_core/shared_core.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class AdminLoginScreen extends StatefulWidget {
+  final String? errorMessage;
+  final VoidCallback onLoginSuccess;
+
+  const AdminLoginScreen({
+    super.key,
+    this.errorMessage,
+    required this.onLoginSuccess,
+  });
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  bool _obscurePassword = true;
 
-  final AuthService _authService = AuthService();
+  @override
+  void initState() {
+    super.initState();
+    _errorMessage = widget.errorMessage;
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminLoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.errorMessage != oldWidget.errorMessage && widget.errorMessage != null) {
+      setState(() => _errorMessage = widget.errorMessage);
+    }
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -26,23 +50,68 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.signIn(
+      // Step 1: Sign in
+      await SupabaseService.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      // Navigation is handled by auth state listener in main.dart
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        // Extract message from Supabase error if possible
-        if (e.toString().contains('Exception:')) {
-           _errorMessage = e.toString().split('Exception:')[1].trim();
+
+      final user = SupabaseService.client.auth.currentUser;
+      if (user == null) {
+        throw Exception('Giriş başarısız');
+      }
+
+      // Step 2: Check role from profiles
+      final response = await SupabaseService.client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (response == null) {
+        await SupabaseService.client.auth.signOut();
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = '⛔ Profil bulunamadı. Yetkisiz erişim.';
+          });
         }
-      });
-    } finally {
+        return;
+      }
+
+      final role = response['role'] as String?;
+
+      if (role != 'admin') {
+        // NOT admin → sign out immediately
+        await SupabaseService.client.auth.signOut();
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = '⛔ YETKİSİZ ERİŞİM!\n\n'
+                'Bu panel yalnızca Admin kullanıcılar içindir.\n'
+                'Hesap rolünüz: "${role ?? 'tanımsız'}"\n\n'
+                'Eğer yönetici olmanız gerekiyorsa, sistem yöneticinizle iletişime geçin.';
+          });
+        }
+        return;
+      }
+
+      // Step 3: Admin confirmed → notify parent
+      if (mounted) {
+        widget.onLoginSuccess();
+      }
+    } catch (e) {
+      String errorMsg = e.toString();
+      if (errorMsg.contains('Invalid login credentials')) {
+        errorMsg = 'Geçersiz e-posta veya şifre.';
+      } else if (errorMsg.contains('Exception:')) {
+        errorMsg = errorMsg.split('Exception:').last.trim();
+      }
+      
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _errorMessage = errorMsg;
         });
       }
     }
@@ -58,94 +127,188 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0E1A),
       body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(Icons.lock_outline, size: 64),
-                    const SizedBox(height: 24),
-                    Text(
-                      'System Admin Login',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                      textAlign: TextAlign.center,
+        child: SingleChildScrollView(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Shield Icon
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.red.shade900, Colors.red.shade600],
                     ),
-                    const SizedBox(height: 32),
-                    
-                    if (_errorMessage != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 24),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(color: Colors.red.shade900),
-                          textAlign: TextAlign.center,
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.shade900.withAlpha(100),
+                        blurRadius: 20,
+                        spreadRadius: 2,
                       ),
-
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(Icons.key),
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        return null;
-                      },
-                      onFieldSubmitted: (_) => _login(),
-                    ),
-                    const SizedBox(height: 32),
-                    FilledButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Sign In'),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: const Icon(Icons.shield, size: 40, color: Colors.white),
                 ),
-              ),
+                const SizedBox(height: 24),
+                
+                const Text(
+                  'SYSTEM ADMIN',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'KİMLİK DOĞRULAMA',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.red.shade400,
+                    letterSpacing: 6,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Error Banner
+                if (_errorMessage != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade900.withAlpha(80),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade700, width: 1.5),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade300, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red.shade200,
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // Login Card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF2A2A4E), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(100),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _emailController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'E-posta',
+                            labelStyle: TextStyle(color: Colors.grey.shade500),
+                            prefixIcon: Icon(Icons.email_outlined, color: Colors.grey.shade600),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'E-posta gerekli';
+                            if (!v.contains('@')) return 'Geçersiz e-posta';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'Şifre',
+                            labelStyle: TextStyle(color: Colors.grey.shade500),
+                            prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade600),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                color: Colors.grey.shade600,
+                              ),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          obscureText: _obscurePassword,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Şifre gerekli';
+                            return null;
+                          },
+                          onFieldSubmitted: (_) => _login(),
+                        ),
+                        const SizedBox(height: 28),
+                        FilledButton(
+                          onPressed: _isLoading ? null : _login,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'GİRİŞ YAP',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                Text(
+                  'Bu panel yetkili personel içindir.',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

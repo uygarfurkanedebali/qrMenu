@@ -7,3 +7,4 @@ export 'category.dart';
 export 'product.dart';
 export 'tenant.dart';
 export 'theme_config.dart';
+export 'user_profile.dart';
