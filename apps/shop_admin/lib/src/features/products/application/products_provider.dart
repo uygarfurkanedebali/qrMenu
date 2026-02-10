@@ -50,8 +50,8 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     }
   }
 
-  /// Add a new product (uses tenant ID from auth state)
-  /// CRITICAL: Uses currentTenantProvider directly for reliable tenant_id
+  /// Add a new product
+  /// CRITICAL: tenant_id injection is MANDATORY — null = immediate abort
   Future<void> addProduct({
     required String name,
     required double price,
@@ -59,54 +59,51 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     String? imageUrl,
     String? categoryId,
   }) async {
-    // 1. Get tenant directly from the state provider (most reliable)
-    final currentTenant = ref.read(currentTenantProvider);
-    
-    print('📦 [PRODUCT] addProduct called');
-    print('   currentTenantProvider value: ${currentTenant?.id ?? "NULL"}');
-    print('   currentTenantIdProvider value: ${ref.read(currentTenantIdProvider) ?? "NULL"}');
-    
-    if (currentTenant == null) {
-      print('❌ [PRODUCT] TENANT IS NULL - Cannot add product!');
-      throw Exception('⚠️ Dükkan bilgisi bulunamadı! Lütfen tekrar giriş yapın.');
-    }
-
-    final tenantId = currentTenant.id;
-    print('✅ [PRODUCT] Using tenant_id: $tenantId for product: $name');
-
+    // 1. İşlem başladığını bildir
     final previousState = state.valueOrNull ?? [];
-    
-    final product = Product(
-      id: '', // Will be set by server
-      tenantId: tenantId,
-      name: name,
-      price: price,
-      description: description,
-      imageUrl: imageUrl,
-      categoryId: categoryId,
-      isAvailable: true,
-      sortOrder: previousState.length,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-    
-    print('📤 [PRODUCT] Sending to Supabase:');
-    print('   ${product.toJsonForInsert()}');
-    
-    // Optimistic update
-    state = AsyncData([...previousState, product]);
-    
+    state = const AsyncValue.loading();
+
     try {
+      // 2. Aktif dükkanı al
+      final currentTenant = ref.read(currentTenantProvider);
+
+      // 3. GÜVENLİK KONTROLÜ: Dükkan verisi var mı ve ID dolu mu?
+      if (currentTenant == null || currentTenant.id.isEmpty) {
+        print('❌ [FLUTTER] TENANT NULL veya EMPTY — ürün eklenemez!');
+        throw Exception('Dükkan bilgisi yüklenemedi. Lütfen sayfayı yenileyip tekrar giriş yapın.');
+      }
+
+      final tenantId = currentTenant.id;
+      print('📦 [FLUTTER] Ürün ekleniyor. Hedef Dükkan ID: $tenantId');
+
+      // 4. Ürünü oluştur — tenant_id ZORUNLU enjekte
+      final product = Product(
+        id: '', // Server tarafından atanacak
+        tenantId: tenantId,
+        name: name,
+        price: price,
+        description: description,
+        imageUrl: imageUrl,
+        categoryId: categoryId,
+        isAvailable: true,
+        sortOrder: previousState.length,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      print('📤 [FLUTTER] Payload: ${product.toJsonForInsert()}');
+
+      // 5. Repository'e gönder
       final repository = ref.read(productRepositoryProvider);
       await repository.addProduct(product);
-      
-      print('✅ [PRODUCT] Product added successfully!');
-      
-      // Refresh from server to ensure consistency
+
+      print('✅ [FLUTTER] Ürün başarıyla eklendi!');
+
+      // 6. Listeyi yenile
       ref.invalidateSelf();
-    } catch (e) {
-      print('❌ [PRODUCT] addProduct FAILED: $e');
-      // Rollback on failure
+    } catch (e, st) {
+      print('❌ [FLUTTER] Ürün ekleme hatası: $e');
+      // Rollback
       state = AsyncData(previousState);
       rethrow;
     }
