@@ -85,7 +85,7 @@ class _MenuContent extends ConsumerWidget {
       body: menuAsync.when(
         loading: () => CustomScrollView(
           slivers: [
-            _buildHeroHeader(context),
+            _buildHeroHeader(context, ref),
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             ),
@@ -93,7 +93,7 @@ class _MenuContent extends ConsumerWidget {
         ),
         error: (error, stack) => CustomScrollView(
           slivers: [
-            _buildHeroHeader(context),
+            _buildHeroHeader(context, ref),
             SliverFillRemaining(
               child: Center(child: Text('Error loading menu: $error')),
             ),
@@ -102,7 +102,7 @@ class _MenuContent extends ConsumerWidget {
         data: (categories) => CustomScrollView(
           slivers: [
             // Hero Header with Dynamic Banner
-            _buildHeroHeader(context, categories: categories),
+            _buildHeroHeader(context, ref, categories: categories),
 
             // Social Action Bar + Wi-Fi
             SliverToBoxAdapter(child: _ActionBar(tenant: tenant, theme: theme)),
@@ -132,7 +132,7 @@ class _MenuContent extends ConsumerWidget {
     );
   }
 
-  SliverAppBar _buildHeroHeader(BuildContext context, {List<MenuCategory>? categories}) {
+  SliverAppBar _buildHeroHeader(BuildContext context, WidgetRef ref, {List<MenuCategory>? categories}) {
     // 1. Determine Active Banner URL
     String? activeBannerUrl = tenant.bannerUrl;
     
@@ -278,7 +278,8 @@ class _MenuContent extends ConsumerWidget {
       ];
     }
 
-    return displayCategories.map((category) {
+    return [
+      ...displayCategories.map((category) {
       return SliverMainAxisGroup(slivers: [
          // Category header
         SliverToBoxAdapter(
@@ -339,7 +340,9 @@ class _MenuContent extends ConsumerWidget {
         
         const SliverToBoxAdapter(child: SizedBox(height: 16)), // Spacing between categories
       ]);
-    }).toList()..add(const SliverToBoxAdapter(child: SizedBox(height: 80))); // Bottom padding
+      }),
+      const SliverToBoxAdapter(child: SizedBox(height: 80)), // Bottom padding
+    ];
   }
 }
 
