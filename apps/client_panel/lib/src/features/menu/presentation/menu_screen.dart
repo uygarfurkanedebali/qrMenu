@@ -158,32 +158,46 @@ class _MenuContent extends ConsumerWidget {
         ),
         background: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                theme.colorScheme.primary,
-                theme.colorScheme.primary.withValues(alpha: 0.8),
-                theme.colorScheme.tertiary.withValues(alpha: 0.6),
-              ],
-            ),
+            color: theme.colorScheme.primary,
+            image: tenant.bannerUrl != null && tenant.bannerUrl!.isNotEmpty
+                ? DecorationImage(
+                    image: NetworkImage(tenant.bannerUrl!),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withValues(alpha: 0.4),
+                      BlendMode.darken,
+                    ),
+                  )
+                : null,
+            gradient: tenant.bannerUrl == null || tenant.bannerUrl!.isEmpty
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primary,
+                      theme.colorScheme.primary.withValues(alpha: 0.8),
+                      theme.colorScheme.tertiary.withValues(alpha: 0.6),
+                    ],
+                  )
+                : null,
           ),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Decorative pattern
-              Positioned(
-                right: -30,
-                top: -30,
-                child: Opacity(
-                  opacity: 0.08,
-                  child: Icon(
-                    Icons.restaurant_menu,
-                    size: 250,
-                    color: theme.colorScheme.onPrimary,
+              // Decorative pattern (Only show if no banner)
+              if (tenant.bannerUrl == null || tenant.bannerUrl!.isEmpty)
+                Positioned(
+                  right: -30,
+                  top: -30,
+                  child: Opacity(
+                    opacity: 0.08,
+                    child: Icon(
+                      Icons.restaurant_menu,
+                      size: 250,
+                      color: theme.colorScheme.onPrimary,
+                    ),
                   ),
                 ),
-              ),
               // Welcome text
               Positioned(
                 left: 20,
