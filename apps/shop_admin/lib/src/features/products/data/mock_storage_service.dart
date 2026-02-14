@@ -12,7 +12,7 @@ import 'package:shared_core/shared_core.dart';
 import '../../auth/application/auth_provider.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
-  return SupabaseStorageService();
+  return SupabaseStorageService(ref);
 });
 
 /// Interface for storage operations
@@ -22,32 +22,46 @@ abstract class StorageService {
 
 /// Real Supabase Storage implementation (REST API Version)
 class SupabaseStorageService implements StorageService {
+  final Ref ref;
+
+  SupabaseStorageService(this.ref);
 
   @override
   Future<String> uploadImage(XFile file) async {
     // 1. Get Session manually from ShopAuthService (The Shielded Source of Truth)
-    // We bypass Supabase.instance.client.auth because it might be stuck in 'signedOut'
     final session = ShopAuthService.currentSession;
     final accessToken = session?.accessToken;
     final user = session?.user;
 
-    print('\n🚀 STORAGE PHASE 2: HEADER INJECTION (REST API)');
-    print('   - Manual Session: ${session != null}');
-    print('   - Access Token: ${accessToken != null ? "PRESENT" : "MISSING"}');
-    print('   - User ID: ${user?.id}');
+    // 2. Get Tenant ID from Provider (Multi-Tenant logic)
+    final tenantId = ref.read(currentTenantIdProvider);
 
+    print('\n🚀 STORAGE PHASE 4: MULTI-TENANT PATHS');
+    print('   - Manual Session: ${session != null}');
+    print('   - User ID: ${user?.id}');
+    print('   - Tenant ID: $tenantId');
+
+    // 3. Validation: Both Auth and Tenant must be present
     if (accessToken == null || user == null) {
-      print('🛑 FATAL: No access token available via ShopAuthService. Cannot upload.');
-      throw Exception('User is not logged in (Phase 2 Fail).');
+      print('🛑 FATAL: No access token available. Cannot upload.');
+      throw Exception('User is not logged in.');
+    }
+
+    if (tenantId == null) {
+       print('🛑 FATAL: No Tenant ID found. Cannot upload to root.');
+       throw Exception('Dükkan bilgisi bulunamadı. Resim yüklenemez.');
     }
 
     try {
-      // 2. Prepare HTTP Request
+      // 4. Prepare HTTP Request
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final path = '${user.id}/$fileName';
+      
+      // NEW PATH: products/[TENANT_ID]/[FILENAME]
+      final path = '$tenantId/$fileName';
+      
+      print('📂 Uploading to path: $path');
       
       // Supabase Storage API Endpoint
-      // POST /storage/v1/object/{bucket}/{path}
       final url = Uri.parse('${Env.supabaseUrl}/storage/v1/object/products/$path');
       
       print('🌐 API URL: $url');
@@ -56,33 +70,29 @@ class SupabaseStorageService implements StorageService {
       request.headers.addAll({
         'Authorization': 'Bearer $accessToken',
         'apikey': Env.supabaseAnonKey,
-        'Content-Type': 'application/octet-stream', // Generic binary stream
+        'Content-Type': 'application/octet-stream', 
         'x-upsert': 'false',
       });
       
-      // Read bytes and set body
       final Uint8List bytes = await file.readAsBytes();
       request.bodyBytes = bytes;
 
-      // 3. Send Request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
       print('📡 RESPONSE STATUS: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        // Success! Construct the public URL manually
-        // Format: {supabaseUrl}/storage/v1/object/public/{bucket}/{path}
          final publicUrl = '${Env.supabaseUrl}/storage/v1/object/public/products/$path';
-         print('✅ UPLOAD COMPLETE (REST API): $publicUrl');
+         print('✅ UPLOAD COMPLETE (MULTI-TENANT): $publicUrl');
          return publicUrl;
       } else {
-        print('💥 UPLOAD FAILED (REST API): ${response.body}');
+        print('💥 UPLOAD FAILED: ${response.body}');
         throw Exception('Upload failed with status ${response.statusCode}: ${response.body}');
       }
 
     } catch (e) {
-      print('💥 UPLOAD ERROR (REST API): $e');
+      print('💥 UPLOAD ERROR: $e');
       rethrow;
     }
   }
