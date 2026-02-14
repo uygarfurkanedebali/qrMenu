@@ -35,6 +35,21 @@ class AuthNotifier extends ChangeNotifier {
       if (ShopAuthService.isPerformingLogin && event.event == AuthChangeEvent.signedOut) {
         print('🛡️ [AUTH SHIELD] BLOCKED ghost signedOut event!');
         print('   Login in progress - ignoring premature logout signal');
+        
+        // 💉 STRATEGY A REVISED: RESURRECTION IN LISTENER
+        // Ghost logout happened. We have the session in ShopAuthService.
+        // We must tell Supabase client to wake up.
+        final validSession = ShopAuthService.currentSession;
+        if (validSession != null && validSession.refreshToken != null) {
+           print('👻 [AUTH FIX] Listener detected ghost logout! Resurrecting client...');
+           // We execute this asynchronously
+           SupabaseService.client.auth.setSession(validSession.refreshToken!).then((_) {
+               print('✅ [AUTH FIX] Client resurrected successfully within listener!');
+           }).catchError((err) {
+               print('❌ [AUTH FIX] Resurrection in listener failed: $err');
+           });
+        }
+        
         return; // DO NOT notifyListeners - prevents router kick
       }
       
