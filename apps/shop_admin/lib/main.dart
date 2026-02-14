@@ -1,10 +1,9 @@
 /// QR-Infinity Shop Admin
-/// v1.0.3
+/// v1.0.4
 /// Dashboard for shop owners to manage their menu.
 /// RBAC: Only users with role='shop_owner' are allowed.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_core/shared_core.dart';
 import 'src/routing/app_router.dart';
 
@@ -119,17 +118,6 @@ class ShopAdminApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Shop Admin Panel',
       debugShowCheckedModeBanner: false,
-      
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('tr'),
-      ],
-      
       theme: darkTheme,
       routerConfig: router,
     );

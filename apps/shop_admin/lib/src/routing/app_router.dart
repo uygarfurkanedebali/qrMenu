@@ -68,7 +68,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
   
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
     redirect: (context, state) {
       // 1. PUBLIC ZONE (VİTRİN)
