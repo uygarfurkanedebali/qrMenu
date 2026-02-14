@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../auth/application/auth_provider.dart';
 import '../application/settings_provider.dart';
+import '../../products/data/mock_storage_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// Pre-defined brand colors for quick selection
 const _presetColors = [
@@ -48,6 +50,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   String _selectedFont = 'Roboto';
   String _selectedCurrency = '₺';
+  String? _bannerUrl;
+  bool _isUploadingBanner = false;
   bool _isSaving = false;
   bool _initialized = false;
 
@@ -82,6 +86,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _wifiPasswordController.text = tenant.wifiPassword ?? '';
     _selectedFont = tenant.fontFamily;
     _selectedCurrency = tenant.currencySymbol;
+    _bannerUrl = tenant.bannerUrl;
+  }
+
+  Future<void> _uploadBanner() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    setState(() => _isUploadingBanner = true);
+
+    try {
+      final service = ref.read(storageServiceProvider);
+      // Phase 4 Logic: Multi-tenant isolated path
+      final url = await service.uploadTenantBanner(image);
+      
+      if (mounted) {
+        setState(() {
+          _bannerUrl = url;
+          _isUploadingBanner = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Afiş yüklendi! Kaydetmeyi unutmayın.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingBanner = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Yükleme hatası: $e')),
+        );
+      }
+    }
   }
 
   Color _parseHexColor(String hex) {
@@ -111,6 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         tenantId: tenant.id,
         updates: {
           'primary_color': _colorController.text.trim(),
+          'banner_url': _bannerUrl,
           'font_family': _selectedFont,
           'currency_symbol': _selectedCurrency,
           'phone_number': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
@@ -199,6 +236,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               subtitle: 'Dükkanınızın marka rengi ve yazı tipi',
             ),
             const SizedBox(height: 12),
+
+            // Banner Upload
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _uploadBanner,
+                child: Container(
+                  height: 150,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    image: _bannerUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(_bannerUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (_bannerUrl != null)
+                        Container(color: Colors.black26), // Overlay for readability
+                      
+                      if (_isUploadingBanner)
+                        const CircularProgressIndicator(color: Colors.white)
+                      else
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _bannerUrl != null ? Icons.edit : Icons.add_photo_alternate,
+                              size: 32,
+                              color: _bannerUrl != null ? Colors.white : Colors.grey.shade700,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _bannerUrl != null ? 'Afişi Değiştir' : 'Dükkan Afişi Yükle',
+                              style: TextStyle(
+                                color: _bannerUrl != null ? Colors.white : Colors.grey.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
 
             // Color picker
             Card(

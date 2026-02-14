@@ -37,6 +37,7 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
   Future<void> addCategory({
     required String name,
     String? description,
+    String? imageUrl,
   }) async {
     final tenantId = ref.read(currentTenantIdProvider);
     if (tenantId == null) throw Exception('Not logged in');
@@ -46,11 +47,47 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
       tenantId: tenantId,
       name: name,
       description: description,
+      imageUrl: imageUrl,
       sortOrder: (state.valueOrNull?.length ?? 0),
     );
 
     // Refresh from server
     ref.invalidateSelf();
+  }
+
+
+
+  /// Update a category
+  Future<void> updateCategory(Category category) async {
+    final repository = ref.read(categoryRepositoryProvider);
+    await repository.updateCategory(category.id, category.toJson());
+    ref.invalidateSelf();
+  }
+
+  /// Reorder categories
+  Future<void> reorderCategories(int oldIndex, int newIndex) async {
+    final currentList = state.valueOrNull;
+    if (currentList == null) return;
+
+    // 1. Optimistic Update
+    final items = List<Category>.from(currentList);
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final item = items.removeAt(oldIndex);
+    items.insert(newIndex, item);
+    
+    state = AsyncData(items);
+
+    // 2. Persist to DB
+    try {
+      final repository = ref.read(categoryRepositoryProvider);
+      await repository.reorderCategories(items);
+    } catch (e) {
+      // Revert on failure
+      ref.invalidateSelf();
+      rethrow;
+    }
   }
 
   /// Delete a category

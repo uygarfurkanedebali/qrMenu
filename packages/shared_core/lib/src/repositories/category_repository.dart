@@ -51,6 +51,7 @@ class CategoryRepository {
     required String tenantId,
     required String name,
     String? description,
+    String? imageUrl,
     int sortOrder = 0,
   }) async {
     try {
@@ -58,6 +59,7 @@ class CategoryRepository {
         'tenant_id': tenantId,
         'name': name,
         'description': description,
+        'image_url': imageUrl,
         'sort_order': sortOrder,
         'is_visible': true,
       };
@@ -98,6 +100,23 @@ class CategoryRepository {
       await _client.from('categories').delete().eq('id', id);
     } catch (e) {
       throw Exception('Failed to delete category: $e');
+    }
+  }
+
+  /// Reorder categories (batch update)
+  Future<void> reorderCategories(List<Category> categories) async {
+    try {
+      // Supabase doesn't support batch updates easily in one go for different values
+      // So we'll loop. For < 50 categories this is fine.
+      // Ideally we'd use a stored procedure or an upsert with unnest.
+      for (int i = 0; i < categories.length; i++) {
+        await _client
+            .from('categories')
+            .update({'sort_order': i})
+            .eq('id', categories[i].id);
+      }
+    } catch (e) {
+      throw Exception('Failed to reorder categories: $e');
     }
   }
 }
