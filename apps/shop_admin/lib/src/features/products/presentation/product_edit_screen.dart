@@ -89,8 +89,12 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
 
     setState(() => _isUploading = true);
 
+    // 🕵️ UI TRACE: Identify the service!
+    final service = ref.read(storageServiceProvider);
+    print('\n🔍 UI TRACE: Storage Service Type -> ${service.runtimeType}');
+
     try {
-      final url = await ref.read(storageServiceProvider).uploadImage(image);
+      final url = await service.uploadImage(image);
       if (mounted) {
         setState(() {
           _imageUrl = url;

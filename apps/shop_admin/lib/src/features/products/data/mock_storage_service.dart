@@ -23,32 +23,53 @@ class SupabaseStorageService implements StorageService {
 
   @override
   Future<String> uploadImage(XFile file) async {
+    // 🕵️ REAL CODE DEBUGGER
+    // Ensure we are accessing the client directly as requested
+    final _client = SupabaseService.client; 
+    final _user = _client.auth.currentUser;
+    final _session = _client.auth.currentSession;
+    
+    print('\n🧨 REAL UPLOAD TRAP 🧨');
+    print('File being executed: mock_storage_service.dart (THIS IS THE REAL IMPLEMENTATION)');
+    print('User ID: ${_user?.id}');
+    if (_session?.accessToken != null) {
+      print('Session Token: ${_session!.accessToken.substring(0, 10)}...');
+    } else {
+      print('Session Token: NULL');
+    }
+    print('Bucket Variable: $_bucketName');
+    print('Bucket Constant: products (Hardcoded check)');
+    print('----------------------------------\n');
+
+    if (_user == null || _session == null) {
+      print('❌ ERROR: User is not authenticated. Aborting upload.');
+      throw Exception('User not authenticated');
+    }
+
     try {
+      // Generate path with user ID
+      final path = '${_user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      
       // Read file bytes
       final Uint8List bytes = await file.readAsBytes();
       
-      // Generate unique filename with timestamp
-      final extension = file.name.split('.').last.toLowerCase();
-      final filename = '${DateTime.now().millisecondsSinceEpoch}.$extension';
-      
-      // Upload to Supabase Storage using the correct API
-      await SupabaseService.client.storage
-          .from(_bucketName)
+      await _client.storage
+          .from(_bucketName) // authenticating against 'product-images'
           .uploadBinary(
-            filename, 
+            path,
             bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
           );
 
-      // Get public URL
-      final publicUrl = SupabaseService.client.storage
+      final url = _client.storage
           .from(_bucketName)
-          .getPublicUrl(filename);
-
-      return publicUrl;
+          .getPublicUrl(path);
+          
+      print('✅ Upload Success: $url');
+      return url;
     } catch (e) {
-      // If storage bucket doesn't exist or upload fails, return a placeholder
-      // This allows the app to work even without storage setup
-      return 'https://placehold.co/400x400/6B7FFF/FFFFFF?text=Product';
+      print('💥 UPLOAD FAILED: $e');
+      rethrow;
     }
   }
 }
