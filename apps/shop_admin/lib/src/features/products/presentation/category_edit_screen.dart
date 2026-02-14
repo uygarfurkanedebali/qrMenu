@@ -77,11 +77,25 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
     setState(() => _isSaving = true);
 
     try {
-      if (widget.category == null) {
-        // Add
+    try {
+      final isGhostCategory = widget.category?.id == 'all_products';
+
+      if (widget.category == null || isGhostCategory) {
+        // Add New (or convert Ghost to Real)
+        
+        // Ensure [SYSTEM] tag for All Products
+        String? finalDesc = _descController.text.isEmpty ? null : _descController.text;
+        if (isGhostCategory) {
+           if (finalDesc == null) {
+             finalDesc = '[SYSTEM]';
+           } else if (!finalDesc.contains('[SYSTEM]')) {
+             finalDesc = '[SYSTEM] $finalDesc';
+           }
+        }
+
         await ref.read(categoriesProvider.notifier).addCategory(
           name: _nameController.text,
-          description: _descController.text.isEmpty ? null : _descController.text,
+          description: finalDesc,
           imageUrl: _imageUrl,
         );
       } else {

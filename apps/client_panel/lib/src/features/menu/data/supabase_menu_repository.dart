@@ -64,15 +64,23 @@ class SupabaseMenuRepository implements MenuRepository {
       final List<MenuCategory> menu = [];
 
       // ---------------------------------------------------------
-      // 1. ADD "ALL PRODUCTS" CATEGORY (Virtual Category)
+      // 1. CHECK FOR DATABASE-BACKED "ALL PRODUCTS" (System Category)
       // ---------------------------------------------------------
-      if (allMenuProducts.isNotEmpty) {
+      final systemCategory = categoriesData.firstWhere(
+        (c) => (c['description'] as String?)?.contains('[SYSTEM]') ?? false,
+        orElse: () => {},
+      );
+      final hasSystemCategory = systemCategory.isNotEmpty;
+
+      // ---------------------------------------------------------
+      // 2. ADD "ALL PRODUCTS" VIRTUAL CATEGORY (If no DB version exists)
+      // ---------------------------------------------------------
+      if (!hasSystemCategory && allMenuProducts.isNotEmpty) {
         menu.add(MenuCategory(
           id: 'all_products',
           tenantId: tenantId,
           name: 'Tüm Ürünler',
           description: 'Lezzet şölenine hoş geldiniz',
-          // Use tenant banner if available, otherwise empty string (or local asset placeholder logic if implemented)
           iconUrl: tenantBanner, 
           sortOrder: -999, // Ensure it's always first
           products: allMenuProducts,
@@ -80,23 +88,32 @@ class SupabaseMenuRepository implements MenuRepository {
       }
 
       // ---------------------------------------------------------
-      // 2. MAP REAL CATEGORIES
+      // 3. MAP REAL CATEGORIES
       // ---------------------------------------------------------
       for (final catJson in categoriesData) {
         final catId = catJson['id'] as String;
+        final desc = catJson['description'] as String?;
+        final isSystemCategory = desc?.contains('[SYSTEM]') ?? false;
         
-        // Filter products for this specific category
-        final catProducts = allMenuProducts
-            .where((p) => p.categoryId == catId)
-            .toList();
+        List<MenuProduct> catProducts;
 
-        // Only add category if it has products (or if you want to show empty ones too)
-        if (catProducts.isNotEmpty) {
+        if (isSystemCategory) {
+           // If it's the system category, it contains ALL products
+           catProducts = allMenuProducts;
+        } else {
+           // Otherwise, filter products for this specific category
+           catProducts = allMenuProducts
+              .where((p) => p.categoryId == catId) // TODO: Phase 3 Multi-Category Support
+              .toList();
+        }
+
+        // Add category if not empty (or if it's the system category which should always appear)
+        if (catProducts.isNotEmpty || isSystemCategory) {
           menu.add(MenuCategory(
             id: catId,
             tenantId: tenantId,
             name: catJson['name'],
-            description: catJson['description'],
+            description: desc?.replaceAll('[SYSTEM]', '').trim(), // Hide internal tag
             iconUrl: catJson['image_url'],
             sortOrder: catJson['sort_order'] ?? 0,
             products: catProducts,
