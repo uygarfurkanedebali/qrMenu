@@ -1,12 +1,15 @@
-/// Storage Service
+/// Storage Service (REST API Bypass)
 /// 
-/// Handles file uploading to Supabase Storage.
+/// Handles file uploading to Supabase Storage using direct HTTP requests.
+/// Bypasses Supabase SDK client state to avoid "Ghost Logout" issues.
 library;
 
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_core/shared_core.dart';
+import '../../auth/application/auth_provider.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   return SupabaseStorageService();
@@ -17,49 +20,69 @@ abstract class StorageService {
   Future<String> uploadImage(XFile file);
 }
 
-/// Real Supabase Storage implementation
+/// Real Supabase Storage implementation (REST API Version)
 class SupabaseStorageService implements StorageService {
-  // REMOVED: final SupabaseClient _client = ... (Source of stale state)
 
   @override
   Future<String> uploadImage(XFile file) async {
-    // 1. Fetch the FRESH singleton instance every time
-    final client = Supabase.instance.client;
-    final session = client.auth.currentSession;
-    final user = client.auth.currentUser;
+    // 1. Get Session manually from ShopAuthService (The Shielded Source of Truth)
+    // We bypass Supabase.instance.client.auth because it might be stuck in 'signedOut'
+    final session = ShopAuthService.currentSession;
+    final accessToken = session?.accessToken;
+    final user = session?.user;
 
-    print('\n🔄 STORAGE DIAGNOSTICS:');
-    print('   - Session Active: ${session != null}');
+    print('\n🚀 STORAGE PHASE 2: HEADER INJECTION (REST API)');
+    print('   - Manual Session: ${session != null}');
+    print('   - Access Token: ${accessToken != null ? "PRESENT" : "MISSING"}');
     print('   - User ID: ${user?.id}');
-    
-    // 2. Fallback check (If singleton is empty, maybe AuthState is stuck?)
-    if (user == null) {
-      print('⚠️ User is null on global client. Attempting session refresh is risky without context.');
-      print('🛑 FATAL: Still no user. Aborting.');
-      throw Exception('User is not logged in (Split Brain Error).');
+
+    if (accessToken == null || user == null) {
+      print('🛑 FATAL: No access token available via ShopAuthService. Cannot upload.');
+      throw Exception('User is not logged in (Phase 2 Fail).');
     }
 
     try {
-      // Hardcoded 'products' to match SQL policy
-      final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      // 2. Prepare HTTP Request
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      final path = '${user.id}/$fileName';
       
-      print('🚀 UPLOADING to: products/$path');
-
-      // 3. Upload using the fresh client
-      // Using uploadBinary because XFile provides bytes reliably across platforms
+      // Supabase Storage API Endpoint
+      // POST /storage/v1/object/{bucket}/{path}
+      final url = Uri.parse('${Env.supabaseUrl}/storage/v1/object/products/$path');
+      
+      print('🌐 API URL: $url');
+      
+      final request = http.Request('POST', url);
+      request.headers.addAll({
+        'Authorization': 'Bearer $accessToken',
+        'apikey': Env.supabaseAnonKey,
+        'Content-Type': 'application/octet-stream', // Generic binary stream
+        'x-upsert': 'false',
+      });
+      
+      // Read bytes and set body
       final Uint8List bytes = await file.readAsBytes();
-      await client.storage.from('products').uploadBinary(
-        path,
-        bytes,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+      request.bodyBytes = bytes;
 
-      final url = client.storage.from('products').getPublicUrl(path);
-      print('✅ UPLOAD COMPLETE: $url');
-      return url;
+      // 3. Send Request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📡 RESPONSE STATUS: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        // Success! Construct the public URL manually
+        // Format: {supabaseUrl}/storage/v1/object/public/{bucket}/{path}
+         final publicUrl = '${Env.supabaseUrl}/storage/v1/object/public/products/$path';
+         print('✅ UPLOAD COMPLETE (REST API): $publicUrl');
+         return publicUrl;
+      } else {
+        print('💥 UPLOAD FAILED (REST API): ${response.body}');
+        throw Exception('Upload failed with status ${response.statusCode}: ${response.body}');
+      }
 
     } catch (e) {
-      print('💥 UPLOAD ERROR: $e');
+      print('💥 UPLOAD ERROR (REST API): $e');
       rethrow;
     }
   }
