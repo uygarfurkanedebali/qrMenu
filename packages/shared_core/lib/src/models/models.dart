@@ -8,3 +8,4 @@ export 'product.dart';
 export 'tenant.dart';
 export 'theme_config.dart';
 export 'user_profile.dart';
+export 'landing_page_config.dart';
