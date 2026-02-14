@@ -19,17 +19,24 @@ abstract class StorageService {
 
 /// Real Supabase Storage implementation
 class SupabaseStorageService implements StorageService {
-  
-  // Use the global client directly to ensure we use the active session
-  final SupabaseClient _client = Supabase.instance.client;
+  // REMOVED: final SupabaseClient _client = ... (Source of stale state)
 
   @override
   Future<String> uploadImage(XFile file) async {
-    final user = _client.auth.currentUser;
+    // 1. Fetch the FRESH singleton instance every time
+    final client = Supabase.instance.client;
+    final session = client.auth.currentSession;
+    final user = client.auth.currentUser;
 
+    print('\n🔄 STORAGE DIAGNOSTICS:');
+    print('   - Session Active: ${session != null}');
+    print('   - User ID: ${user?.id}');
+    
+    // 2. Fallback check (If singleton is empty, maybe AuthState is stuck?)
     if (user == null) {
-      print('🛑 FATAL: Global Supabase client reports NO USER. Cannot upload.');
-      throw Exception('User is not logged in.');
+      print('⚠️ User is null on global client. Attempting session refresh is risky without context.');
+      print('🛑 FATAL: Still no user. Aborting.');
+      throw Exception('User is not logged in (Split Brain Error).');
     }
 
     try {
@@ -38,17 +45,16 @@ class SupabaseStorageService implements StorageService {
       
       print('🚀 UPLOADING to: products/$path');
 
-      // Read file bytes
+      // 3. Upload using the fresh client
+      // Using uploadBinary because XFile provides bytes reliably across platforms
       final Uint8List bytes = await file.readAsBytes();
-
-      // Upload without optional fileOptions to avoid compatibility issues
-      await _client.storage.from('products').uploadBinary(
+      await client.storage.from('products').uploadBinary(
         path,
         bytes,
         fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
       );
 
-      final url = _client.storage.from('products').getPublicUrl(path);
+      final url = client.storage.from('products').getPublicUrl(path);
       print('✅ UPLOAD COMPLETE: $url');
       return url;
 
