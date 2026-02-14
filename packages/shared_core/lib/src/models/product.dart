@@ -9,7 +9,8 @@ library;
 class Product {
   final String id;
   final String tenantId;
-  final String? categoryId;
+  final String? categoryId; // Deprecated (Transitioning to M-to-M)
+  final List<String> categoryIds; // New Field (Phase 1)
   final String name;
   final String? description;
   final double price;
@@ -23,6 +24,7 @@ class Product {
     required this.id,
     required this.tenantId,
     this.categoryId,
+    this.categoryIds = const [], // Default empty
     required this.name,
     this.description,
     required this.price,
@@ -39,6 +41,11 @@ class Product {
       id: json['id'] as String,
       tenantId: json['tenant_id'] as String,
       categoryId: json['category_id'] as String?,
+      // Extract IDs from joined product_categories table if present
+      categoryIds: (json['product_categories'] as List?)
+              ?.map((e) => e['category_id'] as String)
+              .toList() ??
+          [],
       name: json['name'] as String,
       description: json['description'] as String?,
       price: (json['price'] as num).toDouble(),
@@ -88,6 +95,7 @@ class Product {
     String? id,
     String? tenantId,
     String? categoryId,
+    List<String>? categoryIds,
     String? name,
     String? description,
     double? price,
@@ -101,6 +109,7 @@ class Product {
       id: id ?? this.id,
       tenantId: tenantId ?? this.tenantId,
       categoryId: categoryId ?? this.categoryId,
+      categoryIds: categoryIds ?? this.categoryIds,
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,

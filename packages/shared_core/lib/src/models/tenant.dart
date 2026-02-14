@@ -10,6 +10,7 @@ class Tenant {
   final String name;
   final String slug;
   final String? ownerEmail;
+  final String? bannerUrl; // New Field (Phase 1)
   final ThemeConfig? themeConfig;
   final bool isActive;
   final DateTime createdAt;
@@ -28,6 +29,7 @@ class Tenant {
     required this.name,
     required this.slug,
     this.ownerEmail,
+    this.bannerUrl,
     this.themeConfig,
     this.isActive = true,
     required this.createdAt,
@@ -47,6 +49,7 @@ class Tenant {
       name: json['name'] as String,
       slug: json['slug'] as String,
       ownerEmail: json['owner_email'] as String?,
+      bannerUrl: json['banner_url'] as String?,
       themeConfig: json['theme_config'] != null
           ? ThemeConfig.fromJson(json['theme_config'])
           : null,
@@ -68,6 +71,7 @@ class Tenant {
         'name': name,
         'slug': slug,
         'owner_email': ownerEmail,
+        'banner_url': bannerUrl,
         'theme_config': themeConfig?.toJson(),
         'is_active': isActive,
         'created_at': createdAt.toIso8601String(),
@@ -86,6 +90,7 @@ class Tenant {
     String? name,
     String? slug,
     String? ownerEmail,
+    String? bannerUrl,
     ThemeConfig? themeConfig,
     bool? isActive,
     DateTime? createdAt,
@@ -103,6 +108,7 @@ class Tenant {
       name: name ?? this.name,
       slug: slug ?? this.slug,
       ownerEmail: ownerEmail ?? this.ownerEmail,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
       themeConfig: themeConfig ?? this.themeConfig,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
