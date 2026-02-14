@@ -40,70 +40,114 @@ class CategoryListScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (categories) {
-          if (categories.isEmpty) {
-            return const Center(child: Text('No categories found. Add one!'));
-          }
+          final tenant = ref.watch(currentTenantProvider);
+          final bannerUrl = tenant?.bannerUrl;
 
-          return ReorderableListView.builder(
-            itemCount: categories.length,
-            onReorder: (oldIndex, newIndex) {
-              ref
-                  .read(categoriesProvider.notifier)
-                  .reorderCategories(oldIndex, newIndex);
-            },
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return ListTile(
-                key: ValueKey(category.id),
-                leading: category.imageUrl != null
-                    ? CircleAvatar(backgroundImage: NetworkImage(category.imageUrl!))
-                    : const CircleAvatar(child: Icon(Icons.category)),
-                title: Text(category.name),
-                subtitle: Text('${category.description ?? ""} (${category.sortOrder})'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => CategoryEditScreen(category: category),
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Category?'),
-                            content: Text('Are you sure you want to delete "${category.name}"?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                              ),
-                            ],
-                          ),
-                        );
-                        
-                        if (confirm == true) {
-                          await ref.read(categoriesProvider.notifier).deleteCategory(category.id);
-                        }
-                      },
-                    ),
-                    const Icon(Icons.drag_handle),
-                  ],
+          return Column(
+            children: [
+              // SYSTEM CATEGORY: ALL PRODUCTS (Pinned to Top)
+              Container(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    backgroundImage: bannerUrl != null ? NetworkImage(bannerUrl) : null,
+                    child: bannerUrl == null 
+                        ? Icon(Icons.apps, color: Theme.of(context).primaryColor) 
+                        : null,
+                  ),
+                  title: const Text(
+                    'Tüm Ürünler',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Sistem Kategorisi • Otomatik Yönetilir',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  trailing: Tooltip(
+                    message: 'Bu kategori sistem tarafından yönetilir ve düzenlenemez.',
+                    child: Icon(Icons.lock_outline, size: 20, color: Theme.of(context).disabledColor),
+                  ),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sistem kategorisi "Tüm Ürünler" düzenlenemez veya silinemez.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+              const Divider(height: 1),
+
+              // REAL CATEGORIES (Reorderable)
+              Expanded(
+                child: categories.isEmpty
+                    ? const Center(child: Text('Henüz başka kategori yok. Eklemek için + butonuna basın.'))
+                    : ReorderableListView.builder(
+                        itemCount: categories.length,
+                        padding: const EdgeInsets.only(bottom: 80),
+                        onReorder: (oldIndex, newIndex) {
+                          ref
+                              .read(categoriesProvider.notifier)
+                              .reorderCategories(oldIndex, newIndex);
+                        },
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          return ListTile(
+                            key: ValueKey(category.id),
+                            leading: category.imageUrl != null
+                                ? CircleAvatar(backgroundImage: NetworkImage(category.imageUrl!))
+                                : const CircleAvatar(child: Icon(Icons.category)),
+                            title: Text(category.name),
+                            subtitle: Text('${category.description ?? ""} (${category.sortOrder})'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => CategoryEditScreen(category: category),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete Category?'),
+                                        content: Text('Are you sure you want to delete "${category.name}"?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    
+                                    if (confirm == true) {
+                                      await ref.read(categoriesProvider.notifier).deleteCategory(category.id);
+                                    }
+                                  },
+                                ),
+                                const Icon(Icons.drag_handle),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
