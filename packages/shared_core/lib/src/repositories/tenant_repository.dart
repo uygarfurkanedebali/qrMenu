@@ -6,6 +6,7 @@ library;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
+import '../config/env.dart';
 
 class TenantRepository {
   SupabaseClient get _client => SupabaseService.client;
