@@ -7,6 +7,7 @@ library;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
+import '../config/env.dart';
 
 class CategoryRepository {
   SupabaseClient get _client => SupabaseService.client;
@@ -47,14 +48,20 @@ class CategoryRepository {
   }
 
   /// Add a new category
+  /// Uses isolated client to prevent "Ghost Logout" issues
   Future<Category> addCategory({
     required String tenantId,
     required String name,
     String? description,
     String? imageUrl,
     int sortOrder = 0,
+    String? authToken,
   }) async {
     try {
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
       final data = {
         'tenant_id': tenantId,
         'name': name,
@@ -64,7 +71,7 @@ class CategoryRepository {
         'is_visible': true,
       };
 
-      final response = await _client
+      final response = await clientToUse
           .from('categories')
           .insert(data)
           .select()
@@ -77,11 +84,16 @@ class CategoryRepository {
   }
 
   /// Update a category
-  Future<Category> updateCategory(String id, Map<String, dynamic> updates) async {
+  /// Uses isolated client to prevent "Ghost Logout" issues
+  Future<Category> updateCategory(String id, Map<String, dynamic> updates, {String? authToken}) async {
     try {
       updates['updated_at'] = DateTime.now().toIso8601String();
 
-      final response = await _client
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
+      final response = await clientToUse
           .from('categories')
           .update(updates)
           .eq('id', id)
@@ -95,22 +107,32 @@ class CategoryRepository {
   }
 
   /// Delete a category
-  Future<void> deleteCategory(String id) async {
+  /// Uses isolated client to prevent "Ghost Logout" issues
+  Future<void> deleteCategory(String id, {String? authToken}) async {
     try {
-      await _client.from('categories').delete().eq('id', id);
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
+      await clientToUse.from('categories').delete().eq('id', id);
     } catch (e) {
       throw Exception('Failed to delete category: $e');
     }
   }
 
   /// Reorder categories (batch update)
-  Future<void> reorderCategories(List<Category> categories) async {
+  /// Uses isolated client to prevent "Ghost Logout" issues
+  Future<void> reorderCategories(List<Category> categories, {String? authToken}) async {
     try {
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
       // Supabase doesn't support batch updates easily in one go for different values
       // So we'll loop. For < 50 categories this is fine.
       // Ideally we'd use a stored procedure or an upsert with unnest.
       for (int i = 0; i < categories.length; i++) {
-        await _client
+        await clientToUse
             .from('categories')
             .update({'sort_order': i})
             .eq('id', categories[i].id);

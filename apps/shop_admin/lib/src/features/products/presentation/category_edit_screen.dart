@@ -156,7 +156,7 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
               const SizedBox(height: 8),
               const Center(
                 child: Text(
-                  'Supported formats: JPG, PNG, WEBP',
+                  'Sadece JPG, PNG ve WEBP formatları desteklenir.',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ),

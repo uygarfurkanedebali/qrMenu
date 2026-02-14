@@ -14,6 +14,7 @@ import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/dashboard/presentation/dashboard_overview_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
+import '../features/products/presentation/category_list_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/auth/application/auth_provider.dart';
 
@@ -173,6 +174,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/orders',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: _PlaceholderParams(title: 'Order Management'),
+            ),
+          ),
+          GoRoute(
+            path: '/categories',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CategoryListScreen(),
             ),
           ),
           GoRoute(

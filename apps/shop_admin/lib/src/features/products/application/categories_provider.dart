@@ -42,13 +42,16 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
     final tenantId = ref.read(currentTenantIdProvider);
     if (tenantId == null) throw Exception('Not logged in');
 
+    final token = _getToken();
     final repository = ref.read(categoryRepositoryProvider);
+    
     await repository.addCategory(
       tenantId: tenantId,
       name: name,
       description: description,
       imageUrl: imageUrl,
       sortOrder: (state.valueOrNull?.length ?? 0),
+      authToken: token,
     );
 
     // Refresh from server
@@ -59,8 +62,9 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
 
   /// Update a category
   Future<void> updateCategory(Category category) async {
+    final token = _getToken();
     final repository = ref.read(categoryRepositoryProvider);
-    await repository.updateCategory(category.id, category.toJson());
+    await repository.updateCategory(category.id, category.toJson(), authToken: token);
     ref.invalidateSelf();
   }
 
@@ -81,8 +85,9 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
 
     // 2. Persist to DB
     try {
+      final token = _getToken();
       final repository = ref.read(categoryRepositoryProvider);
-      await repository.reorderCategories(items);
+      await repository.reorderCategories(items, authToken: token);
     } catch (e) {
       // Revert on failure
       ref.invalidateSelf();
@@ -92,8 +97,18 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
 
   /// Delete a category
   Future<void> deleteCategory(String categoryId) async {
+    final token = _getToken();
     final repository = ref.read(categoryRepositoryProvider);
-    await repository.deleteCategory(categoryId);
+    await repository.deleteCategory(categoryId, authToken: token);
     ref.invalidateSelf();
+  }
+
+  String _getToken() {
+    final session = ShopAuthService.currentSession;
+    final token = session?.accessToken;
+    if (token == null) {
+      throw Exception('Session expired. Please login again.');
+    }
+    return token;
   }
 }
