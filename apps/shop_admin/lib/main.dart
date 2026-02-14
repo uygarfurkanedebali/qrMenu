@@ -1,5 +1,5 @@
 /// QR-Infinity Shop Admin
-/// 
+/// v1.0.1
 /// Dashboard for shop owners to manage their menu.
 /// RBAC: Only users with role='shop_owner' are allowed.
 import 'package:flutter/material.dart';
