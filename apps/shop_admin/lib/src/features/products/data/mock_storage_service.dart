@@ -6,7 +6,7 @@ library;
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_core/shared_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   return SupabaseStorageService();
@@ -19,57 +19,41 @@ abstract class StorageService {
 
 /// Real Supabase Storage implementation
 class SupabaseStorageService implements StorageService {
-  static const _bucketName = 'product-images';
+  
+  // Use the global client directly to ensure we use the active session
+  final SupabaseClient _client = Supabase.instance.client;
 
   @override
   Future<String> uploadImage(XFile file) async {
-    // 1. Get the GLOBAL client (Source of Truth)
-    // Direct access to bypass potentially stale instances
-    final client = Supabase.instance.client;
-    final user = client.auth.currentUser;
+    final user = _client.auth.currentUser;
 
-    // 2. Auth Check
     if (user == null) {
       print('🛑 FATAL: Global Supabase client reports NO USER. Cannot upload.');
       throw Exception('User is not logged in.');
     }
 
     try {
-      // 3. Define Path & Bucket
-      // Using 'products' to match the primary SQL policy as requested
-      // Note: We use uploadBinary because input is XFile (bytes)
+      // Hardcoded 'products' to match SQL policy
       final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
       
       print('🚀 UPLOADING to: products/$path');
-      print('   User ID: ${user.id}');
 
-      // 4. Perform Upload (Using the global client)
-      await client.storage.from('products').uploadBinary(
+      // Read file bytes
+      final Uint8List bytes = await file.readAsBytes();
+
+      // Upload without optional fileOptions to avoid compatibility issues
+      await _client.storage.from('products').uploadBinary(
         path,
-        await file.readAsBytes(),
-        fileOptions: FileOptions(cacheControl: '3600', upsert: false),
+        bytes,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
       );
 
-      // 5. Get URL
-      final url = client.storage.from('products').getPublicUrl(path);
+      final url = _client.storage.from('products').getPublicUrl(path);
       print('✅ UPLOAD COMPLETE: $url');
       return url;
 
     } catch (e) {
       print('💥 UPLOAD ERROR: $e');
-      rethrow;
-    }
-  }
-          );
-
-      final url = _client.storage
-          .from(_bucketName)
-          .getPublicUrl(path);
-          
-      print('✅ Upload Success: $url');
-      return url;
-    } catch (e) {
-      print('💥 UPLOAD FAILED: $e');
       rethrow;
     }
   }
