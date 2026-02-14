@@ -93,9 +93,17 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
 
       print('📤 [FLUTTER] Payload: ${product.toJsonForInsert()}');
 
-      // 5. Repository'e gönder
+      // 5. Repository'e gönder - Token Enjekte et (Phase 3)
+      final token = ShopAuthService.currentSession?.accessToken;
       final repository = ref.read(productRepositoryProvider);
-      await repository.addProduct(product);
+      
+      if (token != null) {
+        print('💉 [PROVIDER] Injecting Auth Token into Repository for addProduct...');
+      } else {
+        print('⚠️ [PROVIDER] No Auth Token found via ShopAuthService!');
+      }
+
+      await repository.addProduct(product, authToken: token);
 
       print('✅ [FLUTTER] Ürün başarıyla eklendi!');
 
@@ -138,8 +146,14 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     );
     
     try {
+      final token = ShopAuthService.currentSession?.accessToken;
       final repository = ref.read(productRepositoryProvider);
-      await repository.updateProduct(product.id, product.toJson());
+      
+      if (token != null) {
+        print('💉 [PROVIDER] Injecting Auth Token into Repository for updateProduct...');
+      }
+
+      await repository.updateProduct(product.id, product.toJson(), authToken: token);
     } catch (e) {
       // Rollback on failure
       state = AsyncData(previousState);

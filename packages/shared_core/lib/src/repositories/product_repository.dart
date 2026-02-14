@@ -6,6 +6,7 @@ library;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
+import '../config/env.dart';
 
 class ProductRepository {
   SupabaseClient get _client => SupabaseService.client;
@@ -46,9 +47,18 @@ class ProductRepository {
   }
 
   /// Add a new product
-  Future<Product> addProduct(Product product) async {
+  Future<Product> addProduct(Product product, {String? authToken}) async {
     try {
-      final response = await _client
+      // 💉 ISOLATED CLIENT STARTEGY (Phase 3)
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
+      if (authToken != null) {
+        print('💉 [REPO] Using ISOLATED CLIENT for insert with explicit token.');
+      }
+
+      final response = await clientToUse
           .from('products')
           .insert(product.toJsonForInsert())
           .select()
@@ -61,11 +71,20 @@ class ProductRepository {
   }
 
   /// Update a product
-  Future<Product> updateProduct(String id, Map<String, dynamic> updates) async {
+  Future<Product> updateProduct(String id, Map<String, dynamic> updates, {String? authToken}) async {
     try {
       updates['updated_at'] = DateTime.now().toIso8601String();
       
-      final response = await _client
+      // 💉 ISOLATED CLIENT STARTEGY (Phase 3)
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
+      if (authToken != null) {
+        print('💉 [REPO] Using ISOLATED CLIENT for update with explicit token.');
+      }
+      
+      final response = await clientToUse
           .from('products')
           .update(updates)
           .eq('id', id)
