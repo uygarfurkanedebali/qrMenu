@@ -4,7 +4,7 @@
 /// Replace placeholder values with your actual keys.
 library;
 
-import 'dart:html' as html;
+// Removed dart:html import for Wasm compatibility
 
 class Env {
   /// Supabase Project URL
@@ -26,17 +26,14 @@ class Env {
 /// Dynamic URL configuration based on browser location.
 /// No hardcoded IPs or domains - everything is derived from window.location.
 class AppConfig {
-  /// Get the base URL dynamically from browser
+  /// Get the base URL dynamically from browser/platform
   /// Returns: http://domain.com or http://192.168.1.100:80
   static String get baseUrl {
-    final location = html.window.location;
-    final protocol = location.protocol; // 'http:' or 'https:'
-    final host = location.host; // 'domain.com' or 'domain.com:8080'
-    return '$protocol//$host';
+    return '${Uri.base.scheme}://${Uri.base.host}${Uri.base.hasPort ? ':${Uri.base.port}' : ''}';
   }
 
   /// Get the current origin (same as baseUrl)
-  static String get origin => html.window.location.origin;
+  static String get origin => baseUrl;
 
   /// Get the System Admin URL
   /// Returns: {origin}/systemadmin

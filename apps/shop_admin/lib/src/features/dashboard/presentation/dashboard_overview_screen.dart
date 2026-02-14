@@ -4,8 +4,7 @@
 library;
 
 import 'dart:ui_web' as ui_web;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +32,7 @@ class _DashboardOverviewScreenState extends ConsumerState<DashboardOverviewScree
     ui_web.platformViewRegistry.registerViewFactory(
       _viewType,
       (int viewId) {
-        final iframe = html.IFrameElement()
+        final iframe = web.HTMLIFrameElement()
           ..src = url
           ..style.border = 'none'
           ..style.width = '100%'

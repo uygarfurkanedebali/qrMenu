@@ -30,6 +30,7 @@ class TenantState {
   final String name;
   final String slug;
   final String ownerEmail;
+  final String? bannerUrl; // Phase 1: Added bannerUrl
   // Shop Settings
   final String primaryColor;
   final String fontFamily;
@@ -44,6 +45,7 @@ class TenantState {
     required this.name,
     required this.slug,
     required this.ownerEmail,
+    this.bannerUrl, // Phase 1: Added bannerUrl
     this.primaryColor = '#FF5722',
     this.fontFamily = 'Roboto',
     this.currencySymbol = '₺',
@@ -62,6 +64,7 @@ class TenantState {
       name: json['name'] as String,
       slug: json['slug'] as String,
       ownerEmail: json['owner_email'] as String? ?? '',
+      bannerUrl: json['banner_url'] as String?,
       primaryColor: json['primary_color'] as String? ?? '#FF5722',
       fontFamily: json['font_family'] as String? ?? 'Roboto',
       currencySymbol: json['currency_symbol'] as String? ?? '₺',
