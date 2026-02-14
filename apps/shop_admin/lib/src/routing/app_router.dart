@@ -41,12 +41,12 @@ class AuthNotifier extends ChangeNotifier {
         // We must tell Supabase client to wake up.
         final validSession = ShopAuthService.currentSession;
         if (validSession != null && validSession.refreshToken != null) {
-           print('👻 [AUTH FIX] Listener detected ghost logout! Resurrecting client...');
+           print('👻 [AUTH FIX] Listener detected ghost logout! Bypassing API to resurrect client...');
            // We execute this asynchronously
            SupabaseService.client.auth.setSession(validSession.refreshToken!).then((_) {
-               print('✅ [AUTH FIX] Client resurrected successfully within listener!');
+               print('✅ [AUTH FIX] Client memory resurrected successfully!');
            }).catchError((err) {
-               print('❌ [AUTH FIX] Resurrection in listener failed: $err');
+               print('❌ [AUTH FIX] Local memory injection failed: $err');
            });
         }
         
