@@ -23,42 +23,43 @@ class SupabaseStorageService implements StorageService {
 
   @override
   Future<String> uploadImage(XFile file) async {
-    // 🕵️ REAL CODE DEBUGGER
-    // Ensure we are accessing the client directly as requested
-    final _client = SupabaseService.client; 
-    final _user = _client.auth.currentUser;
-    final _session = _client.auth.currentSession;
-    
-    print('\n🧨 REAL UPLOAD TRAP 🧨');
-    print('File being executed: mock_storage_service.dart (THIS IS THE REAL IMPLEMENTATION)');
-    print('User ID: ${_user?.id}');
-    if (_session?.accessToken != null) {
-      print('Session Token: ${_session!.accessToken.substring(0, 10)}...');
-    } else {
-      print('Session Token: NULL');
-    }
-    print('Bucket Variable: $_bucketName');
-    print('Bucket Constant: products (Hardcoded check)');
-    print('----------------------------------\n');
+    // 1. Get the GLOBAL client (Source of Truth)
+    // Direct access to bypass potentially stale instances
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
 
-    if (_user == null || _session == null) {
-      print('❌ ERROR: User is not authenticated. Aborting upload.');
-      throw Exception('User not authenticated');
+    // 2. Auth Check
+    if (user == null) {
+      print('🛑 FATAL: Global Supabase client reports NO USER. Cannot upload.');
+      throw Exception('User is not logged in.');
     }
 
     try {
-      // Generate path with user ID
-      final path = '${_user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      // 3. Define Path & Bucket
+      // Using 'products' to match the primary SQL policy as requested
+      // Note: We use uploadBinary because input is XFile (bytes)
+      final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
       
-      // Read file bytes
-      final Uint8List bytes = await file.readAsBytes();
-      
-      await _client.storage
-          .from(_bucketName) // authenticating against 'product-images'
-          .uploadBinary(
-            path,
-            bytes,
+      print('🚀 UPLOADING to: products/$path');
+      print('   User ID: ${user.id}');
 
+      // 4. Perform Upload (Using the global client)
+      await client.storage.from('products').uploadBinary(
+        path,
+        await file.readAsBytes(),
+        fileOptions: FileOptions(cacheControl: '3600', upsert: false),
+      );
+
+      // 5. Get URL
+      final url = client.storage.from('products').getPublicUrl(path);
+      print('✅ UPLOAD COMPLETE: $url');
+      return url;
+
+    } catch (e) {
+      print('💥 UPLOAD ERROR: $e');
+      rethrow;
+    }
+  }
           );
 
       final url = _client.storage
