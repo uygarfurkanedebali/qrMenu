@@ -113,7 +113,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
       body: menuAsync.when(
         loading: () => CustomScrollView(
           slivers: [
-            _buildHeroHeader(context, ref),
+            _buildHeroHeader(context, ref, null),
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             ),
@@ -121,7 +121,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
         ),
         error: (error, stack) => CustomScrollView(
           slivers: [
-            _buildHeroHeader(context, ref),
+            _buildHeroHeader(context, ref, null),
             SliverFillRemaining(
               child: Center(child: Text('Error loading menu: $error')),
             ),
@@ -129,108 +129,92 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
         ),
         data: (allCategories) {
           // FILTERING LOGIC
-          // If selectedCategoryId is null or 'all', show everything.
-          // Otherwise, show only the selected category.
           final isFiltered = selectedCategoryId != null && selectedCategoryId != 'all';
           
           final displayedCategories = isFiltered
               ? allCategories.where((c) => c.id == selectedCategoryId).toList()
               : allCategories;
+              
+          // Identify selected category object for banner swap
+          final selectedCategory = isFiltered && displayedCategories.isNotEmpty 
+              ? displayedCategories.first 
+              : null;
 
           return CustomScrollView(
             controller: _scrollController,
             slivers: [
-              // Hero Header with Dynamic Banner
-              _buildHeroHeader(context, ref, categories: allCategories),
+              // Hero Header with Dynamic Banner & Back Button logic
+              _buildHeroHeader(context, ref, selectedCategory),
 
               // Social Action Bar + Wi-Fi
               SliverToBoxAdapter(child: _ActionBar(tenant: widget.tenant, theme: widget.theme)),
 
-              // TOP SECTION: Category Grid OR Back Button
-              if (!isFiltered) ...[
-                 // Standard Mode: Show Grid
-                 if (allCategories.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    sliver: SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final category = allCategories[index];
-                          // Fallback image if category has no image
-                          final imageUrl = category.iconUrl ?? 
-                              'https://source.unsplash.com/random/800x600?food,${category.name}'; 
+              // TOP SECTION: Category Grid (Only in standard mode)
+              if (!isFiltered && allCategories.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  sliver: SliverGrid(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final category = allCategories[index];
+                        // Fallback image if category has no image
+                        final imageUrl = category.iconUrl ?? 
+                            'https://source.unsplash.com/random/800x600?food,${category.name}'; 
 
-                          return InkWell(
-                            onTap: () => _selectCategory(category.id),
+                        return InkWell(
+                          onTap: () => _selectCategory(category.id),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: NetworkImage(imageUrl),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
-                                image: DecorationImage(
-                                  image: NetworkImage(imageUrl),
-                                  fit: BoxFit.cover,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.2), // Slight dark tint overall
+                                    Colors.black.withValues(alpha: 0.6),
+                                  ],
                                 ),
                               ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.black.withValues(alpha: 0.2), // Slight dark tint overall
-                                      Colors.black.withValues(alpha: 0.6),
-                                    ],
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.all(12),
-                                child: Text(
-                                  category.name,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 24,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black,
-                                        blurRadius: 10,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                category.name,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 24,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black,
+                                      blurRadius: 10,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        },
-                        childCount: allCategories.length,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
-                        childAspectRatio: 3.5,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                      ),
+                          ),
+                        );
+                      },
+                      childCount: allCategories.length,
                     ),
-                  ),
-              ] else ...[
-                // Isolated Mode: Show Back Button
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: FilledButton.icon(
-                      onPressed: () => _selectCategory(null),
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Tüm Kategoriler'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: widget.theme.colorScheme.secondary,
-                        foregroundColor: widget.theme.colorScheme.onSecondary,
-                      ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
+                      childAspectRatio: 3.5,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
                     ),
                   ),
                 ),
-              ],
 
               // Menu items (Filtered List)
               ..._buildMenuSlivers(context, ref, displayedCategories),
@@ -245,24 +229,43 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
     );
   }
 
-  SliverAppBar _buildHeroHeader(BuildContext context, WidgetRef ref, {List<MenuCategory>? categories}) {
-    // Default to Tenant Banner
-    String? activeBannerUrl = widget.tenant.bannerUrl;
+  SliverAppBar _buildHeroHeader(BuildContext context, WidgetRef ref, MenuCategory? selectedCategory) {
+    // Logic: Use category image if selected, else tenant banner
+    // Note: We use 'iconUrl' as the image source for categories based on current data model structure
+    final bool isCategorySelected = selectedCategory != null;
     
-    // Optional: We could show selected category image here if we wanted to
-    // but the prompt says "Mevcut yapı korunacak" for Header mostly (except banner maybe).
-    // Sticking to tenant banner for consistency.
+    String? activeBannerUrl;
+    if (isCategorySelected && selectedCategory.iconUrl != null && selectedCategory.iconUrl!.isNotEmpty) {
+      activeBannerUrl = selectedCategory.iconUrl;
+    } else {
+      activeBannerUrl = widget.tenant.bannerUrl;
+    }
+    
+    // Title is Tenant Name usually, but could be Category Name if we wanted.
+    // Keeping Tenant Name as per "Mevcut yapı korunacak" directive generally, 
+    // but typically when inside a category, showing category name in big letters is nice. 
+    // However, the prompt specifically asked for *Banner* swap. 
+    // Let's keep Tenant Name for styling consistency or maybe show Category Name if selected?
+    // User stuck to "Tenant Banner" vs "Category Banner". Let's update the title too?
+    // Prompt didn't explicitly safeguard the Title, but "Hero Header" implies the main branding.
+    // Let's stick to Tenant Name to be safe, or maybe just update the background.
+    // The previous implementation had "Tenant Name". I will keep it.
 
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
       stretch: true,
       backgroundColor: widget.theme.colorScheme.primary,
+      // Leading is usually where the back button goes in AppBar, but we want a custom one in flexible space?
+      // Actually, standard AppBar leading works well for "Back", but user asked for:
+      // "Banner'ın üzerine binen... TopLeft... Stack içinde Positioned".
+      // So we will hide the default leading and implement custom one in FlexibleSpaceBar background stack.
+      automaticallyImplyLeading: false, 
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
         titlePadding: const EdgeInsets.only(bottom: 16),
         title: Text(
-          widget.tenant.name,
+          isCategorySelected ? selectedCategory.name : widget.tenant.name,
           style: TextStyle(
             color: widget.theme.colorScheme.onPrimary,
             fontWeight: FontWeight.bold,
@@ -318,38 +321,62 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                     ),
                   ),
                 ),
-              // Welcome text
-              Positioned(
-                left: 20,
-                bottom: 55,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.qr_code_2, size: 14, color: Colors.white.withValues(alpha: 0.9)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Dijital Menü',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+              // Welcome text (Only show if NOT in category mode and ONLY if tenant name is main title)
+              if (!isCategorySelected)
+                Positioned(
+                  left: 20,
+                  bottom: 55,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.qr_code_2, size: 14, color: Colors.white.withValues(alpha: 0.9)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Dijital Menü',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                
+               // CUSTOM BACK BUTTON
+               if (isCategorySelected)
+                 Positioned(
+                   top: 60, // Adjust for safe area approx
+                   left: 16,
+                   child: Material(
+                     color: Colors.black.withValues(alpha: 0.3), // Semi-transparent dark bg
+                     shape: const CircleBorder(),
+                     child: InkWell(
+                       customBorder: const CircleBorder(),
+                       onTap: () => _selectCategory(null),
+                       child: const Padding(
+                         padding: EdgeInsets.all(8.0),
+                         child: Icon(
+                           Icons.arrow_back,
+                           color: Colors.white,
+                           size: 24,
+                         ),
+                       ),
+                     ),
+                   ),
+                 ),
             ],
           ),
         ),
