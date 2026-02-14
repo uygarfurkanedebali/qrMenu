@@ -71,6 +71,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
     redirect: (context, state) {
+      // 1. PUBLIC ZONE (VİTRİN)
+      // Early exit for root route to allow public access
+      // [PHYSICAL WRITE CHECK]
+      if (state.matchedLocation == '/') {
+        print('║ DECISION RULE 0: Public Landing Page (Early Exit)');
+        print('║   → Maintaining: /');
+        return null;
+      }
+
       print('╔═══════════════════════════════════════════════════════╗');
       print('║ 🧭 [ROUTER] REDIRECT CHECK                            ║');
       print('╠═══════════════════════════════════════════════════════╣');
@@ -100,16 +109,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       String? decision;
 
-      final isOnLandingPage = state.matchedLocation == '/';
-
-      // Rule 0: Landing Page is ALWAYS public
-      if (isOnLandingPage) {
-        decision = null;
-        print('║ DECISION RULE 0: Public Landing Page');
-        print('║   → Maintaining: /');
-      }
       // Rule 1: Not logged in → force login page
-      else if (!isLoggedIn && !isOnLoginPage) {
+      if (!isLoggedIn && !isOnLoginPage) {
         decision = '/login';
         print('║ DECISION RULE 1: Not authenticated');
         print('║   → Redirecting to: /login');
