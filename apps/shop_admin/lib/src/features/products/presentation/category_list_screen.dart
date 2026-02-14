@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_core/shared_core.dart';
 import '../application/categories_provider.dart';
+import '../../auth/application/auth_provider.dart';
 import 'category_edit_screen.dart';
 
 class CategoryListScreen extends ConsumerWidget {

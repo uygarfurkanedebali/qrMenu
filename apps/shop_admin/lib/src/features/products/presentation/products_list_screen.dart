@@ -30,11 +30,7 @@ class ProductsListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Products'),
         actions: [
-          IconButton(
-            onPressed: () => context.go('/categories'),
-            icon: const Icon(Icons.category),
-            tooltip: 'Manage Categories',
-          ),
+
           IconButton(
             onPressed: () => context.go('/products/new'),
             icon: const Icon(Icons.add),
@@ -80,11 +76,7 @@ class ProductsListScreen extends ConsumerWidget {
                     label: const Text('Add Product'),
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => context.go('/categories'),
-                    icon: const Icon(Icons.category),
-                    label: const Text('Manage Categories'),
-                  ),
+
                 ],
               ),
             );

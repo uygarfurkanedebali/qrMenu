@@ -218,6 +218,15 @@ class _Sidebar extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 _NavTile(
+                  title: 'Categories',
+                  icon: Icons.category_outlined,
+                  selectedIcon: Icons.category,
+                  isActive: location == '/categories',
+                  onTap: () => context.go('/categories'),
+                  theme: theme,
+                ),
+                const SizedBox(height: 4),
+                _NavTile(
                   title: 'Orders',
                   icon: Icons.shopping_bag_outlined,
                   selectedIcon: Icons.shopping_bag,
