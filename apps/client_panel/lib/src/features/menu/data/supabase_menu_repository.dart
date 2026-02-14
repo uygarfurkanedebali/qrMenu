@@ -17,15 +17,16 @@ class SupabaseMenuRepository implements MenuRepository {
   @override
   Future<List<MenuCategory>> getMenuByTenantSlug(String slug) async {
     try {
-      // 1. Get Tenant ID
+      // 1. Get Tenant Details (ID, Name, Banner)
       final tenantResponse = await SupabaseService.client
           .from('tenants')
-          .select('id')
+          .select('id, name, banner_url')
           .eq('slug', slug)
           .maybeSingle();
 
       if (tenantResponse == null) return [];
       final tenantId = tenantResponse['id'] as String;
+      final tenantBanner = tenantResponse['banner_url'] as String?;
 
       // 2. Fetch Categories (Parallel fetch could be better but sequential is safer for now)
       final categoriesResponse = await SupabaseService.client
@@ -71,8 +72,8 @@ class SupabaseMenuRepository implements MenuRepository {
           tenantId: tenantId,
           name: 'Tüm Ürünler',
           description: 'Lezzet şölenine hoş geldiniz',
-          // Use a nice default image for "All Products" if you don't have a specific one
-          iconUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop', 
+          // Use tenant banner if available, otherwise empty string (or local asset placeholder logic if implemented)
+          iconUrl: tenantBanner, 
           sortOrder: -999, // Ensure it's always first
           products: allMenuProducts,
         ));
