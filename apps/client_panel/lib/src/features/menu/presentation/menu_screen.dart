@@ -140,24 +140,25 @@ class _MenuContent extends ConsumerWidget {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  Colors.transparent,
-                                  Colors.black.withValues(alpha: 0.7),
+                                  Colors.black.withValues(alpha: 0.2), // Slight dark tint overall
+                                  Colors.black.withValues(alpha: 0.6),
                                 ],
-                                stops: const [0.6, 1.0],
                               ),
                             ),
-                            alignment: Alignment.bottomLeft,
+                            alignment: Alignment.center,
                             padding: const EdgeInsets.all(12),
                             child: Text(
                               category.name,
+                              textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 24,
                                 shadows: [
                                   Shadow(
-                                    color: Colors.black45,
-                                    blurRadius: 4,
+                                    color: Colors.black,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 2),
                                   ),
                                 ],
                               ),

@@ -47,70 +47,60 @@ class SupabaseMenuRepository implements MenuRepository {
 
       final productsData = List<Map<String, dynamic>>.from(productsResponse);
 
-      // 4. Map Products to Categories
+      // 4. Map Products to Menu Objects
+      final allMenuProducts = productsData.map((json) => MenuProduct(
+        id: json['id'],
+        tenantId: json['tenant_id'],
+        categoryId: json['category_id'] ?? 'uncategorized',
+        name: json['name'],
+        description: json['description'],
+        price: (json['price'] as num).toDouble(),
+        imageUrl: json['image_url'],
+        isAvailable: json['is_available'] ?? true,
+        isPopular: json['is_popular'] ?? false,
+      )).toList();
+
       final List<MenuCategory> menu = [];
 
-      // Create a map for quick lookup if needed, but we'll iterate categories to preserve order
-      // First, handle products with NO category (if any)
-      final uncategorizedProducts = productsData
-          .where((p) => p['category_id'] == null)
-          .map((json) => MenuProduct(
-                id: json['id'],
-                tenantId: json['tenant_id'],
-                categoryId: 'uncategorized',
-                name: json['name'],
-                description: json['description'],
-                price: (json['price'] as num).toDouble(),
-                imageUrl: json['image_url'],
-                isAvailable: json['is_available'] ?? true,
-                isPopular: json['is_popular'] ?? false,
-              ))
-          .toList();
-
-      if (uncategorizedProducts.isNotEmpty) {
+      // ---------------------------------------------------------
+      // 1. ADD "ALL PRODUCTS" CATEGORY (Virtual Category)
+      // ---------------------------------------------------------
+      if (allMenuProducts.isNotEmpty) {
         menu.add(MenuCategory(
-          id: 'uncategorized',
+          id: 'all_products',
           tenantId: tenantId,
-          name: 'Diğer Ürünler',
-          description: null,
-          iconUrl: null,
-          sortOrder: -1,
-          products: uncategorizedProducts,
+          name: 'Tüm Ürünler',
+          description: 'Lezzet şölenine hoş geldiniz',
+          // Use a nice default image for "All Products" if you don't have a specific one
+          iconUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop', 
+          sortOrder: -999, // Ensure it's always first
+          products: allMenuProducts,
         ));
       }
 
-      // Now map real categories
+      // ---------------------------------------------------------
+      // 2. MAP REAL CATEGORIES
+      // ---------------------------------------------------------
       for (final catJson in categoriesData) {
         final catId = catJson['id'] as String;
         
-        // Filter products for this category
-        final catProducts = productsData
-            .where((p) => p['category_id'] == catId)
-            .map((json) => MenuProduct(
-                  id: json['id'],
-                  tenantId: json['tenant_id'],
-                  categoryId: catId,
-                  name: json['name'],
-                  description: json['description'],
-                  price: (json['price'] as num).toDouble(),
-                  imageUrl: json['image_url'],
-                  isAvailable: json['is_available'] ?? true,
-                  isPopular: json['is_popular'] ?? false,
-                ))
+        // Filter products for this specific category
+        final catProducts = allMenuProducts
+            .where((p) => p.categoryId == catId)
             .toList();
 
-        // Only add category if it has products (optional, but good for menu cleanliness)
-        // User didn't specify to hide empty categories, but usually we do.
-        // Let's show them for now so user sees their categories even if empty.
-        menu.add(MenuCategory(
-          id: catId,
-          tenantId: tenantId,
-          name: catJson['name'],
-          description: catJson['description'],
-          iconUrl: catJson['image_url'], // Critical for Dynamic Banner!
-          sortOrder: catJson['sort_order'] ?? 0,
-          products: catProducts,
-        ));
+        // Only add category if it has products (or if you want to show empty ones too)
+        if (catProducts.isNotEmpty) {
+          menu.add(MenuCategory(
+            id: catId,
+            tenantId: tenantId,
+            name: catJson['name'],
+            description: catJson['description'],
+            iconUrl: catJson['image_url'],
+            sortOrder: catJson['sort_order'] ?? 0,
+            products: catProducts,
+          ));
+        }
       }
 
       return menu;
