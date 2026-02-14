@@ -77,7 +77,7 @@ class _MenuContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final menuAsync = ref.watch(menuProvider);
-    final selectedCategoryIndex = ref.watch(selectedCategoryIndexProvider);
+    final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
 
     return Scaffold(
@@ -101,8 +101,8 @@ class _MenuContent extends ConsumerWidget {
         ),
         data: (categories) => CustomScrollView(
           slivers: [
-            // Hero Header
-            _buildHeroHeader(context),
+            // Hero Header with Dynamic Banner
+            _buildHeroHeader(context, categories: categories),
 
             // Social Action Bar + Wi-Fi
             SliverToBoxAdapter(child: _ActionBar(tenant: tenant, theme: theme)),
@@ -113,15 +113,15 @@ class _MenuContent extends ConsumerWidget {
                 pinned: true,
                 delegate: CategoryHeaderDelegate(
                   categories: categories,
-                  selectedIndex: selectedCategoryIndex,
-                  onCategorySelected: (index) {
-                    ref.read(selectedCategoryIndexProvider.notifier).state = index;
+                  selectedCategoryId: selectedCategoryId,
+                  onCategorySelected: (id) {
+                    ref.read(selectedCategoryIdProvider.notifier).state = id;
                   },
                 ),
               ),
 
-            // Menu items
-            ..._buildMenuSlivers(context, ref, categories, selectedCategoryIndex),
+            // Menu items (Filtered)
+            ..._buildMenuSlivers(context, ref, categories, selectedCategoryId),
 
             // Footer
             SliverToBoxAdapter(child: _Footer(tenant: tenant, theme: theme)),
@@ -132,7 +132,25 @@ class _MenuContent extends ConsumerWidget {
     );
   }
 
-  SliverAppBar _buildHeroHeader(BuildContext context) {
+  SliverAppBar _buildHeroHeader(BuildContext context, {List<MenuCategory>? categories}) {
+    // 1. Determine Active Banner URL
+    String? activeBannerUrl = tenant.bannerUrl;
+    
+    // Check if a category is selected and has an image
+    if (categories != null) {
+      final selectedId = ref.watch(selectedCategoryIdProvider);
+      if (selectedId != null) {
+        final selectedCategory = categories.cast<MenuCategory?>().firstWhere(
+          (c) => c!.id == selectedId,
+          orElse: () => null,
+        );
+        
+        if (selectedCategory != null && selectedCategory.iconUrl != null && selectedCategory.iconUrl!.isNotEmpty) {
+           activeBannerUrl = selectedCategory.iconUrl;
+        }
+      }
+    }
+
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
@@ -159,9 +177,9 @@ class _MenuContent extends ConsumerWidget {
         background: Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.primary,
-            image: tenant.bannerUrl != null && tenant.bannerUrl!.isNotEmpty
+            image: activeBannerUrl != null && activeBannerUrl.isNotEmpty
                 ? DecorationImage(
-                    image: NetworkImage(tenant.bannerUrl!),
+                    image: NetworkImage(activeBannerUrl),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
                       Colors.black.withValues(alpha: 0.4),
@@ -169,7 +187,7 @@ class _MenuContent extends ConsumerWidget {
                     ),
                   )
                 : null,
-            gradient: tenant.bannerUrl == null || tenant.bannerUrl!.isEmpty
+            gradient: activeBannerUrl == null || activeBannerUrl.isEmpty
                 ? LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -185,7 +203,7 @@ class _MenuContent extends ConsumerWidget {
             fit: StackFit.expand,
             children: [
               // Decorative pattern (Only show if no banner)
-              if (tenant.bannerUrl == null || tenant.bannerUrl!.isEmpty)
+              if (activeBannerUrl == null || activeBannerUrl.isEmpty)
                 Positioned(
                   right: -30,
                   top: -30,
@@ -238,7 +256,7 @@ class _MenuContent extends ConsumerWidget {
   }
 
   List<Widget> _buildMenuSlivers(
-      BuildContext context, WidgetRef ref, List<MenuCategory> categories, int selectedIndex) {
+      BuildContext context, WidgetRef ref, List<MenuCategory> categories, String? selectedCategoryId) {
     if (categories.isEmpty) {
       return [
         const SliverFillRemaining(
@@ -247,68 +265,81 @@ class _MenuContent extends ConsumerWidget {
       ];
     }
 
-    final category = categories[selectedIndex];
+    // Filter categories if one is selected
+    final displayCategories = selectedCategoryId == null
+        ? categories
+        : categories.where((c) => c.id == selectedCategoryId).toList();
 
-    return [
-      // Category header
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                category.name,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              if (category.description != null) ...[
-                const SizedBox(height: 4),
+    if (displayCategories.isEmpty) {
+       return [
+        const SliverFillRemaining(
+          child: Center(child: Text('Bu kategoride ürün bulunamadı.')),
+        ),
+      ];
+    }
+
+    return displayCategories.map((category) {
+      return SliverMainAxisGroup(slivers: [
+         // Category header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  category.description!,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  category.name,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
-              ],
-            ],
-          ),
-        ),
-      ),
-
-      // Products list
-      SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = category.products[index];
-            return ProductCard(
-              product: product,
-              currencySymbol: tenant.currencySymbol,
-              onAddToCart: () {
-                ref.read(cartProvider.notifier).addItem(product);
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${product.name} sepete eklendi'),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                    action: SnackBarAction(
-                      label: 'Sepeti Gör',
-                      onPressed: () => showCartBottomSheet(context),
+                if (category.description != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    category.description!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                );
-              },
-            );
-          },
-          childCount: category.products.length,
+                ],
+              ],
+            ),
+          ),
         ),
-      ),
 
-      const SliverToBoxAdapter(child: SizedBox(height: 80)),
-    ];
+        // Products list
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final product = category.products[index];
+              return ProductCard(
+                product: product,
+                currencySymbol: tenant.currencySymbol,
+                onAddToCart: () {
+                  ref.read(cartProvider.notifier).addItem(product);
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${product.name} sepete eklendi'),
+                      duration: const Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                      action: SnackBarAction(
+                        label: 'Sepeti Gör',
+                        onPressed: () => showCartBottomSheet(context),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+            childCount: category.products.length,
+          ),
+        ),
+        
+        const SliverToBoxAdapter(child: SizedBox(height: 16)), // Spacing between categories
+      ]);
+    }).toList()..add(const SliverToBoxAdapter(child: SizedBox(height: 80))); // Bottom padding
   }
 }
 

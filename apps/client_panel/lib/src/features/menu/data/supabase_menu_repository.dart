@@ -17,87 +17,105 @@ class SupabaseMenuRepository implements MenuRepository {
   @override
   Future<List<MenuCategory>> getMenuByTenantSlug(String slug) async {
     try {
-      // First, get the tenant by slug
+      // 1. Get Tenant ID
       final tenantResponse = await SupabaseService.client
           .from('tenants')
-          .select('id, name')
+          .select('id')
           .eq('slug', slug)
           .maybeSingle();
 
-      if (tenantResponse == null) {
-        return [];
-      }
-
+      if (tenantResponse == null) return [];
       final tenantId = tenantResponse['id'] as String;
 
-      // Fetch products for this tenant
+      // 2. Fetch Categories (Parallel fetch could be better but sequential is safer for now)
+      final categoriesResponse = await SupabaseService.client
+          .from('categories')
+          .select()
+          .eq('tenant_id', tenantId)
+          .eq('is_visible', true)
+          .order('sort_order', ascending: true);
+
+      final categoriesData = List<Map<String, dynamic>>.from(categoriesResponse);
+
+      // 3. Fetch Products
       final productsResponse = await SupabaseService.client
           .from('products')
-          .select('*')
+          .select()
           .eq('tenant_id', tenantId)
           .eq('is_available', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
 
-      final products = (productsResponse as List<dynamic>)
-          .map((json) => Product.fromJson(json))
+      final productsData = List<Map<String, dynamic>>.from(productsResponse);
+
+      // 4. Map Products to Categories
+      final List<MenuCategory> menu = [];
+
+      // Create a map for quick lookup if needed, but we'll iterate categories to preserve order
+      // First, handle products with NO category (if any)
+      final uncategorizedProducts = productsData
+          .where((p) => p['category_id'] == null)
+          .map((json) => MenuProduct(
+                id: json['id'],
+                tenantId: json['tenant_id'],
+                categoryId: 'uncategorized',
+                name: json['name'],
+                description: json['description'],
+                price: (json['price'] as num).toDouble(),
+                imageUrl: json['image_url'],
+                isAvailable: json['is_available'] ?? true,
+                isPopular: json['is_popular'] ?? false,
+              ))
           .toList();
 
-      if (products.isEmpty) {
-        return [];
-      }
-
-      // Group products by category or create default category
-      final Map<String, List<MenuProduct>> categoryProducts = {};
-      
-      for (final product in products) {
-        final categoryId = product.categoryId ?? 'uncategorized';
-        categoryProducts.putIfAbsent(categoryId, () => []);
-        categoryProducts[categoryId]!.add(MenuProduct(
-          id: product.id,
-          tenantId: product.tenantId,
-          categoryId: categoryId,
-          name: product.name,
-          description: product.description ?? '',
-          price: product.price,
-          imageUrl: product.imageUrl,
-          isPopular: false,
-          tags: [],
-        ));
-      }
-
-      // Create menu categories
-      final categories = <MenuCategory>[];
-      int sortOrder = 0;
-
-      // If all products are uncategorized, create a default category
-      if (categoryProducts.containsKey('uncategorized')) {
-        categories.add(MenuCategory(
+      if (uncategorizedProducts.isNotEmpty) {
+        menu.add(MenuCategory(
           id: 'uncategorized',
           tenantId: tenantId,
-          name: 'Menu',
-          description: 'Our delicious offerings',
-          sortOrder: sortOrder++,
-          products: categoryProducts['uncategorized']!,
+          name: 'Diğer Ürünler',
+          description: null,
+          iconUrl: null,
+          sortOrder: -1,
+          products: uncategorizedProducts,
         ));
       }
 
-      // Add other categories (fetch from categories table if needed)
-      for (final entry in categoryProducts.entries) {
-        if (entry.key != 'uncategorized') {
-          categories.add(MenuCategory(
-            id: entry.key,
-            tenantId: tenantId,
-            name: 'Category',
-            description: '',
-            sortOrder: sortOrder++,
-            products: entry.value,
-          ));
-        }
+      // Now map real categories
+      for (final catJson in categoriesData) {
+        final catId = catJson['id'] as String;
+        
+        // Filter products for this category
+        final catProducts = productsData
+            .where((p) => p['category_id'] == catId)
+            .map((json) => MenuProduct(
+                  id: json['id'],
+                  tenantId: json['tenant_id'],
+                  categoryId: catId,
+                  name: json['name'],
+                  description: json['description'],
+                  price: (json['price'] as num).toDouble(),
+                  imageUrl: json['image_url'],
+                  isAvailable: json['is_available'] ?? true,
+                  isPopular: json['is_popular'] ?? false,
+                ))
+            .toList();
+
+        // Only add category if it has products (optional, but good for menu cleanliness)
+        // User didn't specify to hide empty categories, but usually we do.
+        // Let's show them for now so user sees their categories even if empty.
+        menu.add(MenuCategory(
+          id: catId,
+          tenantId: tenantId,
+          name: catJson['name'],
+          description: catJson['description'],
+          iconUrl: catJson['image_url'], // Critical for Dynamic Banner!
+          sortOrder: catJson['sort_order'] ?? 0,
+          products: catProducts,
+        ));
       }
 
-      return categories;
+      return menu;
     } catch (e) {
-      // Return empty list on error
+      print('Error fetching menu: $e');
       return [];
     }
   }

@@ -9,13 +9,13 @@ import '../../domain/menu_models.dart';
 /// Sticky category tabs header
 class CategoryTabsHeader extends StatelessWidget {
   final List<MenuCategory> categories;
-  final int selectedIndex;
-  final ValueChanged<int> onCategorySelected;
+  final String? selectedCategoryId;
+  final ValueChanged<String?> onCategorySelected;
 
   const CategoryTabsHeader({
     super.key,
     required this.categories,
-    required this.selectedIndex,
+    required this.selectedCategoryId,
     required this.onCategorySelected,
   });
 
@@ -30,10 +30,33 @@ class CategoryTabsHeader extends StatelessWidget {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: categories.length,
+        itemCount: categories.length + 1, // +1 for "All"
         itemBuilder: (context, index) {
-          final category = categories[index];
-          final isSelected = index == selectedIndex;
+          // "All" Tab
+          if (index == 0) {
+            final isSelected = selectedCategoryId == null;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FilterChip(
+                selected: isSelected,
+                label: const Text('Tümü'),
+                labelStyle: TextStyle(
+                  color: isSelected
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurfaceVariant,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                selectedColor: colorScheme.primary,
+                checkmarkColor: colorScheme.onPrimary,
+                showCheckmark: false,
+                onSelected: (_) => onCategorySelected(null),
+              ),
+            );
+          }
+
+          final category = categories[index - 1];
+          final isSelected = category.id == selectedCategoryId;
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -50,7 +73,7 @@ class CategoryTabsHeader extends StatelessWidget {
               selectedColor: colorScheme.primary,
               checkmarkColor: colorScheme.onPrimary,
               showCheckmark: false,
-              onSelected: (_) => onCategorySelected(index),
+              onSelected: (_) => onCategorySelected(category.id),
             ),
           );
         },
@@ -62,12 +85,12 @@ class CategoryTabsHeader extends StatelessWidget {
 /// Sliver delegate for sticky category header
 class CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   final List<MenuCategory> categories;
-  final int selectedIndex;
-  final ValueChanged<int> onCategorySelected;
+  final String? selectedCategoryId;
+  final ValueChanged<String?> onCategorySelected;
 
   CategoryHeaderDelegate({
     required this.categories,
-    required this.selectedIndex,
+    required this.selectedCategoryId,
     required this.onCategorySelected,
   });
 
@@ -82,14 +105,14 @@ class CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return CategoryTabsHeader(
       categories: categories,
-      selectedIndex: selectedIndex,
+      selectedCategoryId: selectedCategoryId,
       onCategorySelected: onCategorySelected,
     );
   }
 
   @override
   bool shouldRebuild(CategoryHeaderDelegate oldDelegate) {
-    return selectedIndex != oldDelegate.selectedIndex ||
+    return selectedCategoryId != oldDelegate.selectedCategoryId ||
         categories != oldDelegate.categories;
   }
 }

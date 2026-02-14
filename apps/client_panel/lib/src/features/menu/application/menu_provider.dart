@@ -30,5 +30,8 @@ final menuProvider = FutureProvider<List<MenuCategory>>((ref) async {
   );
 });
 
-/// Provider for the currently selected category index
+/// Provider for the currently selected category ID (null = All)
+final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
+
+/// Provider for the currently selected category index (Legacy/ScrollSpy)
 final selectedCategoryIndexProvider = StateProvider<int>((ref) => 0);
