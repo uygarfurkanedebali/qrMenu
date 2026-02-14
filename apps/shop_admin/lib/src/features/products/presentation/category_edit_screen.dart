@@ -77,7 +77,6 @@ class _CategoryEditScreenState extends ConsumerState<CategoryEditScreen> {
     setState(() => _isSaving = true);
 
     try {
-    try {
       final isGhostCategory = widget.category?.id == 'all_products';
 
       if (widget.category == null || isGhostCategory) {

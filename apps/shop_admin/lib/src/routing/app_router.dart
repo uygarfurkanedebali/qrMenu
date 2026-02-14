@@ -16,6 +16,7 @@ import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
 import '../features/products/presentation/category_list_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/landing/presentation/landing_screen.dart';
 import '../features/auth/application/auth_provider.dart';
 
 /// Tracks whether role has been verified for the current session
@@ -99,8 +100,16 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       String? decision;
 
+      final isOnLandingPage = state.matchedLocation == '/';
+
+      // Rule 0: Landing Page is ALWAYS public
+      if (isOnLandingPage) {
+        decision = null;
+        print('║ DECISION RULE 0: Public Landing Page');
+        print('║   → Maintaining: /');
+      }
       // Rule 1: Not logged in → force login page
-      if (!isLoggedIn && !isOnLoginPage) {
+      else if (!isLoggedIn && !isOnLoginPage) {
         decision = '/login';
         print('║ DECISION RULE 1: Not authenticated');
         print('║   → Redirecting to: /login');
@@ -134,9 +143,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       
       // Root redirect
+      // Landing Page (Public)
       GoRoute(
         path: '/',
-        redirect: (_, __) => '/products',
+        builder: (context, state) => const LandingScreen(),
+        // Explicitly prevent parent redirect logic from interfering if needed locally
+        redirect: (_, __) => null, 
       ),
       
       // Dashboard Shell with nested routes
