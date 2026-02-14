@@ -21,11 +21,23 @@ Future<void> saveSettings({
   ref.read(settingsSaveProvider.notifier).state = const AsyncLoading();
 
   try {
+    // Phase 1 Fix: Get token for isolated client
+    final session = ShopAuthService.currentSession;
+    final token = session?.accessToken;
+
+    if (token == null) {
+      throw Exception('Oturum süresi dolmuş olabilir. Lütfen tekrar giriş yapın.');
+    }
+
     final repository = TenantRepository();
-    final updatedTenant = await repository.updateTenant(tenantId, {
-      ...updates,
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+    final updatedTenant = await repository.updateTenant(
+      tenantId, 
+      {
+        ...updates,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      authToken: token, // Inject token
+    );
 
     // Update local tenant state with new values
     final currentTenant = ref.read(currentTenantProvider);

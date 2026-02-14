@@ -87,9 +87,15 @@ class TenantRepository {
   }
 
   /// Update tenant
-  Future<Tenant> updateTenant(String id, Map<String, dynamic> updates) async {
+  /// Uses isolated client to prevent "Ghost Logout" issues
+  Future<Tenant> updateTenant(String id, Map<String, dynamic> updates, {String? authToken}) async {
     try {
-      final response = await _client
+      // Create isolated client if token is provided
+      final clientToUse = authToken != null 
+          ? SupabaseClient(Env.supabaseUrl, Env.supabaseAnonKey, headers: {'Authorization': 'Bearer $authToken'})
+          : _client;
+
+      final response = await clientToUse
           .from('tenants')
           .update(updates)
           .eq('id', id)
