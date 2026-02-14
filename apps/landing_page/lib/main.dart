@@ -136,7 +136,7 @@ class _LandingHomeState extends State<LandingHome> {
                if (AuthService().currentUser != null) ...[
                  const Icon(Icons.check_circle, size: 64, color: Colors.green),
                  const SizedBox(height: 16),
-                 Text('Welcome ${AuthService().currentUser?.email}'),
+                 Text('Welcome to QR Menu Platform ${AuthService().currentUser?.email}'),
                  const SizedBox(height: 16),
                  FilledButton(
                    onPressed: () => _handleAuthSuccess(),
@@ -144,7 +144,7 @@ class _LandingHomeState extends State<LandingHome> {
                  )
                ] else ...[
                  Text(
-                   _isLogin ? 'Login' : 'Register',
+                   _isLogin ? 'Login to QR Menu Platform' : 'Register to QR Menu Platform',
                    style: Theme.of(context).textTheme.headlineMedium,
                  ),
                  const SizedBox(height: 24),
