@@ -56,10 +56,29 @@ class SupabaseStorageService implements StorageService {
       // 4. Prepare HTTP Request
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
       
-      // NEW PATH: products/[TENANT_ID]/[FILENAME]
+      // NEW PATH: products/[TENANT_ID]/[FILENAME] (Confirmed)
       final path = '$tenantId/$fileName';
       
+      // MIME Type Detection
+      final extension = file.name.split('.').last.toLowerCase();
+      String mimeType;
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+          mimeType = 'image/jpeg';
+          break;
+        case 'png':
+          mimeType = 'image/png';
+          break;
+        case 'webp':
+          mimeType = 'image/webp';
+          break;
+        default:
+          mimeType = 'application/octet-stream';
+      }
+
       print('📂 Uploading to path: $path');
+      print('🎨 MIME Type detected: $mimeType');
       
       // Supabase Storage API Endpoint
       final url = Uri.parse('${Env.supabaseUrl}/storage/v1/object/products/$path');
@@ -70,7 +89,7 @@ class SupabaseStorageService implements StorageService {
       request.headers.addAll({
         'Authorization': 'Bearer $accessToken',
         'apikey': Env.supabaseAnonKey,
-        'Content-Type': 'application/octet-stream', 
+        'Content-Type': mimeType, 
         'x-upsert': 'false',
       });
       
