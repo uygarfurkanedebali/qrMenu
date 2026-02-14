@@ -1,5 +1,5 @@
 /// QR-Infinity Shop Admin
-/// v1.0.2
+/// v1.0.3
 /// Dashboard for shop owners to manage their menu.
 /// RBAC: Only users with role='shop_owner' are allowed.
 import 'package:flutter/material.dart';
@@ -30,6 +30,7 @@ class ShopAdminApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Router Bridge: Connects to app_router.dart which holds the Landing Page logic
     final router = ref.watch(routerProvider);
 
     // Dark theme — Slate palette with Indigo accent
