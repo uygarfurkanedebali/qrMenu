@@ -156,6 +156,27 @@ class ShopAuthService {
       print('   currentSession exists: ${session != null}');
       print('   currentUser exists: ${SupabaseService.client.auth.currentUser != null}');
 
+      // 💉 STRATEGY A: GHOST LOGOUT FIX (RESURRECTION)
+      // If client says "User Null" but we just logged in, force it to accept the session.
+      if (SupabaseService.client.auth.currentUser == null && _manualSession != null) {
+        print('👻 [AUTH FIX] Ghost Logout detected! Client state is stale.');
+        print('💉 [AUTH FIX] Attempting manual session resurrection...');
+        try {
+          // Force the client to recognize the session we just received
+          // We use the Refresh Token to re-hydrate the session
+          if (_manualSession!.refreshToken != null) {
+             await SupabaseService.client.auth.setSession(_manualSession!.refreshToken!);
+             print('✅ [AUTH FIX] Session resurrected via setSession!');
+             print('   Re-verified User ID: ${SupabaseService.client.auth.currentUser?.id}');
+          } else {
+             print('⚠️ [AUTH FIX] No refresh token available for resurrection.');
+          }
+        } catch (e) {
+          print('❌ [AUTH FIX] Resurrection failed: $e');
+          // We continue, hoping _manualSession is enough for UI, though Storage might fail
+        }
+      }
+
       // 2. Fetch user role (NO AUTO-LOGOUT if fails)
       print('⏳ [AUTH] Step 2/3: Fetching user profile...');
       try {
