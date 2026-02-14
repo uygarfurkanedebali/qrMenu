@@ -75,6 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Early exit for root route to allow public access
       // [PHYSICAL WRITE CHECK]
       if (state.matchedLocation == '/') {
+        debugPrint('🚨 ANTIGRAVITY REDIRECT BYPASS ACTIVE');
         print('║ DECISION RULE 0: Public Landing Page (Early Exit)');
         print('║   → Maintaining: /');
         return null;
