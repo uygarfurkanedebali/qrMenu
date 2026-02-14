@@ -58,7 +58,7 @@ class SupabaseStorageService implements StorageService {
           .uploadBinary(
             path,
             bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+            fileOptions: FileOptions(cacheControl: '3600', upsert: false),
           );
 
       final url = _client.storage
