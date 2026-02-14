@@ -237,6 +237,13 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                             ),
                 ),
               ),
+              const SizedBox(height: 8),
+              const Center(
+                child: Text(
+                  'Supported formats: JPG, PNG, WEBP',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ),
               const SizedBox(height: 24),
 
               // Fields
