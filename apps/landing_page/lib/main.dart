@@ -50,8 +50,10 @@ class _LandingHomeState extends State<LandingHome> {
 
     try {
       // Check if they own a tenant
-      final tenant = await TenantRepository().getTenantByOwnerEmail(user.email!);
-      
+      final tenant = await TenantRepository().getTenantByOwnerEmail(
+        user.email!,
+      );
+
       if (mounted) {
         if (tenant != null) {
           // Redirect to Shop Admin
@@ -60,15 +62,19 @@ class _LandingHomeState extends State<LandingHome> {
         } else {
           // No shop found.
           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Logged in! No shop found for this account. Please contact support.')),
+            const SnackBar(
+              content: Text(
+                'Logged in! No shop found for this account. Please contact support.',
+              ),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Error fetching shop: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching shop: $e')));
       }
     }
   }
@@ -88,10 +94,9 @@ class _LandingHomeState extends State<LandingHome> {
       } else {
         await AuthService().signUp(email: email, password: password);
       }
-      
+
       // Handle success and redirect
       await _handleAuthSuccess();
-
     } catch (e) {
       if (mounted) {
         setState(() => _errorMessage = e.toString());
@@ -117,13 +122,13 @@ class _LandingHomeState extends State<LandingHome> {
         title: const Text('QR Menu Platform'),
         actions: [
           if (AuthService().currentUser != null)
-             IconButton(
-               icon: const Icon(Icons.logout),
-               onPressed: () async {
-                 await AuthService().signOut();
-                 setState(() {});
-               },
-             )
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                await AuthService().signOut();
+                setState(() {});
+              },
+            ),
         ],
       ),
       body: Center(
@@ -133,43 +138,50 @@ class _LandingHomeState extends State<LandingHome> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-               if (AuthService().currentUser != null) ...[
-                 const Icon(Icons.check_circle, size: 64, color: Colors.green),
-                 const SizedBox(height: 16),
-                 Text('Welcome ${AuthService().currentUser?.email}'),
-                 const SizedBox(height: 16),
-                 FilledButton(
-                   onPressed: () => _handleAuthSuccess(),
-                   child: const Text('Go to Shop Admin')
-                 )
-               ] else ...[
-                 Text(
-                   _isLogin ? 'Login' : 'Register',
-                   style: Theme.of(context).textTheme.headlineMedium,
-                 ),
-                 const SizedBox(height: 24),
-                 if (_errorMessage != null)
-                    Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-                 TextField(
-                   controller: _emailController,
-                   decoration: const InputDecoration(labelText: 'Email'),
-                 ),
-                 const SizedBox(height: 16),
-                 TextField(
-                   controller: _passwordController,
-                   decoration: const InputDecoration(labelText: 'Password'),
-                   obscureText: true,
-                 ),
-                 const SizedBox(height: 24),
-                 FilledButton(
-                   onPressed: _isLoading ? null : _submit,
-                   child: _isLoading ? const CircularProgressIndicator() : Text(_isLogin ? 'Sign In' : 'Sign Up'),
-                 ),
-                 TextButton(
-                   onPressed: () => setState(() => _isLogin = !_isLogin),
-                   child: Text(_isLogin ? 'Create Account' : 'Have an account? Login'),
-                 ),
-               ]
+              if (AuthService().currentUser != null) ...[
+                const Icon(Icons.check_circle, size: 64, color: Colors.green),
+                const SizedBox(height: 16),
+                Text('Welcome ${AuthService().currentUser?.email}'),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => _handleAuthSuccess(),
+                  child: const Text('Go to Shop Admin'),
+                ),
+              ] else ...[
+                Text(
+                  _isLogin ? 'Login' : 'Register',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 24),
+                if (_errorMessage != null)
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                TextField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : Text(_isLogin ? 'Sign In' : 'Sign Up'),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _isLogin = !_isLogin),
+                  child: Text(
+                    _isLogin ? 'Create Account' : 'Have an account? Login',
+                  ),
+                ),
+              ],
             ],
           ),
         ),
