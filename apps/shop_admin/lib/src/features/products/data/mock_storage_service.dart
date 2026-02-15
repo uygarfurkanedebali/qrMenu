@@ -1,5 +1,5 @@
 /// Storage Service (REST API Bypass)
-/// 
+///
 /// Handles file uploading to Supabase Storage using direct HTTP requests.
 /// Bypasses Supabase SDK client state to avoid "Ghost Logout" issues.
 library;
@@ -28,6 +28,19 @@ class SupabaseStorageService implements StorageService {
 
   SupabaseStorageService(this.ref);
 
+  /// Helper to sanitize filenames
+  String _sanitizeFilename(String filename) {
+    return filename
+        .toLowerCase()
+        .replaceAll(RegExp(r'[ıİ]'), 'i')
+        .replaceAll(RegExp(r'[ğĞ]'), 'g')
+        .replaceAll(RegExp(r'[üÜ]'), 'u')
+        .replaceAll(RegExp(r'[şŞ]'), 's')
+        .replaceAll(RegExp(r'[öÖ]'), 'o')
+        .replaceAll(RegExp(r'[çÇ]'), 'c')
+        .replaceAll(RegExp(r'[^a-z0-9\._-]'), '_');
+  }
+
   @override
   Future<String> uploadImage(XFile file) async {
     // 1. Get Session manually from ShopAuthService (The Shielded Source of Truth)
@@ -50,17 +63,18 @@ class SupabaseStorageService implements StorageService {
     }
 
     if (tenantId == null) {
-       print('🛑 FATAL: No Tenant ID found. Cannot upload to root.');
-       throw Exception('Dükkan bilgisi bulunamadı. Resim yüklenemez.');
+      print('🛑 FATAL: No Tenant ID found. Cannot upload to root.');
+      throw Exception('Dükkan bilgisi bulunamadı. Resim yüklenemez.');
     }
 
     try {
       // 4. Prepare HTTP Request
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      
+      final cleanName = _sanitizeFilename(file.name);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$cleanName';
+
       // NEW PATH: products/[TENANT_ID]/[FILENAME] (Confirmed)
       final path = '$tenantId/$fileName';
-      
+
       // MIME Type Detection
       final extension = file.name.split('.').last.toLowerCase();
       String mimeType;
@@ -81,20 +95,22 @@ class SupabaseStorageService implements StorageService {
 
       print('📂 Uploading to path: $path');
       print('🎨 MIME Type detected: $mimeType');
-      
+
       // Supabase Storage API Endpoint
-      final url = Uri.parse('${Env.supabaseUrl}/storage/v1/object/products/$path');
-      
+      final url = Uri.parse(
+        '${Env.supabaseUrl}/storage/v1/object/products/$path',
+      );
+
       print('🌐 API URL: $url');
-      
+
       final request = http.Request('POST', url);
       request.headers.addAll({
         'Authorization': 'Bearer $accessToken',
         'apikey': Env.supabaseAnonKey,
-        'Content-Type': mimeType, 
+        'Content-Type': mimeType,
         'x-upsert': 'false',
       });
-      
+
       final Uint8List bytes = await file.readAsBytes();
       request.bodyBytes = bytes;
 
@@ -102,16 +118,18 @@ class SupabaseStorageService implements StorageService {
       final response = await http.Response.fromStream(streamedResponse);
 
       print('📡 RESPONSE STATUS: ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
-         final publicUrl = '${Env.supabaseUrl}/storage/v1/object/public/products/$path';
-         print('✅ UPLOAD COMPLETE (MULTI-TENANT): $publicUrl');
-         return publicUrl;
+        final publicUrl =
+            '${Env.supabaseUrl}/storage/v1/object/public/products/$path';
+        print('✅ UPLOAD COMPLETE (MULTI-TENANT): $publicUrl');
+        return publicUrl;
       } else {
         print('💥 UPLOAD FAILED: ${response.body}');
-        throw Exception('Upload failed with status ${response.statusCode}: ${response.body}');
+        throw Exception(
+          'Upload failed with status ${response.statusCode}: ${response.body}',
+        );
       }
-
     } catch (e) {
       print('💥 UPLOAD ERROR: $e');
       rethrow;
@@ -143,43 +161,51 @@ class SupabaseStorageService implements StorageService {
     print('   - Tenant ID: $tenantId');
 
     // 3. Validation
-    if (accessToken == null || user == null) throw Exception('User is not logged in.');
+    if (accessToken == null || user == null)
+      throw Exception('User is not logged in.');
     if (tenantId == null) throw Exception('Tenant ID not found.');
 
     try {
       // 4. Prepare Logic
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      final cleanName = _sanitizeFilename(file.name);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$cleanName';
       final path = '$tenantId/$fileName'; // Isolation
-      
+
       // MIME Type
       final extension = file.name.split('.').last.toLowerCase();
       String mimeType = 'application/octet-stream';
-      if (['jpg', 'jpeg'].contains(extension)) mimeType = 'image/jpeg';
-      else if (extension == 'png') mimeType = 'image/png';
-      else if (extension == 'webp') mimeType = 'image/webp';
+      if (['jpg', 'jpeg'].contains(extension))
+        mimeType = 'image/jpeg';
+      else if (extension == 'png')
+        mimeType = 'image/png';
+      else if (extension == 'webp')
+        mimeType = 'image/webp';
 
-      final url = Uri.parse('${Env.supabaseUrl}/storage/v1/object/$bucketName/$path');
-      
+      final url = Uri.parse(
+        '${Env.supabaseUrl}/storage/v1/object/$bucketName/$path',
+      );
+
       print('🌐 API URL: $url');
-      
+
       final request = http.Request('POST', url);
       request.headers.addAll({
         'Authorization': 'Bearer $accessToken',
         'apikey': Env.supabaseAnonKey,
-        'Content-Type': mimeType, 
+        'Content-Type': mimeType,
         'x-upsert': 'false',
       });
-      
+
       final Uint8List bytes = await file.readAsBytes();
       request.bodyBytes = bytes;
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
-         final publicUrl = '${Env.supabaseUrl}/storage/v1/object/public/$bucketName/$path';
-         print('✅ UPLOAD SUCCESS: $publicUrl');
-         return publicUrl;
+        final publicUrl =
+            '${Env.supabaseUrl}/storage/v1/object/public/$bucketName/$path';
+        print('✅ UPLOAD SUCCESS: $publicUrl');
+        return publicUrl;
       } else {
         throw Exception('Upload failed: ${response.body}');
       }
@@ -203,7 +229,7 @@ class MockStorageService implements StorageService {
     await Future.delayed(const Duration(seconds: 1));
     return 'https://placehold.co/1200x300/FF5722/FFFFFF?text=Banner';
   }
-  
+
   @override
   Future<String> uploadCategoryImage(XFile file) async {
     await Future.delayed(const Duration(seconds: 1));
