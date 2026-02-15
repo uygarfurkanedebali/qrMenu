@@ -22,11 +22,11 @@ class PaperMenuLayout extends StatefulWidget {
 }
 
 class _PaperMenuLayoutState extends State<PaperMenuLayout> {
-  // Ürün listesi için
+  // Product List Controller
   final ItemScrollController _productScrollController = ItemScrollController();
   final ItemPositionsListener _productPositionsListener = ItemPositionsListener.create();
 
-  // Kategori listesi için
+  // Category Tab Controller
   final ItemScrollController _categoryScrollController = ItemScrollController();
 
   List<dynamic> _flatList = [];
@@ -35,7 +35,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   List<MenuCategory> _filteredCategories = [];
   
   String? _selectedCategoryId;
-  bool _isTabClicked = false; // Elle tıklama kontrolü
+  bool _isTabClicked = false; // Prevents auto-scroll logic from interfering during tap
 
   @override
   void initState() {
@@ -53,19 +53,20 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     int globalIndex = 0;
 
     for (var cat in widget.categories) {
+      // Skip empty or special categories
       if (cat.id == '0' || cat.name == 'All Products' || cat.name == 'Tüm Ürünler' || cat.products.isEmpty) {
         continue;
       }
 
       _filteredCategories.add(cat);
       
-      // Kategori Başlığı (Listede görünen büyük başlık)
+      // 1. Category Title (Big Header in List)
       _flatList.add(cat); 
       _categoryStartIndex[cat.id] = globalIndex;
       _indexToCategoryId[globalIndex] = cat.id;
       globalIndex++;
 
-      // Ürünler
+      // 2. Products
       for (var product in cat.products) {
         _flatList.add(product);
         _indexToCategoryId[globalIndex] = cat.id;
@@ -80,14 +81,14 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     }
   }
 
-  // Aşağı kaydırdıkça kategoriyi güncelle
+  // Sync: Product List Scroll -> Update Category Tab
   void _onProductScroll() {
     if (_isTabClicked) return;
 
     final positions = _productPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
 
-    // Ekranın %30'luk üst kısmına giren ilk öğeyi yakala
+    // Detect the first item visible in the top 30% of the viewport
     final firstVisible = positions
         .where((p) => p.itemLeadingEdge < 0.3) 
         .reduce((max, p) => p.itemLeadingEdge > max.itemLeadingEdge ? p : max);
@@ -95,14 +96,16 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     final currentId = _indexToCategoryId[firstVisible.index];
 
     if (currentId != null && currentId != _selectedCategoryId) {
-      setState(() {
-        _selectedCategoryId = currentId;
-      });
-      _scrollToCategoryTab(currentId);
+      if (mounted) {
+        setState(() {
+          _selectedCategoryId = currentId;
+        });
+        _scrollToCategoryTab(currentId);
+      }
     }
   }
 
-  // Üst barı hizala
+  // Scroll Category Tab to Center
   void _scrollToCategoryTab(String categoryId) {
     int index = _filteredCategories.indexWhere((c) => c.id == categoryId);
     if (index != -1) {
@@ -110,33 +113,36 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
         index: index,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-        // HİLE BURADA: 0.5 tam ortalar ama yazı uzunsa sağa kayar.
-        // 0.42 - 0.45 arası bir değer genelde görsel olarak tam ortaya denk gelir.
-        alignment: 0.42, 
+        alignment: 0.45, // Centers the tab (~0.45 accounts for text width)
       );
     }
   }
 
+  // Handle Category Tap
   void _onCategoryTap(String categoryId) async {
     setState(() {
       _isTabClicked = true;
       _selectedCategoryId = categoryId;
     });
 
+    // 1. Center the tab
     _scrollToCategoryTab(categoryId);
 
+    // 2. Scroll product list to category start
     if (_categoryStartIndex.containsKey(categoryId)) {
       await _productScrollController.scrollTo(
         index: _categoryStartIndex[categoryId]!,
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeInOutCubic,
-        // Kategori başlığı yapışkan barın hemen altına gelsin (biraz boşluk bırakarak)
-        alignment: 0.08, 
+        alignment: 0.04, // Slight offset so title isn't hidden behind the sticky bar
       );
     }
 
+    // 3. Unlock auto-scroll listener after animation
     await Future.delayed(const Duration(milliseconds: 700));
-    _isTabClicked = false;
+    if (mounted) {
+      _isTabClicked = false;
+    }
   }
 
   Future<void> _launchUrl(String urlString) async {
@@ -170,6 +176,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       backgroundColor: bgColor,
       body: Stack(
         children: [
+          // Background Texture
           Positioned.fill(
             child: CustomPaint(painter: NoisePainter(opacity: 0.05)),
           ),
@@ -177,13 +184,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
           NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
-                // 1. KISIM: RESTORAN BİLGİLERİ (Aşağı indikçe kaybolur)
-                // SliverToBoxAdapter kullandığımız için sayfa içeriğiyle beraber yukarı kayar.
+                // 1. SCROLLABLE TENANT HEADER (Moves with scroll)
                 SliverToBoxAdapter(
                   child: _buildTenantHeader(tenant, bgColor),
                 ),
 
-                // 2. KISIM: KATEGORİ ŞERİDİ (Yukarı yapışır - Pinned)
+                // 2. STICKY CATEGORY BAR (Stays on top)
                 SliverPersistentHeader(
                   pinned: true, 
                   floating: false,
@@ -197,12 +203,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 ),
               ];
             },
-            // 3. KISIM: ÜRÜN LİSTESİ
+            // 3. PRODUCT LIST BODY
             body: ScrollablePositionedList.builder(
               itemCount: _flatList.length,
               itemScrollController: _productScrollController,
               itemPositionsListener: _productPositionsListener,
-              padding: const EdgeInsets.only(bottom: 100), // En alta boşluk
+              padding: const EdgeInsets.only(bottom: 100),
               itemBuilder: (context, index) {
                 final item = _flatList[index];
 
@@ -222,13 +228,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     );
   }
 
-  // --- WIDGET PARÇALARI ---
+  // --- WIDGET COMPONENTS ---
 
   Widget _buildTenantHeader(Tenant tenant, Color bgColor) {
-    // Restoran bilgilerini buraya taşıdık. SliverToBoxAdapter içinde olduğu için
-    // sayfayı kaydırdığınızda yukarı doğru gidip kaybolacak.
     return Container(
-      color: bgColor,
+      color: bgColor, // Matches background so it looks seamless
       padding: const EdgeInsets.only(top: 60, bottom: 20, left: 20, right: 20),
       child: Column(
         children: [
@@ -284,7 +288,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       if (icons.isNotEmpty) icons.add(const SizedBox(width: 20));
       icons.add(_iconButton('wifi.png', () {
          Clipboard.setData(ClipboardData(text: tenant.wifiPassword ?? ''));
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Wifi şifresi kopyalandı!")));
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Wifi şifresi kopyalandı!")));
+         }
       }));
     }
 
@@ -313,11 +319,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
 
   Widget _buildCategoryTitle(MenuCategory category) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 50, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 24), // More top padding for separation
       alignment: Alignment.center,
       child: Column(
         children: [
-          Icon(Icons.star_rate_rounded, size: 14, color: Colors.black26),
+          const Icon(Icons.star_rate_rounded, size: 14, color: Colors.black26),
           const SizedBox(height: 8),
           Text(
             category.name.toUpperCase(),
@@ -335,6 +341,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   }
 
   Widget _buildProductRow(MenuProduct product, Tenant tenant) {
+    // Elegant Typography
     final nameStyle = GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black87);
     final priceStyle = GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.black87);
     final descStyle = GoogleFonts.lora(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.black54, height: 1.3);
@@ -349,8 +356,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
             children: [
               Expanded(child: Text(product.name, style: nameStyle)),
               const SizedBox(width: 8),
-              // Noktalı çizgi
-              Expanded(child: Padding(padding: const EdgeInsets.only(bottom: 6), child: CustomPaint(painter: _DottedLinePainter()))),
+              // Dotted Line Spacer
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 6), 
+                  child: CustomPaint(painter: _DottedLinePainter())
+                )
+              ),
               const SizedBox(width: 8),
               Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
             ],
@@ -364,7 +376,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ),
     );
   }
-
+  
   Widget _buildFooter(Tenant tenant) {
     return Container(
       padding: const EdgeInsets.all(40),
@@ -384,7 +396,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
 }
 
 // -----------------------------------------------------------------------------
-// STICKY HEADER (YAPIŞKAN KATEGORİ BARI)
+// STICKY CATEGORY DELEGATE
 // -----------------------------------------------------------------------------
 class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
   final List<MenuCategory> categories;
@@ -404,11 +416,12 @@ class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: bgColor.withOpacity(0.98), // Arka planın görünmemesi için
+      // High opacity to cover content scrolling behind it
+      color: bgColor.withOpacity(0.98), 
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Üst Çizgi
+          // Top Border/Divider
           Container(height: 1, color: Colors.black.withOpacity(0.05)),
           
           Expanded(
@@ -416,7 +429,7 @@ class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
               itemCount: categories.length,
               itemScrollController: itemScrollController,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16), // Baş ve sondaki boşluk
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemBuilder: (context, index) {
                 final cat = categories[index];
                 final isSelected = cat.id == selectedCategoryId;
@@ -445,7 +458,7 @@ class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
               },
             ),
           ),
-           // Alt Çizgi (Gölge efekti)
+           // Bottom Border (Subtle Shadow Effect)
            Container(height: 1, color: Colors.black.withOpacity(0.08)),
         ],
       ),
@@ -453,7 +466,7 @@ class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => 56; // Bar yüksekliği
+  double get maxExtent => 56;
 
   @override
   double get minExtent => 56;
@@ -465,6 +478,9 @@ class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
+// -----------------------------------------------------------------------------
+// HELPER PAINTERS
+// -----------------------------------------------------------------------------
 class _DottedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
