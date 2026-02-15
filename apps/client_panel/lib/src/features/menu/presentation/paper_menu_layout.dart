@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../domain/menu_models.dart';
 import 'components/noise_painter.dart';
@@ -143,41 +144,93 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                           ),
                         const SizedBox(height: 12),
                         // SOCIAL ICONS ROW (Small)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Instagram Small
-                            if (tenant.instagramHandle != null)
+                        const SizedBox(height: 12),
+                        // SOCIAL & WIFI ICONS ROW
+                        Builder(builder: (context) {
+                          final List<Widget> headerItems = [];
+
+                          // 1. Instagram
+                          if (tenant.instagramHandle != null && tenant.instagramHandle!.isNotEmpty) {
+                            headerItems.add(
                               InkWell(
                                 onTap: () => _launchUrl('https://instagram.com/${tenant.instagramHandle}'),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Image.asset('assets/icons/instagram.png', width: 16, height: 16),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      tenant.instagramHandle!,
-                                      style: GoogleFonts.lora(color: Colors.black54, fontSize: 12),
-                                    ),
+                                    Image.asset('assets/icons/instagram.png', width: 14, height: 14),
+                                    const SizedBox(width: 4),
+                                    Text(tenant.instagramHandle!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
                                   ],
                                 ),
                               ),
-                            if (tenant.instagramHandle != null) const SizedBox(width: 16),
-                            // WhatsApp Small (Placeholder)
-                            InkWell(
-                              onTap: () => _launchUrl('https://wa.me/905555555555'),
-                              child: Row(
-                                children: [
-                                  Image.asset('assets/icons/whatsapp.png', width: 16, height: 16),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '+90 555 555 55 55',
-                                    style: GoogleFonts.lora(color: Colors.black54, fontSize: 12),
-                                  ),
-                                ],
+                            );
+                          }
+
+                          // 2. WhatsApp
+                          if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty) {
+                            if (headerItems.isNotEmpty) {
+                              headerItems.add(const Text('  |  ', style: TextStyle(color: Colors.black26)));
+                            }
+                            final cleanPhone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
+                            headerItems.add(
+                              InkWell(
+                                onTap: () => _launchUrl('https://wa.me/$cleanPhone'),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Image.asset('assets/icons/whatsapp.png', width: 14, height: 14),
+                                    const SizedBox(width: 4),
+                                    Text(tenant.phoneNumber!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                                  ],
+                                ),
                               ),
+                            );
+                          }
+
+                          // 3. WiFi
+                          if (tenant.wifiName != null && tenant.wifiName!.isNotEmpty) {
+                            if (headerItems.isNotEmpty) {
+                              headerItems.add(const Text('  |  ', style: TextStyle(color: Colors.black26)));
+                            }
+                            headerItems.add(
+                              InkWell(
+                                onTap: () async {
+                                  if (tenant.wifiPassword != null && tenant.wifiPassword!.isNotEmpty) {
+                                    await Clipboard.setData(ClipboardData(text: tenant.wifiPassword!));
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('WiFi şifresi kopyalandı: ${tenant.wifiPassword}'),
+                                          duration: const Duration(seconds: 2),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.wifi, size: 14, color: Colors.black54),
+                                    const SizedBox(width: 4),
+                                    Text(tenant.wifiName!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          
+                          if (headerItems.isEmpty) return const SizedBox.shrink();
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: headerItems,
                             ),
-                          ],
-                        ),
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -343,26 +396,30 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
             ),
 
           // WhatsApp Button
-          OutlinedButton(
-            onPressed: () => _launchUrl('https://wa.me/905555555555'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.black87,
-              side: const BorderSide(color: Colors.black12),
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty)
+            OutlinedButton(
+              onPressed: () {
+                final cleanPhone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
+                _launchUrl('https://wa.me/$cleanPhone');
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.black87,
+                side: const BorderSide(color: Colors.black12),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/icons/whatsapp.png', width: 24, height: 24),
+                  const SizedBox(width: 12),
+                  Text(
+                     "WhatsApp'tan Sipariş Ver",
+                     style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/icons/whatsapp.png', width: 24, height: 24),
-                const SizedBox(width: 12),
-                Text(
-                   "WhatsApp'tan Sipariş Ver",
-                   style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
           
           const SizedBox(height: 40),
           Text(
