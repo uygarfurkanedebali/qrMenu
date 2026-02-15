@@ -115,26 +115,19 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
           NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
-                // LOGO / BRANDING
-                SliverAppBar(
-                  backgroundColor: bgColor.withValues(alpha: 0.95),
-                  surfaceTintColor: Colors.transparent, // Disable Material 3 tint
-                  elevation: 0,
-                  pinned: false,
-                  floating: true,
-                  snap: true,
-                  expandedHeight: 120,
-                  flexibleSpace: FlexibleSpaceBar(
-                    centerTitle: true,
-                    titlePadding: const EdgeInsets.only(bottom: 20),
-                    title: Column(
+                // LOGO / BRANDING (SliverToBoxAdapter - STATIC)
+                SliverToBoxAdapter(
+                  child: Container(
+                    color: bgColor.withValues(alpha: 0.95),
+                    padding: const EdgeInsets.only(top: 60, bottom: 20),
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           tenant.name.toUpperCase(),
                           style: GoogleFonts.lora(
                             color: Colors.black87,
-                            fontSize: 22, // SliverAppBar scales this, roughly
+                            fontSize: 28, 
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2.5,
                           ),
@@ -145,13 +138,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                             '@${tenant.instagramHandle}',
                             style: GoogleFonts.lora(
                               color: Colors.black54,
-                              fontSize: 10,
+                              fontSize: 12,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        // SOCIAL ICONS ROW (Small)
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         // SOCIAL & WIFI ICONS ROW
                         Builder(builder: (context) {
                           final List<Widget> headerItems = [];
@@ -164,7 +155,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Image.asset('assets/icons/instagram.png', width: 14, height: 14),
+                                    Image.asset(
+                                      'assets/icons/instagram.png', 
+                                      width: 14, 
+                                      height: 14,
+                                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.camera_alt, size: 14, color: Colors.black54),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(tenant.instagramHandle!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
                                   ],
@@ -176,7 +172,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                           // 2. WhatsApp
                           if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty) {
                             if (headerItems.isNotEmpty) {
-                              headerItems.add(const Text('  |  ', style: TextStyle(color: Colors.black26)));
+                              headerItems.add(const Text('   |   ', style: TextStyle(color: Colors.black26, fontSize: 12)));
                             }
                             final cleanPhone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
                             headerItems.add(
@@ -185,7 +181,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Image.asset('assets/icons/whatsapp.png', width: 14, height: 14),
+                                    Image.asset(
+                                      'assets/icons/whatsapp.png', 
+                                      width: 14, 
+                                      height: 14,
+                                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, size: 14, color: Colors.black54),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(tenant.phoneNumber!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
                                   ],
@@ -197,7 +198,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                           // 3. WiFi
                           if (tenant.wifiName != null && tenant.wifiName!.isNotEmpty) {
                             if (headerItems.isNotEmpty) {
-                              headerItems.add(const Text('  |  ', style: TextStyle(color: Colors.black26)));
+                              headerItems.add(const Text('   |   ', style: TextStyle(color: Colors.black26, fontSize: 12)));
                             }
                             headerItems.add(
                               InkWell(
@@ -223,7 +224,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                           backgroundColor: Colors.black87,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          margin: const EdgeInsets.only(bottom: 30, left: 40, right: 40), // Small and centered
+                                          margin: const EdgeInsets.only(bottom: 30, left: 40, right: 40),
                                         ),
                                       );
                                     }
@@ -319,11 +320,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
   }
 
   Widget _buildProductRow(MenuProduct product, Tenant tenant) {
-    // TYPOGRAPHY & AESTHETICS
-    // Product Name: Bold (w700), Black.
-    // Price: w600, Black.
-    // Description: Italic, Black54, lower size.
-    
     final nameStyle = GoogleFonts.lora(
       fontSize: 16, 
       fontWeight: FontWeight.w700, 
@@ -348,33 +344,29 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // FIX PRODUCT ROW LAYOUT
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end, // Align bottom
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(product.name, style: nameStyle), // Left
+              Text(product.name, style: nameStyle),
               const SizedBox(width: 8),
-              
-              // Spacer with Dots
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6), // Align dots with baseline
+                  padding: const EdgeInsets.only(bottom: 6),
                   child: CustomPaint(painter: _DottedLinePainter()),
                 ),
               ),
-              
               const SizedBox(width: 8),
               Text(
                 '${product.price} ${tenant.currencySymbol}', 
                 style: priceStyle
-              ), // Right
+              ),
             ],
           ),
           
           if (product.description != null && product.description!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Padding(
-              padding: const EdgeInsets.only(right: 48), // Leave space on right for readability
+              padding: const EdgeInsets.only(right: 48),
               child: Text(product.description!, style: descStyle),
             ),
           ]
@@ -382,6 +374,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
       ),
     );
   }
+  
   Widget _buildFooter(Tenant tenant) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
