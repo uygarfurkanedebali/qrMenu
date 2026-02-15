@@ -13,8 +13,7 @@ class AdminLayout extends StatefulWidget {
 class _AdminLayoutState extends State<AdminLayout> {
   bool _isRailExtended = false;
 
-  final Color _bgColor = const Color(0xFFF8F9FA);
-  final Color _primaryColor = const Color(0xFFFF5722);
+
 
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
@@ -44,20 +43,21 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isDesktop = MediaQuery.of(context).size.width >= 800;
     final int selectedIndex = _calculateSelectedIndex(context);
     
     // Mobil görünüm (Alt Navigasyon)
     if (!isDesktop) {
       return Scaffold(
-        backgroundColor: _bgColor,
+        backgroundColor: theme.scaffoldBackgroundColor,
         bottomNavigationBar: BottomNavigationBar(
            currentIndex: selectedIndex,
            onTap: _onItemTapped,
-           selectedItemColor: _primaryColor,
+           selectedItemColor: const Color(0xFFFF5722),
            unselectedItemColor: Colors.grey,
            showUnselectedLabels: true,
-           backgroundColor: Colors.white,
+           backgroundColor: theme.cardColor,
            type: BottomNavigationBarType.fixed,
            items: const [
              BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Panel'),
@@ -72,7 +72,7 @@ class _AdminLayoutState extends State<AdminLayout> {
 
     // Masaüstü görünüm (Overlay Hover Sidebar)
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           // 1. Ana İçerik (Soldan 72px sabit boşluk)
@@ -112,31 +112,34 @@ class _AdminLayoutState extends State<AdminLayout> {
               onExit: (_) => setState(() => _isRailExtended = false),
               child: Material(
                 elevation: 8,
-                color: Colors.white,
+                color: theme.cardColor,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24), // Fixed top spacing
                     // Logo veya Başlık Alanı (Opsiyonel)
                     if (_isRailExtended)
-                       const Padding(
-                         padding: EdgeInsets.only(bottom: 20),
+                       Padding(
+                         padding: const EdgeInsets.only(bottom: 20, left: 24),
                          child: Text(
                            "QR MENU ADMIN",
-                           style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                           style: theme.textTheme.titleMedium?.copyWith(
+                             fontWeight: FontWeight.bold, 
+                             letterSpacing: 1.2
+                           ),
                          ),
                        ),
                     
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          _buildNavItem(icon: Icons.dashboard, label: 'Panel', index: 0, selectedIndex: selectedIndex),
-                          _buildNavItem(icon: Icons.list_alt, label: 'Ürünler', index: 1, selectedIndex: selectedIndex),
-                          _buildNavItem(icon: Icons.category, label: 'Kategoriler', index: 2, selectedIndex: selectedIndex),
-                          _buildNavItem(icon: Icons.settings, label: 'Ayarlar', index: 3, selectedIndex: selectedIndex),
-                        ],
-                      ),
+                    // Fixed Column instead of ListView to prevent jumps
+                    Column(
+                      children: [
+                        _buildNavItem(icon: Icons.dashboard, label: 'Panel', index: 0, selectedIndex: selectedIndex),
+                        _buildNavItem(icon: Icons.list_alt, label: 'Ürünler', index: 1, selectedIndex: selectedIndex),
+                        _buildNavItem(icon: Icons.category, label: 'Kategoriler', index: 2, selectedIndex: selectedIndex),
+                        _buildNavItem(icon: Icons.settings, label: 'Ayarlar', index: 3, selectedIndex: selectedIndex),
+                      ],
                     ),
+                    const Spacer(),
                   ],
                 ),
               ),
@@ -149,29 +152,40 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   Widget _buildNavItem({required IconData icon, required String label, required int index, required int selectedIndex}) {
     final isSelected = selectedIndex == index;
+    final theme = Theme.of(context);
+    final primaryColor = const Color(0xFFFF5722); // Keep accent color constant for now
+    final iconColor = isSelected ? primaryColor : theme.iconTheme.color ?? Colors.grey[700];
+    final textColor = isSelected ? primaryColor : theme.textTheme.bodyLarge?.color ?? Colors.black87;
+
     return InkWell(
       onTap: () => _onItemTapped(index),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        color: isSelected ? _primaryColor.withOpacity(0.05) : null,
+      child: SizedBox(
+        height: 56, // Fixed height prevents vertical jumping
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? _primaryColor : Colors.grey[700], size: 24),
-            const SizedBox(width: 20),
-            if (_isRailExtended)
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? _primaryColor : Colors.black87,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    fontSize: 15,
+            const SizedBox(width: 24), // STRICT left padding
+            Icon(icon, color: iconColor), // Pinned icon
+            const SizedBox(width: 20), // STRICT spacing
+            // Text area always present, just faded/clipped when collapsed
+            Expanded(
+              child: ClipRect(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _isRailExtended ? 1.0 : 0.0,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    softWrap: false, // Prevents wrapping during animation
+                    overflow: TextOverflow.visible,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
                 ),
               ),
+            ),
           ],
         ),
       ),
