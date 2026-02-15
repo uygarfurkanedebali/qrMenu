@@ -236,3 +236,5 @@ class MockStorageService implements StorageService {
     return 'https://placehold.co/300x200/4CAF50/FFFFFF?text=Category';
   }
 }
+
+// FORCE UPDATE: Fix InvalidKey error
