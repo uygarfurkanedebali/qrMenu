@@ -31,90 +31,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    print('╔═══════════════════════════════════════════════════════╗');
-    print('║ 👆 [LOGIN UI] Submit Button PRESSED                   ║');
-    print('║ Time: ${DateTime.now().toIso8601String()}');
-    print('╚═══════════════════════════════════════════════════════╝');
-    
-    if (!_formKey.currentState!.validate()) {
-      print('❌ [LOGIN UI] Form validation FAILED');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    print('✅ [LOGIN UI] Form validation PASSED');
     setState(() {
       _isLoading = true;
       _error = null;
     });
-    print('⏳ [LOGIN UI] Loading state SET to true');
 
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      print('═══════════════════════════════════════════════════════');
-      print('🚀 [LOGIN UI] Calling ShopAuthService.signIn()...');
-      print('   Email: $email');
-      print('═══════════════════════════════════════════════════════');
-      
-      // Call simplified auth service (includes state propagation delay)
+      // Call simplified auth service
       final tenant = await ShopAuthService.signIn(
         email: email,
         password: password,
       );
 
-      print('═══════════════════════════════════════════════════════');
-      print('✅ [LOGIN UI] ShopAuthService.signIn() COMPLETED');
-      print('   Tenant: ${tenant.name} (${tenant.slug})');
-      print('═══════════════════════════════════════════════════════');
+      if (!mounted) return;
 
-      // CRITICAL: Check if widget is still mounted after async
-      if (!mounted) {
-        print('⚠️  [LOGIN UI] Widget DISPOSED during signIn - STOPPING execution');
-        print('   This is normal if router already navigated away');
-        return;
-      }
-
-      print('✅ [LOGIN UI] Widget still MOUNTED - proceeding with state updates');
-      
       // Store tenant in provider
-      print('📝 [LOGIN UI] Setting currentTenantProvider state...');
       ref.read(currentTenantProvider.notifier).state = tenant;
-      
-      print('📝 [LOGIN UI] Setting roleVerifiedProvider to TRUE...');
       ref.read(roleVerifiedProvider.notifier).state = true;
-      
-      print('🔄 [LOGIN UI] State updated, waiting 100ms for router refresh...');
       
       // Give router a moment to process the auth state change
       await Future.delayed(const Duration(milliseconds: 100));
       
-      // CRITICAL: Check mounted again after second async
-      if (!mounted) {
-        print('⚠️  [LOGIN UI] Widget DISPOSED after delay - STOPPING execution');
-        print('   Router likely already handled navigation');
-        return;
-      }
-      
-      print('🧭 [LOGIN UI] Calling context.go(\'/products\')...');
+      if (!mounted) return;
       
       // Navigation - router should now see authenticated state
       context.go('/products');
-      print('✅ [LOGIN UI] Navigation triggered to /products!');
-      print('   Waiting for router redirect logic to run...');
       
     } catch (e) {
-      print('═══════════════════════════════════════════════════════');
-      print('❌ [LOGIN UI] Exception caught in _login()');
-      print('   Error type: ${e.runtimeType}');
-      print('   Error message: $e');
-      print('═══════════════════════════════════════════════════════');
-      
-      // CRITICAL: Check mounted before using setState or showing errors
-      if (!mounted) {
-        print('⚠️  [LOGIN UI] Widget DISPOSED during error handling');
-        return;
-      }
+      if (!mounted) return;
       
       String errorMsg = e.toString();
       if (errorMsg.contains('Invalid login credentials')) {
@@ -123,40 +72,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         errorMsg = errorMsg.split('Exception:').last.trim();
       }
       
-      print('📝 [LOGIN UI] Setting error state: $errorMsg');
       setState(() {
         _error = errorMsg;
         _isLoading = false;
       });
 
-      // Show error in SnackBar
-      if (mounted) {
-        print('📢 [LOGIN UI] Showing error SnackBar');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     } finally {
-      // CRITICAL: Check mounted before setState
       if (mounted) {
-        print('🔄 [LOGIN UI] Finally block - setting loading to FALSE');
-        setState(() {
-          _isLoading = false;
-        });
-      } else {
-        print('⚠️  [LOGIN UI] Finally block - widget disposed, skipping setState');
+        setState(() => _isLoading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Light Theme Colors
+    const Color bgColor = Color(0xFFF8F9FA); // Light Grey Background
+    const Color cardColor = Colors.white;
+    const Color textColor = Colors.black87;
+    const Color subTextColor = Colors.black54;
+    const Color primaryColor = Color(0xFFFF5722);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: bgColor,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -171,20 +116,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
-                    ),
+                    color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6366F1).withAlpha(80),
+                        color: Colors.black.withOpacity(0.1),
                         blurRadius: 20,
                         spreadRadius: 2,
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.store, size: 40, color: Colors.white),
+                  child: const Icon(Icons.store, size: 40, color: primaryColor),
                 ),
                 const SizedBox(height: 24),
                 
@@ -193,17 +134,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 4,
+                    color: textColor,
+                    letterSpacing: 2,
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Dükkan Yönetim Paneli',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF94A3B8),
-                    letterSpacing: 2,
+                    fontSize: 14,
+                    color: subTextColor,
+                    letterSpacing: 1,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -214,19 +155,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade900.withAlpha(80),
+                      color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade700, width: 1.5),
+                      border: Border.all(color: Colors.red.shade200, width: 1),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade300, size: 24),
+                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             _error!,
-                            style: TextStyle(color: Colors.red.shade200, fontSize: 14, height: 1.5),
+                            style: TextStyle(color: Colors.red.shade900, fontSize: 14, height: 1.5),
                           ),
                         ),
                       ],
@@ -237,16 +178,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Login Card
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF334155), width: 1),
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(100),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
@@ -257,11 +197,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         TextFormField(
                           controller: _emailController,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'E-posta',
-                            labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                            prefixIcon: Icon(Icons.email_outlined, color: Colors.grey.shade600),
+                            labelStyle: const TextStyle(color: subTextColor),
+                            prefixIcon: const Icon(Icons.email_outlined, color: subTextColor),
+                            filled: true,
+                            fillColor: const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: primaryColor, width: 1.5),
+                            ),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           autofillHints: const [AutofillHints.email],
@@ -275,17 +229,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         TextFormField(
                           controller: _passwordController,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Şifre',
-                            labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                            prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade600),
+                            labelStyle: const TextStyle(color: subTextColor),
+                            prefixIcon: const Icon(Icons.lock_outline, color: subTextColor),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                color: Colors.grey.shade600,
+                                color: subTextColor,
                               ),
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: primaryColor, width: 1.5),
                             ),
                           ),
                           obscureText: _obscurePassword,
@@ -297,13 +265,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           },
                           onFieldSubmitted: (_) => _login(),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 32),
 
                         FilledButton(
                           onPressed: _isLoading ? null : _login,
                           style: FilledButton.styleFrom(
+                            backgroundColor: primaryColor,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                            shadowColor: primaryColor.withOpacity(0.4),
                           ),
                           child: _isLoading
                               ? const SizedBox(
@@ -312,7 +283,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 )
                               : const Text(
                                   'GİRİŞ YAP',
-                                  style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 2),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700, 
+                                    letterSpacing: 1.5,
+                                    fontSize: 16,
+                                  ),
                                 ),
                         ),
                       ],
@@ -323,7 +298,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 24),
                 const Text(
                   'Dükkan sahibi hesabınızla giriş yapın.',
-                  style: TextStyle(color: Color(0xFF475569), fontSize: 12),
+                  style: TextStyle(color: subTextColor, fontSize: 13),
                 ),
               ],
             ),
