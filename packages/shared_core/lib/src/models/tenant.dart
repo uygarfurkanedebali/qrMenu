@@ -1,21 +1,16 @@
-/// Tenant model for shop/restaurant representation
-/// 
-/// Tenants are the core multi-tenant entities.
 library;
-
-import 'theme_config.dart';
 
 class Tenant {
   final String id;
   final String name;
   final String slug;
   final String? ownerEmail;
-  final String? bannerUrl; // New Field (Phase 1)
-  final ThemeConfig? themeConfig;
+  final String? bannerUrl;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
-  // Shop Settings
+  
+  // Settings
   final String primaryColor;
   final String fontFamily;
   final String currencySymbol;
@@ -23,6 +18,8 @@ class Tenant {
   final String? instagramHandle;
   final String? wifiName;
   final String? wifiPassword;
+  
+  // NEW: Design Configuration
   final Map<String, dynamic> designConfig;
 
   const Tenant({
@@ -31,7 +28,6 @@ class Tenant {
     required this.slug,
     this.ownerEmail,
     this.bannerUrl,
-    this.themeConfig,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -42,7 +38,7 @@ class Tenant {
     this.instagramHandle,
     this.wifiName,
     this.wifiPassword,
-    this.designConfig = const {'layout': 'grid', 'font': 'Inter', 'texture': false},
+    this.designConfig = const {},
   });
 
   factory Tenant.fromJson(Map<String, dynamic> json) {
@@ -52,9 +48,6 @@ class Tenant {
       slug: json['slug'] as String,
       ownerEmail: json['owner_email'] as String?,
       bannerUrl: json['banner_url'] as String?,
-      themeConfig: json['theme_config'] != null
-          ? ThemeConfig.fromJson(json['theme_config'])
-          : null,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -67,29 +60,28 @@ class Tenant {
       wifiPassword: json['wifi_password'] as String?,
       designConfig: json['design_config'] != null
           ? Map<String, dynamic>.from(json['design_config'] as Map)
-          : const {'layout': 'grid', 'font': 'Inter', 'texture': false},
+          : const {},
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'slug': slug,
-        'owner_email': ownerEmail,
-        'banner_url': bannerUrl,
-        'theme_config': themeConfig?.toJson(),
-        'is_active': isActive,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-        'primary_color': primaryColor,
-        'font_family': fontFamily,
-        'currency_symbol': currencySymbol,
-        'phone_number': phoneNumber,
-        'instagram_handle': instagramHandle,
-        'wifi_name': wifiName,
-        'wifi_password': wifiPassword,
-        'design_config': designConfig,
-      };
+    'id': id,
+    'name': name,
+    'slug': slug,
+    'owner_email': ownerEmail,
+    'banner_url': bannerUrl,
+    'is_active': isActive,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+    'primary_color': primaryColor,
+    'font_family': fontFamily,
+    'currency_symbol': currencySymbol,
+    'phone_number': phoneNumber,
+    'instagram_handle': instagramHandle,
+    'wifi_name': wifiName,
+    'wifi_password': wifiPassword,
+    'design_config': designConfig,
+  };
 
   Tenant copyWith({
     String? id,
@@ -97,7 +89,6 @@ class Tenant {
     String? slug,
     String? ownerEmail,
     String? bannerUrl,
-    ThemeConfig? themeConfig,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -116,7 +107,6 @@ class Tenant {
       slug: slug ?? this.slug,
       ownerEmail: ownerEmail ?? this.ownerEmail,
       bannerUrl: bannerUrl ?? this.bannerUrl,
-      themeConfig: themeConfig ?? this.themeConfig,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -130,15 +120,4 @@ class Tenant {
       designConfig: designConfig ?? this.designConfig,
     );
   }
-
-  @override
-  String toString() => 'Tenant(id: $id, name: $name, slug: $slug)';
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Tenant && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
 }

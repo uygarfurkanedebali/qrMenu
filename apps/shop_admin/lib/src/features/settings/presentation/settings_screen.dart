@@ -1,38 +1,23 @@
 /// Shop Settings Screen
-///
-/// Full configuration dashboard for shop branding,
-/// contact info, and customer-facing settings.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_core/shared_core.dart'; // TenantState için
+import 'package:shared_core/shared_core.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../auth/application/auth_provider.dart';
 import '../application/settings_provider.dart';
 import '../../products/data/mock_storage_service.dart';
-import 'components/design_settings_section.dart'; // YENİ: Design Settings Widget'ı
+import 'components/design_settings_section.dart';
 
-/// Pre-defined brand colors for quick selection
 const _presetColors = [
-  '#FF5722', // Deep Orange
-  '#E91E63', // Pink
-  '#9C27B0', // Purple
-  '#3F51B5', // Indigo
-  '#2196F3', // Blue
-  '#009688', // Teal
-  '#4CAF50', // Green
-  '#FF9800', // Orange
-  '#795548', // Brown
-  '#607D8B', // Blue Grey
+  '#FF5722', '#E91E63', '#9C27B0', '#3F51B5', '#2196F3',
+  '#009688', '#4CAF50', '#FF9800', '#795548', '#607D8B',
 ];
 
-/// Available Google Fonts (For App UI)
 const _fontFamilies = ['Roboto', 'Lato', 'Montserrat', 'Open Sans', 'Poppins', 'Inter', 'Nunito', 'Raleway'];
-
-/// Currency options
 const _currencies = ['₺', '\$', '€', '£', '¥'];
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -51,12 +36,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _wifiNameController;
   late TextEditingController _wifiPasswordController;
 
-  // App Appearance Settings
   String _selectedFont = 'Roboto';
   String _selectedCurrency = '₺';
   String? _bannerUrl;
   
-  // NEW: Menu Design Settings
+  // Design Settings
   String _layoutMode = 'grid';
   String _designFontFamily = 'Inter';
   bool _enableTexture = false;
@@ -85,7 +69,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  void _populateForm(TenantState tenant) {
+  void _populateForm(Tenant tenant) {
     if (_initialized) return;
     _initialized = true;
 
@@ -98,7 +82,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _selectedCurrency = tenant.currencySymbol;
     _bannerUrl = tenant.bannerUrl;
 
-    // YENİ: Design Config'i doldur
     final designConfig = tenant.designConfig;
     _layoutMode = designConfig['layout'] as String? ?? 'grid';
     _designFontFamily = designConfig['font'] as String? ?? 'Inter';
@@ -138,19 +121,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Color _parseHexColor(String hex) {
     try {
       hex = hex.replaceAll('#', '');
-      if (hex.length == 3) {
-        hex = hex.split('').map((c) => '$c$c').join();
-      }
-      if (hex.length == 6) {
-        return Color(int.parse('FF$hex', radix: 16));
-      }
+      if (hex.length == 3) hex = hex.split('').map((c) => '$c$c').join();
+      if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
     } catch (_) {}
     return const Color(0xFFFF5722);
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     final tenant = ref.read(currentTenantProvider);
     if (tenant == null) return;
 
@@ -169,7 +147,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'instagram_handle': _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
           'wifi_name': _wifiNameController.text.trim().isEmpty ? null : _wifiNameController.text.trim(),
           'wifi_password': _wifiPasswordController.text.trim().isEmpty ? null : _wifiPasswordController.text.trim(),
-          // YENİ: Design Config Kaydı
           'design_config': {
             'layout': _layoutMode,
             'font': _designFontFamily,
@@ -196,10 +173,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Kaydetme hatası: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -213,15 +187,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    if (tenant == null) {
-      return const Scaffold(
-        body: Center(child: Text('Lütfen giriş yapın')),
-      );
-    }
+    if (tenant == null) return const Scaffold(body: Center(child: Text('Giriş yapın')));
 
     _populateForm(tenant);
-
-    final primaryColor = _parseHexColor(_colorController.text);
 
     return Scaffold(
       appBar: AppBar(
@@ -233,10 +201,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: _isSaving ? null : _save,
               icon: _isSaving
                   ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.save, size: 18),
               label: Text(_isSaving ? 'Kaydediliyor...' : 'Kaydet'),
             ),
@@ -248,271 +214,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // ═══════════════════════════════════════
-            // SECTION 1: GÖRÜNÜM (Appearance)
-            // ═══════════════════════════════════════
-            _SectionHeader(
-              icon: Icons.palette,
-              title: 'Görünüm',
-              subtitle: 'Dükkanınızın marka rengi ve yazı tipi',
-            ),
+            // Section 1: Görünüm
+            _SectionHeader(icon: Icons.palette, title: 'Görünüm', subtitle: 'Marka rengi ve afiş'),
             const SizedBox(height: 12),
-
-            // Banner Upload
+            
+            // Banner & Color Cards...
             Card(
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: _uploadBanner,
                 child: Container(
                   height: 150,
-                  width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     image: _bannerUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(_bannerUrl!),
-                            fit: BoxFit.cover,
-                          )
+                        ? DecorationImage(image: NetworkImage(_bannerUrl!), fit: BoxFit.cover)
                         : null,
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (_bannerUrl != null)
-                        Container(color: Colors.black26), // Overlay for readability
-                      
-                      if (_isUploadingBanner)
-                        const CircularProgressIndicator(color: Colors.white)
-                      else
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _bannerUrl != null ? Icons.edit : Icons.add_photo_alternate,
-                              size: 32,
-                              color: _bannerUrl != null ? Colors.white : Colors.grey.shade700,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _bannerUrl != null ? 'Afişi Değiştir' : 'Dükkan Afişi Yükle',
-                              style: TextStyle(
-                                color: _bannerUrl != null ? Colors.white : Colors.grey.shade700,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
+                  child: Center(
+                    child: _isUploadingBanner
+                        ? const CircularProgressIndicator()
+                        : Icon(Icons.add_a_photo, size: 40, color: Colors.grey.shade700),
                   ),
                 ),
               ),
             ),
-            
             const SizedBox(height: 16),
-
-            // Color picker
+            
+            // Renk Seçimi
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Ana Renk', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 12),
-
-                    // Quick select color circles
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _presetColors.map((hex) {
-                        final isSelected = _colorController.text.toUpperCase() == hex.toUpperCase();
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() => _colorController.text = hex);
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: _parseHexColor(hex),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected ? Colors.white : Colors.transparent,
-                                width: 3,
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: _parseHexColor(hex).withAlpha(120),
-                                        blurRadius: 8,
-                                        spreadRadius: 2,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: isSelected
-                                ? const Icon(Icons.check, color: Colors.white, size: 20)
-                                : null,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Hex input
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: primaryColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _colorController,
-                            decoration: const InputDecoration(
-                              labelText: 'Hex Renk Kodu',
-                              hintText: '#FF5722',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.tag),
-                            ),
-                            onChanged: (_) => setState(() {}),
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Renk kodu gerekli';
-                              final hex = RegExp(r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$');
-                              if (!hex.hasMatch(v)) return 'Geçersiz format (örn: #FF5722)';
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
+                    TextFormField(
+                      controller: _colorController,
+                      decoration: const InputDecoration(labelText: 'Hex Renk Kodu', prefixIcon: Icon(Icons.colorize)),
+                      onChanged: (_) => setState(() {}),
                     ),
                   ],
                 ),
               ),
             ),
-
-            const SizedBox(height: 12),
-
-            // Font picker
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: _fontFamilies.contains(_selectedFont) ? _selectedFont : 'Roboto',
-                      decoration: const InputDecoration(
-                        labelText: 'Yazı Tipi',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.text_fields),
-                      ),
-                      items: _fontFamilies.map((f) {
-                        TextStyle fontStyle;
-                        try {
-                          fontStyle = GoogleFonts.getFont(f, fontSize: 16);
-                        } catch (_) {
-                          fontStyle = const TextStyle(fontSize: 16);
-                        }
-                        return DropdownMenuItem(
-                          value: f,
-                          child: Text(f, style: fontStyle),
-                        );
-                      }).toList(),
-                      selectedItemBuilder: (context) {
-                        return _fontFamilies.map((f) {
-                          TextStyle fontStyle;
-                          try {
-                            fontStyle = GoogleFonts.getFont(f, fontSize: 16);
-                          } catch (_) {
-                            fontStyle = const TextStyle(fontSize: 16);
-                          }
-                          return Text(f, style: fontStyle);
-                        }).toList();
-                      },
-                      onChanged: (v) => setState(() => _selectedFont = v ?? 'Roboto'),
-                    ),
-                    const SizedBox(height: 12),
-                    // Font preview
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Önizleme',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Builder(builder: (context) {
-                            TextStyle previewStyle;
-                            try {
-                              previewStyle = GoogleFonts.getFont(
-                                _selectedFont,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                              );
-                            } catch (_) {
-                              previewStyle = const TextStyle(fontSize: 24, fontWeight: FontWeight.w600);
-                            }
-                            return Text(
-                              'Merhaba Dünya! 🍽️',
-                              style: previewStyle,
-                            );
-                          }),
-                          const SizedBox(height: 4),
-                          Builder(builder: (context) {
-                            TextStyle previewStyle;
-                            try {
-                              previewStyle = GoogleFonts.getFont(
-                                _selectedFont,
-                                fontSize: 14,
-                              );
-                            } catch (_) {
-                              previewStyle = const TextStyle(fontSize: 14);
-                            }
-                            return Text(
-                              'Menümüzden en lezzetli seçenekleri keşfedin.',
-                              style: previewStyle,
-                            );
-                          }),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             const SizedBox(height: 32),
 
-            // ═══════════════════════════════════════
-            // SECTION 1.5: TASARIM & LAYOUT (Design)
-            // ═══════════════════════════════════════
-             _SectionHeader(
-              icon: Icons.design_services,
-              title: 'Menü Tasarımı',
-              subtitle: 'Müşteri menüsünün görünümünü özelleştirin',
-            ),
+            // Section 2: Menü Tasarımı (NEW)
+            _SectionHeader(icon: Icons.design_services, title: 'Menü Tasarımı', subtitle: 'Müşteri ekranı özelleştirme'),
             const SizedBox(height: 12),
-
             DesignSettingsSection(
               layoutMode: _layoutMode,
               fontFamily: _designFontFamily,
@@ -521,19 +269,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onFontChanged: (v) => setState(() => _designFontFamily = v ?? 'Inter'),
               onTextureChanged: (v) => setState(() => _enableTexture = v),
             ),
-
             const SizedBox(height: 32),
 
-            // ═══════════════════════════════════════
-            // SECTION 2: İLETİŞİM (Contact)
-            // ═══════════════════════════════════════
-            _SectionHeader(
-              icon: Icons.phone,
-              title: 'İletişim',
-              subtitle: 'Müşterilerinizin sizi ulaşabileceği bilgiler',
-            ),
+            // Section 3: İletişim
+            _SectionHeader(icon: Icons.phone, title: 'İletişim', subtitle: 'Telefon ve Instagram'),
             const SizedBox(height: 12),
-
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -541,107 +281,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     TextFormField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefon Numarası',
-                        hintText: '+90 5XX XXX XX XX',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
-                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Telefon', prefixIcon: Icon(Icons.phone)),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _instagramController,
-                      decoration: const InputDecoration(
-                        labelText: 'Instagram',
-                        hintText: 'dukkan_hesabi',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.camera_alt_outlined),
-                        prefixText: '@ ',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Instagram', prefixIcon: Icon(Icons.camera_alt)),
                     ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: 32),
 
-            // ═══════════════════════════════════════
-            // SECTION 3: OPERASYON (Operations)
-            // ═══════════════════════════════════════
-            _SectionHeader(
-              icon: Icons.settings,
-              title: 'Operasyon',
-              subtitle: 'Para birimi ve işletme ayarları',
-            ),
+            // Section 4: Müşteri Bilgileri
+            _SectionHeader(icon: Icons.wifi, title: 'Wi-Fi', subtitle: 'Müşteriler için internet bilgisi'),
             const SizedBox(height: 12),
-
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: DropdownButtonFormField<String>(
-                  value: _currencies.contains(_selectedCurrency) ? _selectedCurrency : '₺',
-                  decoration: const InputDecoration(
-                    labelText: 'Para Birimi',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  items: _currencies
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 18))))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCurrency = v ?? '₺'),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // ═══════════════════════════════════════
-            // SECTION 4: MÜŞTERİ (Customer Utility)
-            // ═══════════════════════════════════════
-            _SectionHeader(
-              icon: Icons.wifi,
-              title: 'Müşteri Bilgileri',
-              subtitle: 'Menüde müşterilerinize gösterilecek bilgiler',
-            ),
-            const SizedBox(height: 12),
-
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _wifiNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Wi-Fi Adı',
-                        hintText: 'Cafe_WiFi',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.wifi),
-                      ),
-                    ),
+                    TextFormField(controller: _wifiNameController, decoration: const InputDecoration(labelText: 'Wi-Fi Adı', prefixIcon: Icon(Icons.wifi))),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _wifiPasswordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Wi-Fi Şifresi',
-                        hintText: '••••••••',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock_outline),
-                      ),
-                    ),
+                    TextFormField(controller: _wifiPasswordController, decoration: const InputDecoration(labelText: 'Şifre', prefixIcon: Icon(Icons.lock))),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: 32),
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
 
-            // Save button (bottom)
-            FilledButton.icon(
-              onPressed: _isSaving ? null : _save,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
+  const _SectionHeader({required this.icon, required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, color: theme.primaryColor),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(subtitle, style: theme.textTheme.bodySmall),
+          ],
+        ),
+      ],
+    );
+  }
+}
