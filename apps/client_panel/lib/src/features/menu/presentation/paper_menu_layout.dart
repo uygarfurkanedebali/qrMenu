@@ -85,6 +85,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
     }
   }
 
+  Future<void> _launchUrl(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $urlString');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tenant = widget.tenant;
@@ -200,9 +207,23 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text('WiFi şifresi kopyalandı: ${tenant.wifiPassword}'),
+                                          content: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'WiFi şifresi kopyalandı: ${tenant.wifiPassword}',
+                                                style: const TextStyle(fontSize: 13),
+                                              ),
+                                            ],
+                                          ),
                                           duration: const Duration(seconds: 2),
                                           behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.black87,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                          margin: const EdgeInsets.only(bottom: 30, left: 40, right: 40), // Small and centered
                                         ),
                                       );
                                     }
