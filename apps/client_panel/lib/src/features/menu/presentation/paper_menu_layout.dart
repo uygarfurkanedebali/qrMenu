@@ -94,29 +94,17 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     if (positions.isEmpty) return;
 
     // --- 1. Sticky Header Visibility Logic ---
-    // Check if 'CATEGORY_BAR' (Index 1) is visible.
-    // If visible and near top, hide overlay. If completely scrolled off or negative, show overlay.
-    // We check if Index 1's leading edge is < 0 (Scrolled up past top)
-    
-    // Find absolute position of Item 1
     final categoryBarItem = positions.where((p) => p.index == 1).firstOrNull;
     
     bool shouldShowSticky = true;
     if (categoryBarItem != null) {
-      // If Item 1 is visible:
-      // If it's at the very top or below, we hide sticky.
-      // Sticky shows only when Item 1 starts leaving the screen upwards (leadingEdge < 0)
-      // Actually, we want it sticky as soon as the inline one touches the top.
-      // So if Item 1.leadingEdge <= 0, we show sticky.
       if (categoryBarItem.itemLeadingEdge > 0) {
          shouldShowSticky = false;
       }
     } else {
-      // Item 1 is not in viewport.
-      // If first visible item index > 1, then we scrolled PAST it -> Show Sticky.
       final firstVisible = positions.reduce((min, p) => p.itemLeadingEdge < min.itemLeadingEdge ? p : min);
       if (firstVisible.index < 1) {
-         shouldShowSticky = false; // Header is visible, Category bar is below viewport
+         shouldShowSticky = false; 
       }
     }
     
@@ -129,9 +117,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     // --- 2. Active Category Spy Logic ---
     if (_isTabClicked) return;
 
-    // Find visible product
     final spyItem = positions
-        .where((p) => p.itemLeadingEdge < 0.3) // Top 30% spy area
+        .where((p) => p.itemLeadingEdge < 0.3) 
         .reduce((max, p) => p.itemLeadingEdge > max.itemLeadingEdge ? p : max);
 
     final currentId = _indexToCategoryId[spyItem.index];
@@ -146,16 +133,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     }
   }
 
-  // Scroll logic
   void _scrollToContents(String categoryId, {bool onlyTab = false}) {
     int tabIndex = _filteredCategories.indexWhere((c) => c.id == categoryId);
     
     if (tabIndex != -1) {
-      // Sync Overlay Tab
       if (_overlayTabController.isAttached) {
          _overlayTabController.scrollTo(index: tabIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.45);
       }
-      // Sync Inline Tab (Optional, keeping them in sync looks nice)
       if (_inlineTabController.isAttached) {
          _inlineTabController.scrollTo(index: tabIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.45);
       }
@@ -166,8 +150,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
         index: _categoryStartIndex[categoryId]!,
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeInOutCubic,
-        // Calculate alignment to not hide behind sticky header (approx 56px height)
-        // Adjust alignment based on viewport height, roughly 0.08 - 0.1 works for mobile
         alignment: 0.08, 
       );
     }
@@ -233,7 +215,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 if (item == 'TENANT_HEADER') {
                   return _buildTenantHeader(tenant, bgColor);
                 } else if (item == 'CATEGORY_BAR') {
-                  // This is the placeholder bar that scrolls with the content
                   return _buildCategoryBar(bgColor, controller: _inlineTabController);
                 } else if (item == 'FOOTER') {
                   return _buildFooter(tenant);
@@ -248,16 +229,18 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
           ),
 
           // LAYER 2: STICKY HEADER OVERLAY
-          // AnimatedOpacity for smooth transition
           Positioned(
             top: 0, 
             left: 0, 
             right: 0,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: _showStickyHeader ? 1.0 : 0.0,
-              pointerEvents: _showStickyHeader ? PointerEvents.auto : PointerEvents.none,
-              child: _buildCategoryBar(bgColor, isSticky: true, controller: _overlayTabController),
+            // HATA BURADAYDI: pointerEvents yerine IgnorePointer kullanıyoruz
+            child: IgnorePointer(
+              ignoring: !_showStickyHeader, // Gizliyken tıklamaları yoksay
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _showStickyHeader ? 1.0 : 0.0,
+                child: _buildCategoryBar(bgColor, isSticky: true, controller: _overlayTabController),
+              ),
             ),
           ),
         ],
@@ -304,7 +287,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     );
   }
 
-  // Refactored Contact Info with Text Labels
   Widget _buildContactInfoSection(Tenant tenant) {
     List<Widget> rows = [];
     
@@ -378,7 +360,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   }
 
   Widget _buildCategoryBar(Color bgColor, {bool isSticky = false, required ItemScrollController controller}) {
-    // Only add shadowing/border if it's the sticky one overlaying content
     final boxDecoration = isSticky 
       ? BoxDecoration(
           color: bgColor.withOpacity(0.98),
@@ -387,7 +368,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
           ],
           border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.05))),
         )
-      : BoxDecoration(color: bgColor); // Inline bar blends in
+      : BoxDecoration(color: bgColor);
 
     return Container(
       height: 56,
