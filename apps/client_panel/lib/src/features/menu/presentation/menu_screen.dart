@@ -103,31 +103,36 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
   }
 
   @override
+// ... imports
+import 'paper_menu_layout.dart';
+
+// ...
+
+  @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(menuProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
 
+    // Check Layout Mode
+    final layoutMode = widget.tenant.designConfig['layout'] as String? ?? 'grid';
+    final isPaperMode = layoutMode == 'paper';
+
     return Scaffold(
       backgroundColor: widget.theme.colorScheme.surface,
       body: menuAsync.when(
-        loading: () => CustomScrollView(
-          slivers: [
-            _buildHeroHeader(context, ref, null),
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ],
-        ),
-        error: (error, stack) => CustomScrollView(
-          slivers: [
-            _buildHeroHeader(context, ref, null),
-            SliverFillRemaining(
-              child: Center(child: Text('Error loading menu: $error')),
-            ),
-          ],
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error loading menu: $error')),
         data: (allCategories) {
+          if (isPaperMode) {
+             return PaperMenuLayout(
+               tenant: widget.tenant,
+               categories: allCategories,
+             );
+          }
+
+          // ... (Existing Grid/Standard Layout Logic)
+          
           // FILTERING LOGIC
           final isFiltered = selectedCategoryId != null && selectedCategoryId != 'all';
           
@@ -225,7 +230,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
           );
         },
       ),
-      floatingActionButton: _CartFab(theme: widget.theme, cartItemCount: cartItemCount),
+      floatingActionButton: !isPaperMode ? _CartFab(theme: widget.theme, cartItemCount: cartItemCount) : null,
     );
   }
 

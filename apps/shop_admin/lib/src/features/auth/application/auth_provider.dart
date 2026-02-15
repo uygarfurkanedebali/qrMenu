@@ -40,6 +40,9 @@ class TenantState {
   final String? wifiName;
   final String? wifiPassword;
 
+  // Design Config (New)
+  final Map<String, dynamic> designConfig;
+
   const TenantState({
     required this.id,
     required this.name,
@@ -53,6 +56,7 @@ class TenantState {
     this.instagramHandle,
     this.wifiName,
     this.wifiPassword,
+    this.designConfig = const {},
   });
 
   /// Client Panel URL for this tenant
@@ -70,6 +74,9 @@ class TenantState {
       currencySymbol: json['currency_symbol'] as String? ?? '₺',
       phoneNumber: json['phone_number'] as String?,
       instagramHandle: json['instagram_handle'] as String?,
+      designConfig: json['design_config'] != null
+          ? Map<String, dynamic>.from(json['design_config'] as Map)
+          : const {},
     );
   }
 
@@ -86,6 +93,7 @@ class TenantState {
     String? instagramHandle,
     String? wifiName,
     String? wifiPassword,
+    Map<String, dynamic>? designConfig,
   }) {
     return TenantState(
       id: id ?? this.id,
@@ -100,6 +108,7 @@ class TenantState {
       instagramHandle: instagramHandle ?? this.instagramHandle,
       wifiName: wifiName ?? this.wifiName,
       wifiPassword: wifiPassword ?? this.wifiPassword,
+      designConfig: designConfig ?? this.designConfig,
     );
   }
 }

@@ -69,7 +69,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  void _populateForm(Tenant tenant) {
+  void _populateForm(dynamic tenant) {
     if (_initialized) return;
     _initialized = true;
 
