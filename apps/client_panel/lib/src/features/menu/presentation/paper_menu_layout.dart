@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../domain/menu_models.dart';
 import 'components/noise_painter.dart';
 
@@ -140,6 +141,43 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                               fontStyle: FontStyle.italic,
                             ),
                           ),
+                        const SizedBox(height: 12),
+                        // SOCIAL ICONS ROW (Small)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Instagram Small
+                            if (tenant.instagramHandle != null)
+                              InkWell(
+                                onTap: () => _launchUrl('https://instagram.com/${tenant.instagramHandle}'),
+                                child: Row(
+                                  children: [
+                                    Image.asset('assets/icons/instagram.png', width: 16, height: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      tenant.instagramHandle!,
+                                      style: GoogleFonts.lora(color: Colors.black54, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (tenant.instagramHandle != null) const SizedBox(width: 16),
+                            // WhatsApp Small (Placeholder)
+                            InkWell(
+                              onTap: () => _launchUrl('https://wa.me/905555555555'),
+                              child: Row(
+                                children: [
+                                  Image.asset('assets/icons/whatsapp.png', width: 16, height: 16),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '+90 555 555 55 55',
+                                    style: GoogleFonts.lora(color: Colors.black54, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -169,6 +207,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                   return _buildCategoryHeader(item);
                 } else if (item is MenuProduct) {
                   return _buildProductRow(item, tenant);
+                } else if (item == 'FOOTER') {
+                  return _buildFooter(tenant);
                 }
                 return const SizedBox.shrink();
               },
@@ -264,6 +304,71 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
               child: Text(product.description!, style: descStyle),
             ),
           ]
+        ],
+      ),
+    );
+  }
+  Widget _buildFooter(Tenant tenant) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Column(
+        children: [
+          Container(height: 1, width: 60, color: Colors.black12),
+          const SizedBox(height: 40),
+          
+          // Instagram Button
+          if (tenant.instagramHandle != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: OutlinedButton(
+                onPressed: () => _launchUrl('https://instagram.com/${tenant.instagramHandle}'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black87,
+                  side: const BorderSide(color: Colors.black12),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/icons/instagram.png', width: 24, height: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Bizi Instagram'da Takip Edin",
+                      style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // WhatsApp Button
+          OutlinedButton(
+            onPressed: () => _launchUrl('https://wa.me/905555555555'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black87,
+              side: const BorderSide(color: Colors.black12),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/icons/whatsapp.png', width: 24, height: 24),
+                const SizedBox(width: 12),
+                Text(
+                   "WhatsApp'tan Sipariş Ver",
+                   style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 40),
+          Text(
+            "Powered by QR-Infinity",
+            style: GoogleFonts.lora(fontSize: 10, color: Colors.black26, fontStyle: FontStyle.italic),
+          ),
         ],
       ),
     );
