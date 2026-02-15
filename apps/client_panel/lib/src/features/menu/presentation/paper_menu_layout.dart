@@ -22,12 +22,14 @@ class PaperMenuLayout extends StatefulWidget {
 }
 
 class _PaperMenuLayoutState extends State<PaperMenuLayout> {
-  // Product List Controller
-  final ItemScrollController _productScrollController = ItemScrollController();
-  final ItemPositionsListener _productPositionsListener = ItemPositionsListener.create();
+  // Main List Controller (Unified: Header + Categories + Products)
+  final ItemScrollController _mainScrollController = ItemScrollController();
+  final ItemPositionsListener _mainPositionsListener = ItemPositionsListener.create();
 
-  // Category Tab Controller
-  final ItemScrollController _categoryScrollController = ItemScrollController();
+  // Overlay Category Tab Controller
+  final ItemScrollController _overlayTabController = ItemScrollController();
+  // Inline Category Tab Controller (Syncs with overlay)
+  final ItemScrollController _inlineTabController = ItemScrollController();
 
   List<dynamic> _flatList = [];
   final Map<String, int> _categoryStartIndex = {};
@@ -35,13 +37,14 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   List<MenuCategory> _filteredCategories = [];
   
   String? _selectedCategoryId;
-  bool _isTabClicked = false; // Prevents auto-scroll logic from interfering during tap
+  bool _isTabClicked = false;
+  bool _showStickyHeader = false;
 
   @override
   void initState() {
     super.initState();
     _processCategories();
-    _productPositionsListener.itemPositions.addListener(_onProductScroll);
+    _mainPositionsListener.itemPositions.addListener(_onMainScroll);
   }
 
   void _processCategories() {
@@ -50,23 +53,28 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     _indexToCategoryId.clear();
     _filteredCategories = [];
 
-    int globalIndex = 0;
+    // 1. TENANT HEADER (Item 0)
+    _flatList.add('TENANT_HEADER');
+
+    // 2. CATEGORY BAR PLACEHOLDER (Item 1)
+    _flatList.add('CATEGORY_BAR');
+
+    int globalIndex = 2; // Starts after Header(0) and CategoryBar(1)
 
     for (var cat in widget.categories) {
-      // Skip empty or special categories
       if (cat.id == '0' || cat.name == 'All Products' || cat.name == 'Tüm Ürünler' || cat.products.isEmpty) {
         continue;
       }
 
       _filteredCategories.add(cat);
       
-      // 1. Category Title (Big Header in List)
+      // Category Title
       _flatList.add(cat); 
       _categoryStartIndex[cat.id] = globalIndex;
       _indexToCategoryId[globalIndex] = cat.id;
       globalIndex++;
 
-      // 2. Products
+      // Products
       for (var product in cat.products) {
         _flatList.add(product);
         _indexToCategoryId[globalIndex] = cat.id;
@@ -81,68 +89,100 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     }
   }
 
-  // Sync: Product List Scroll -> Update Category Tab
-  void _onProductScroll() {
-    if (_isTabClicked) return;
-
-    final positions = _productPositionsListener.itemPositions.value;
+  void _onMainScroll() {
+    final positions = _mainPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
 
-    // Detect the first item visible in the top 30% of the viewport
-    final firstVisible = positions
-        .where((p) => p.itemLeadingEdge < 0.3) 
+    // --- 1. Sticky Header Visibility Logic ---
+    // Check if 'CATEGORY_BAR' (Index 1) is visible.
+    // If visible and near top, hide overlay. If completely scrolled off or negative, show overlay.
+    // We check if Index 1's leading edge is < 0 (Scrolled up past top)
+    
+    // Find absolute position of Item 1
+    final categoryBarItem = positions.where((p) => p.index == 1).firstOrNull;
+    
+    bool shouldShowSticky = true;
+    if (categoryBarItem != null) {
+      // If Item 1 is visible:
+      // If it's at the very top or below, we hide sticky.
+      // Sticky shows only when Item 1 starts leaving the screen upwards (leadingEdge < 0)
+      // Actually, we want it sticky as soon as the inline one touches the top.
+      // So if Item 1.leadingEdge <= 0, we show sticky.
+      if (categoryBarItem.itemLeadingEdge > 0) {
+         shouldShowSticky = false;
+      }
+    } else {
+      // Item 1 is not in viewport.
+      // If first visible item index > 1, then we scrolled PAST it -> Show Sticky.
+      final firstVisible = positions.reduce((min, p) => p.itemLeadingEdge < min.itemLeadingEdge ? p : min);
+      if (firstVisible.index < 1) {
+         shouldShowSticky = false; // Header is visible, Category bar is below viewport
+      }
+    }
+    
+    if (_showStickyHeader != shouldShowSticky) {
+      setState(() {
+        _showStickyHeader = shouldShowSticky;
+      });
+    }
+
+    // --- 2. Active Category Spy Logic ---
+    if (_isTabClicked) return;
+
+    // Find visible product
+    final spyItem = positions
+        .where((p) => p.itemLeadingEdge < 0.3) // Top 30% spy area
         .reduce((max, p) => p.itemLeadingEdge > max.itemLeadingEdge ? p : max);
 
-    final currentId = _indexToCategoryId[firstVisible.index];
+    final currentId = _indexToCategoryId[spyItem.index];
 
     if (currentId != null && currentId != _selectedCategoryId) {
       if (mounted) {
         setState(() {
           _selectedCategoryId = currentId;
         });
-        _scrollToCategoryTab(currentId);
+        _scrollToContents(currentId, onlyTab: true);
       }
     }
   }
 
-  // Scroll Category Tab to Center
-  void _scrollToCategoryTab(String categoryId) {
-    int index = _filteredCategories.indexWhere((c) => c.id == categoryId);
-    if (index != -1) {
-      _categoryScrollController.scrollTo(
-        index: index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        alignment: 0.45, // Centers the tab (~0.45 accounts for text width)
+  // Scroll logic
+  void _scrollToContents(String categoryId, {bool onlyTab = false}) {
+    int tabIndex = _filteredCategories.indexWhere((c) => c.id == categoryId);
+    
+    if (tabIndex != -1) {
+      // Sync Overlay Tab
+      if (_overlayTabController.isAttached) {
+         _overlayTabController.scrollTo(index: tabIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.45);
+      }
+      // Sync Inline Tab (Optional, keeping them in sync looks nice)
+      if (_inlineTabController.isAttached) {
+         _inlineTabController.scrollTo(index: tabIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.45);
+      }
+    }
+
+    if (!onlyTab && _categoryStartIndex.containsKey(categoryId)) {
+      _mainScrollController.scrollTo(
+        index: _categoryStartIndex[categoryId]!,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+        // Calculate alignment to not hide behind sticky header (approx 56px height)
+        // Adjust alignment based on viewport height, roughly 0.08 - 0.1 works for mobile
+        alignment: 0.08, 
       );
     }
   }
 
-  // Handle Category Tap
   void _onCategoryTap(String categoryId) async {
     setState(() {
       _isTabClicked = true;
       _selectedCategoryId = categoryId;
     });
 
-    // 1. Center the tab
-    _scrollToCategoryTab(categoryId);
+    _scrollToContents(categoryId);
 
-    // 2. Scroll product list to category start
-    if (_categoryStartIndex.containsKey(categoryId)) {
-      await _productScrollController.scrollTo(
-        index: _categoryStartIndex[categoryId]!,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-        alignment: 0.04, // Slight offset so title isn't hidden behind the sticky bar
-      );
-    }
-
-    // 3. Unlock auto-scroll listener after animation
     await Future.delayed(const Duration(milliseconds: 700));
-    if (mounted) {
-      _isTabClicked = false;
-    }
+    if (mounted) _isTabClicked = false;
   }
 
   Future<void> _launchUrl(String urlString) async {
@@ -176,51 +216,48 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          // Background Texture
           Positioned.fill(
             child: CustomPaint(painter: NoisePainter(opacity: 0.05)),
           ),
 
-          NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                // 1. SCROLLABLE TENANT HEADER (Moves with scroll)
-                SliverToBoxAdapter(
-                  child: _buildTenantHeader(tenant, bgColor),
-                ),
-
-                // 2. STICKY CATEGORY BAR (Stays on top)
-                SliverPersistentHeader(
-                  pinned: true, 
-                  floating: false,
-                  delegate: _StickyCategoryListDelegate(
-                    categories: _filteredCategories,
-                    selectedCategoryId: _selectedCategoryId,
-                    onSelect: _onCategoryTap,
-                    bgColor: bgColor,
-                    itemScrollController: _categoryScrollController,
-                  ),
-                ),
-              ];
-            },
-            // 3. PRODUCT LIST BODY
-            body: ScrollablePositionedList.builder(
+          // LAYER 1: UNIFIED SCROLLABLE CONTENT
+          Positioned.fill(
+            child: ScrollablePositionedList.builder(
               itemCount: _flatList.length,
-              itemScrollController: _productScrollController,
-              itemPositionsListener: _productPositionsListener,
+              itemScrollController: _mainScrollController,
+              itemPositionsListener: _mainPositionsListener,
               padding: const EdgeInsets.only(bottom: 100),
               itemBuilder: (context, index) {
                 final item = _flatList[index];
 
-                if (item is MenuCategory) {
+                if (item == 'TENANT_HEADER') {
+                  return _buildTenantHeader(tenant, bgColor);
+                } else if (item == 'CATEGORY_BAR') {
+                  // This is the placeholder bar that scrolls with the content
+                  return _buildCategoryBar(bgColor, controller: _inlineTabController);
+                } else if (item == 'FOOTER') {
+                  return _buildFooter(tenant);
+                } else if (item is MenuCategory) {
                   return _buildCategoryTitle(item);
                 } else if (item is MenuProduct) {
                   return _buildProductRow(item, tenant);
-                } else if (item == 'FOOTER') {
-                  return _buildFooter(tenant);
                 }
                 return const SizedBox.shrink();
               },
+            ),
+          ),
+
+          // LAYER 2: STICKY HEADER OVERLAY
+          // AnimatedOpacity for smooth transition
+          Positioned(
+            top: 0, 
+            left: 0, 
+            right: 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _showStickyHeader ? 1.0 : 0.0,
+              pointerEvents: _showStickyHeader ? PointerEvents.auto : PointerEvents.none,
+              child: _buildCategoryBar(bgColor, isSticky: true, controller: _overlayTabController),
             ),
           ),
         ],
@@ -232,7 +269,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
 
   Widget _buildTenantHeader(Tenant tenant, Color bgColor) {
     return Container(
-      color: bgColor, // Matches background so it looks seamless
+      color: bgColor,
       padding: const EdgeInsets.only(top: 60, bottom: 20, left: 20, right: 20),
       child: Column(
         children: [
@@ -259,67 +296,140 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
             ),
           ],
           
-          const SizedBox(height: 20),
-          _buildContactIcons(tenant),
+          const SizedBox(height: 24),
+          _buildContactInfoSection(tenant),
           const SizedBox(height: 10),
-          Container(height: 1, width: 80, color: Colors.black12),
         ],
       ),
     );
   }
 
-  Widget _buildContactIcons(Tenant tenant) {
-    final List<Widget> icons = [];
-
+  // Refactored Contact Info with Text Labels
+  Widget _buildContactInfoSection(Tenant tenant) {
+    List<Widget> rows = [];
+    
     // Instagram
     if (tenant.instagramHandle != null) {
-      icons.add(_iconButton('instagram.png', () => _launchUrl('https://instagram.com/${tenant.instagramHandle}')));
+      rows.add(_buildContactRow(
+        'instagram.png', 
+        '@${tenant.instagramHandle}', 
+        () => _launchUrl('https://instagram.com/${tenant.instagramHandle}')
+      ));
     }
-    
+
     // WhatsApp
     if (tenant.phoneNumber != null) {
-      if (icons.isNotEmpty) icons.add(const SizedBox(width: 20));
-      final phone = _formatWhatsApp(tenant.phoneNumber!, forUrl: true);
-      icons.add(_iconButton('whatsapp.png', () => _launchUrl('https://wa.me/$phone')));
+      final displayPhone = _formatWhatsApp(tenant.phoneNumber!, forUrl: false);
+      final urlPhone = _formatWhatsApp(tenant.phoneNumber!, forUrl: true);
+      rows.add(_buildContactRow(
+        'whatsapp.png', 
+        displayPhone, 
+        () => _launchUrl('https://wa.me/$urlPhone')
+      ));
     }
 
-    // Wifi
+    // WiFi
     if (tenant.wifiName != null) {
-      if (icons.isNotEmpty) icons.add(const SizedBox(width: 20));
-      icons.add(_iconButton('wifi.png', () {
-         Clipboard.setData(ClipboardData(text: tenant.wifiPassword ?? ''));
-         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Wifi şifresi kopyalandı!")));
-         }
-      }));
+       rows.add(_buildContactRow(
+        'wifi.png', 
+        tenant.wifiName!, 
+        () {
+           Clipboard.setData(ClipboardData(text: tenant.wifiPassword ?? ''));
+           if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Wifi şifresi kopyalandı!"), behavior: SnackBarBehavior.floating));
+           }
+        }
+      ));
     }
 
-    if (icons.isEmpty) return const SizedBox.shrink();
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: icons);
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: rows,
+    );
   }
 
-  Widget _iconButton(String iconName, VoidCallback onTap) {
+  Widget _buildContactRow(String iconName, String text, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.black12),
-          borderRadius: BorderRadius.circular(50),
-          color: Colors.white.withOpacity(0.5)
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.network(
+              _getIconUrl(iconName), 
+              width: 18, height: 18,
+              errorBuilder: (_,__,___) => const Icon(Icons.link, size: 18, color: Colors.black54),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              text, 
+              style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87)
+            ),
+          ],
         ),
-        child: Image.network(
-          _getIconUrl(iconName),
-          width: 20, height: 20,
-          errorBuilder: (_,__,___) => const Icon(Icons.link, size: 20, color: Colors.black54),
-        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryBar(Color bgColor, {bool isSticky = false, required ItemScrollController controller}) {
+    // Only add shadowing/border if it's the sticky one overlaying content
+    final boxDecoration = isSticky 
+      ? BoxDecoration(
+          color: bgColor.withOpacity(0.98),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))
+          ],
+          border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.05))),
+        )
+      : BoxDecoration(color: bgColor); // Inline bar blends in
+
+    return Container(
+      height: 56,
+      decoration: boxDecoration,
+      child: ScrollablePositionedList.builder(
+        itemCount: _filteredCategories.length,
+        itemScrollController: controller,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemBuilder: (context, index) {
+          final cat = _filteredCategories[index];
+          final isSelected = cat.id == _selectedCategoryId;
+          
+          return GestureDetector(
+            onTap: () => _onCategoryTap(cat.id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: isSelected 
+                ? const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Colors.black87, width: 2.5)),
+                  )
+                : null,
+              child: Text(
+                cat.name.toUpperCase(),
+                style: GoogleFonts.lora(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  color: isSelected ? Colors.black87 : Colors.black45,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildCategoryTitle(MenuCategory category) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 24), // More top padding for separation
+      padding: const EdgeInsets.fromLTRB(24, 50, 24, 24),
       alignment: Alignment.center,
       child: Column(
         children: [
@@ -341,7 +451,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   }
 
   Widget _buildProductRow(MenuProduct product, Tenant tenant) {
-    // Elegant Typography
     final nameStyle = GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black87);
     final priceStyle = GoogleFonts.lora(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.black87);
     final descStyle = GoogleFonts.lora(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.black54, height: 1.3);
@@ -356,7 +465,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
             children: [
               Expanded(child: Text(product.name, style: nameStyle)),
               const SizedBox(width: 8),
-              // Dotted Line Spacer
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 6), 
@@ -395,92 +503,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// STICKY CATEGORY DELEGATE
-// -----------------------------------------------------------------------------
-class _StickyCategoryListDelegate extends SliverPersistentHeaderDelegate {
-  final List<MenuCategory> categories;
-  final String? selectedCategoryId;
-  final Function(String) onSelect;
-  final Color bgColor;
-  final ItemScrollController itemScrollController;
-
-  _StickyCategoryListDelegate({
-    required this.categories,
-    required this.selectedCategoryId,
-    required this.onSelect,
-    required this.bgColor,
-    required this.itemScrollController,
-  });
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      // High opacity to cover content scrolling behind it
-      color: bgColor.withOpacity(0.98), 
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Top Border/Divider
-          Container(height: 1, color: Colors.black.withOpacity(0.05)),
-          
-          Expanded(
-            child: ScrollablePositionedList.builder(
-              itemCount: categories.length,
-              itemScrollController: itemScrollController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemBuilder: (context, index) {
-                final cat = categories[index];
-                final isSelected = cat.id == selectedCategoryId;
-                
-                return GestureDetector(
-                  onTap: () => onSelect(cat.id),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.center,
-                    decoration: isSelected 
-                      ? const BoxDecoration(
-                          border: Border(bottom: BorderSide(color: Colors.black87, width: 2.5)),
-                        )
-                      : null,
-                    child: Text(
-                      cat.name.toUpperCase(),
-                      style: GoogleFonts.lora(
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                        color: isSelected ? Colors.black87 : Colors.black45,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-           // Bottom Border (Subtle Shadow Effect)
-           Container(height: 1, color: Colors.black.withOpacity(0.08)),
-        ],
-      ),
-    );
-  }
-
-  @override
-  double get maxExtent => 56;
-
-  @override
-  double get minExtent => 56;
-
-  @override
-  bool shouldRebuild(covariant _StickyCategoryListDelegate oldDelegate) {
-    return oldDelegate.selectedCategoryId != selectedCategoryId ||
-           oldDelegate.categories != categories;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// HELPER PAINTERS
-// -----------------------------------------------------------------------------
 class _DottedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
