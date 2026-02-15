@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:shared_core/shared_core.dart'; // Ensure this exports Tenant, Category, Product
-import '../domain/menu_models.dart'; // Importing this to possibly map types if needed
+import 'package:shared_core/shared_core.dart';
+import '../domain/menu_models.dart';
 import 'components/noise_painter.dart';
 
 class PaperMenuLayout extends StatefulWidget {
   final Tenant tenant;
-  final List<MenuCategory> categories; // Using MenuCategory to match Client Panel domain
-  // Sepet mantığı için gerekirse callbackler eklenebilir
-  
+  final List<MenuCategory> categories;
+
   const PaperMenuLayout({
     super.key,
     required this.tenant,
@@ -20,187 +19,341 @@ class PaperMenuLayout extends StatefulWidget {
   State<PaperMenuLayout> createState() => _PaperMenuLayoutState();
 }
 
-class _PaperMenuLayoutState extends State<PaperMenuLayout> {
+class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProviderStateMixin {
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   
-  // Basitlik için tüm ürünleri tek bir düz listede (flat list) tutacağız.
-  // Her eleman ya bir "Başlık" (Kategori) ya da bir "Ürün" olacak.
+  // Flattened list of items (Category Header or Product)
   List<dynamic> _flatList = [];
+  // Map to store indices of category headers for scrolling
+  final Map<String, int> _categoryIndices = {};
+  // Filtered actual categories (for the tab bar)
+  List<MenuCategory> _filteredCategories = [];
+  
+  String? _selectedCategoryId;
 
   @override
   void initState() {
     super.initState();
-    _buildFlatList();
+    _processCategories();
+  }
+  
+  void _processCategories() {
+    _flatList = [];
+    _categoryIndices.clear();
+    _filteredCategories = [];
+
+    int indexChecker = 0;
+
+    for (var cat in widget.categories) {
+      // 1. FILTER SYSTEM CATEGORY
+      if (cat.id == '0' || 
+          cat.name == 'All Products' || 
+          cat.name == 'Tüm Ürünler') {
+        continue;
+      }
+      
+      // Ensure category has products
+      if (cat.products.isNotEmpty) {
+        _filteredCategories.add(cat);
+        
+        // Track where this category starts
+        _categoryIndices[cat.id] = indexChecker;
+        if (_selectedCategoryId == null) _selectedCategoryId = cat.id;
+
+        // Add Category Header
+        _flatList.add(cat);
+        indexChecker++;
+        
+        // Add Products
+        _flatList.addAll(cat.products);
+        indexChecker += cat.products.length;
+      }
+    }
   }
 
-  void _buildFlatList() {
-    _flatList = [];
-    for (var cat in widget.categories) {
-      if (cat.products.isNotEmpty) {
-        _flatList.add(cat); // Kategori Başlığı
-        _flatList.addAll(cat.products); // Ürünler
-      }
+  void _scrollToCategory(String categoryId) {
+    if (_categoryIndices.containsKey(categoryId)) {
+      setState(() => _selectedCategoryId = categoryId);
+      _itemScrollController.scrollTo(
+        index: _categoryIndices[categoryId]!,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final config = widget.tenant.designConfig;
-    final bool useTexture = config['texture'] ?? false;
-    final String fontFamily = config['font'] ?? 'Inter';
+    final tenant = widget.tenant;
+    final config = tenant.designConfig;
+    final bool useTexture = config['texture'] ?? true; 
     
-    // Font seçimi
-    TextStyle baseStyle;
-    try {
-      baseStyle = GoogleFonts.getFont(fontFamily);
-    } catch (_) {
-      baseStyle = GoogleFonts.inter();
-    }
-
-    // Sıcak/Kırık Beyaz Arkaplan
+    // Background Color: Warm White / Paper
     final bgColor = const Color(0xFFFDFBF7);
-
-  // Parse primary color safely
-  final primaryColorHex = widget.tenant.primaryColor;
-  Color primaryColor;
-  try {
-    primaryColor = Color(int.parse('FF${primaryColorHex.replaceAll('#', '')}', radix: 16));
-  } catch (e) {
-    primaryColor = Colors.black;
-  }
 
     return Scaffold(
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          // 1. Doku Katmanı (Opsiyonel)
+          // 1. Noise Texture
           if (useTexture)
             Positioned.fill(
               child: CustomPaint(painter: NoisePainter(opacity: 0.05)),
             ),
 
-          // 2. İçerik
-          CustomScrollView(
-            slivers: [
-              // Header (Logo)
-              SliverAppBar(
-                backgroundColor: bgColor.withValues(alpha: 0.9),
-                elevation: 0,
-                floating: false,
-                pinned: true,
-                expandedHeight: 120.0,
-                flexibleSpace: FlexibleSpaceBar(
-                  centerTitle: true,
-                  title: Text(
-                    widget.tenant.name,
-                    style: baseStyle.copyWith(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
+          // 2. Content
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                // LOGO / BRANDING
+                SliverAppBar(
+                  backgroundColor: bgColor.withValues(alpha: 0.95),
+                  surfaceTintColor: Colors.transparent, // Disable Material 3 tint
+                  elevation: 0,
+                  pinned: false,
+                  floating: true,
+                  snap: true,
+                  expandedHeight: 120,
+                  flexibleSpace: FlexibleSpaceBar(
+                    centerTitle: true,
+                    titlePadding: const EdgeInsets.only(bottom: 20),
+                    title: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          tenant.name.toUpperCase(),
+                          style: GoogleFonts.lora(
+                            color: Colors.black87,
+                            fontSize: 22, // SliverAppBar scales this, roughly
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (tenant.instagramHandle != null)
+                          Text(
+                            '@${tenant.instagramHandle}',
+                            style: GoogleFonts.lora(
+                              color: Colors.black54,
+                              fontSize: 10,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
-              ),
 
-              // Liste
-              SliverPadding(
-                padding: const EdgeInsets.only(bottom: 100),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final item = _flatList[index];
-
-                      if (item is MenuCategory) {
-                        // --- KATEGORİ BAŞLIĞI ---
-                        return Container(
-                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                item.name.toUpperCase(),
-                                style: baseStyle.copyWith(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2.0,
-                                  color: primaryColor,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              const Divider(indent: 100, endIndent: 100, thickness: 1, color: Colors.black26),
-                            ],
-                          ),
-                        );
-                      } else if (item is MenuProduct) {
-                        // --- ÜRÜN SATIRI ---
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.baseline,
-                                textBaseline: TextBaseline.alphabetic,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.name,
-                                      style: baseStyle.copyWith(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Noktalı Çizgi (Spacer)
-                                  Expanded(
-                                    child: CustomPaint(
-                                      painter: _DottedLinePainter(),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${item.price} ${widget.tenant.currencySymbol}',
-                                    style: baseStyle.copyWith(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (item.description != null && item.description!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4, right: 40),
-                                  child: Text(
-                                    item.description!,
-                                    style: baseStyle.copyWith(
-                                      fontSize: 13,
-                                      color: Colors.black54,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                    childCount: _flatList.length,
+                // STICKY CATEGORY HEADER
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _StickyCategoryHeaderDelegate(
+                    categories: _filteredCategories,
+                    selectedCategoryId: _selectedCategoryId,
+                    onSelect: _scrollToCategory,
+                    bgColor: bgColor,
                   ),
                 ),
+              ];
+            },
+            body: ScrollablePositionedList.builder(
+              itemCount: _flatList.length,
+              itemScrollController: _itemScrollController,
+              itemPositionsListener: _itemPositionsListener,
+              padding: const EdgeInsets.fromLTRB(0, 20, 0, 100),
+              itemBuilder: (context, index) {
+                final item = _flatList[index];
+
+                if (item is MenuCategory) {
+                  return _buildCategoryHeader(item);
+                } else if (item is MenuProduct) {
+                  return _buildProductRow(item, tenant);
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryHeader(MenuCategory category) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(Icons.star_rate_rounded, size: 16, color: Colors.black.withValues(alpha: 0.3)),
+          const SizedBox(height: 8),
+          Text(
+            category.name.toUpperCase(),
+             style: GoogleFonts.lora(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Container(height: 1, width: 60, color: Colors.black12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductRow(MenuProduct product, Tenant tenant) {
+    // TYPOGRAPHY & AESTHETICS
+    // Product Name: Bold (w700), Black.
+    // Price: w600, Black.
+    // Description: Italic, Black54, lower size.
+    
+    final nameStyle = GoogleFonts.lora(
+      fontSize: 16, 
+      fontWeight: FontWeight.w700, 
+      color: Colors.black87
+    );
+    
+    final priceStyle = GoogleFonts.lora(
+      fontSize: 16, 
+      fontWeight: FontWeight.w600, 
+      color: Colors.black87
+    );
+    
+    final descStyle = GoogleFonts.lora(
+      fontSize: 13, 
+      fontStyle: FontStyle.italic, 
+      color: Colors.black54,
+      height: 1.4,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // FIX PRODUCT ROW LAYOUT
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end, // Align bottom
+            children: [
+              Text(product.name, style: nameStyle), // Left
+              const SizedBox(width: 8),
+              
+              // Spacer with Dots
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 6), // Align dots with baseline
+                  child: CustomPaint(painter: _DottedLinePainter()),
+                ),
               ),
+              
+              const SizedBox(width: 8),
+              Text(
+                '${product.price} ${tenant.currencySymbol}', 
+                style: priceStyle
+              ), // Right
             ],
           ),
+          
+          if (product.description != null && product.description!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(right: 48), // Leave space on right for readability
+              child: Text(product.description!, style: descStyle),
+            ),
+          ]
         ],
       ),
     );
   }
 }
 
+// -----------------------------------------------------------------------------
+// STICKY HEADER DELEGATE
+// -----------------------------------------------------------------------------
+class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final List<MenuCategory> categories;
+  final String? selectedCategoryId;
+  final Function(String) onSelect;
+  final Color bgColor;
+
+  _StickyCategoryHeaderDelegate({
+    required this.categories,
+    required this.selectedCategoryId,
+    required this.onSelect,
+    required this.bgColor,
+  });
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: bgColor.withValues(alpha: 0.95), // slightly transparent paper
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05))),
+            ),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final cat = categories[index];
+                final isSelected = cat.id == selectedCategoryId;
+                
+                return GestureDetector(
+                  onTap: () => onSelect(cat.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: isSelected 
+                      ? const BoxDecoration(
+                          border: Border(bottom: BorderSide(color: Colors.black87, width: 2)),
+                        )
+                      : null,
+                    child: Text(
+                      cat.name.toUpperCase(),
+                      style: GoogleFonts.lora(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.black87 : Colors.black45,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Optional: Tiny shadow line
+          if (overlapsContent)
+            Container(height: 1, color: Colors.black.withValues(alpha: 0.03)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  double get maxExtent => 50; // Height of the bar
+
+  @override
+  double get minExtent => 50;
+
+  @override
+  bool shouldRebuild(covariant _StickyCategoryHeaderDelegate oldDelegate) {
+    return oldDelegate.selectedCategoryId != selectedCategoryId ||
+           oldDelegate.categories != categories;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// DOTTED LINE PAINTER
+// -----------------------------------------------------------------------------
 class _DottedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -211,10 +364,11 @@ class _DottedLinePainter extends CustomPainter {
     
     double startX = 0;
     while (startX < size.width) {
-      canvas.drawCircle(Offset(startX, size.height), 1, paint);
-      startX += 6; // Nokta aralığı
+      canvas.drawCircle(Offset(startX, size.height), 0.8, paint);
+      startX += 6; // Space between dots
     }
   }
+  
   @override
   bool shouldRepaint(old) => false;
 }
