@@ -1,17 +1,16 @@
 /// QR-Infinity Shop Admin
-/// v1.0.2
+/// v1.0.4
 /// Dashboard for shop owners to manage their menu.
-/// RBAC: Only users with role='shop_owner' are allowed.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // <-- İŞTE EKSİK OLAN BU!
 import 'src/routing/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase
+  // 1. Supabase'i Başlat
   try {
     await SupabaseService.initialize();
   } catch (e) {
@@ -20,14 +19,20 @@ void main() async {
 
   // 2. [KRİTİK HAMLE] VARSA ESKİ OTURUMU ÖLDÜR
   // Bu satır, sayfa her yüklendiğinde hafızadaki token'ı siler ve Login'e zorlar.
-  final session = Supabase.instance.client.auth.currentSession;
-  if (session != null) {
-    debugPrint(
-      '🧹 [STARTUP] Eski oturum tespit edildi, güvenlik gereği siliniyor...',
-    );
-    await Supabase.instance.client.auth.signOut();
+  // Not: Hata almamak için try-catch bloğuna aldık.
+  try {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      debugPrint(
+        '🧹 [STARTUP] Eski oturum tespit edildi, güvenlik gereği siliniyor...',
+      );
+      await Supabase.instance.client.auth.signOut();
+    }
+  } catch (e) {
+    debugPrint('⚠️ [STARTUP] Oturum temizleme hatası (önemsiz): $e');
   }
 
+  // 3. Uygulamayı Başlat
   runApp(const ProviderScope(child: ShopAdminApp()));
 }
 
@@ -36,6 +41,7 @@ class ShopAdminApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Router Bridge: Connects to app_router.dart
     final router = ref.watch(routerProvider);
 
     // Dark theme — Slate palette with Indigo accent
@@ -124,14 +130,6 @@ class ShopAdminApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Shop Admin Panel',
       debugShowCheckedModeBanner: false,
-
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('en'), Locale('tr')],
-
       theme: darkTheme,
       routerConfig: router,
     );
