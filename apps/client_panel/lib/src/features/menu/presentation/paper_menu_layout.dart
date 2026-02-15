@@ -24,20 +24,26 @@ class PaperMenuLayout extends StatefulWidget {
 class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProviderStateMixin {
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
+  final ScrollController _tabScrollController = ScrollController();
   
-  // Flattened list of items (Category Header or Product)
   List<dynamic> _flatList = [];
-  // Map to store indices of category headers for scrolling
   final Map<String, int> _categoryIndices = {};
-  // Filtered actual categories (for the tab bar)
   List<MenuCategory> _filteredCategories = [];
   
   String? _selectedCategoryId;
+  bool _isAutoScrolling = false;
 
   @override
   void initState() {
     super.initState();
     _processCategories();
+    _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
+  }
+
+  @override
+  void dispose() {
+    _tabScrollController.dispose();
+    super.dispose();
   }
   
   void _processCategories() {
@@ -48,40 +54,83 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
     int indexChecker = 0;
 
     for (var cat in widget.categories) {
-      // 1. FILTER SYSTEM CATEGORY
-      if (cat.id == '0' || 
-          cat.name == 'All Products' || 
-          cat.name == 'Tüm Ürünler') {
-        continue;
-      }
+      if (cat.id == '0' || cat.name == 'All Products' || cat.name == 'Tüm Ürünler') continue;
       
-      // Ensure category has products
       if (cat.products.isNotEmpty) {
         _filteredCategories.add(cat);
-        
-        // Track where this category starts
         _categoryIndices[cat.id] = indexChecker;
         if (_selectedCategoryId == null) _selectedCategoryId = cat.id;
 
-        // Add Category Header
         _flatList.add(cat);
         indexChecker++;
         
-        // Add Products
         _flatList.addAll(cat.products);
         indexChecker += cat.products.length;
       }
     }
   }
 
-  void _scrollToCategory(String categoryId) {
+  // Auto-select category based on scroll position
+  void _onItemPositionsChanged() {
+    if (_isAutoScrolling) return;
+
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+
+    // Find the first visible item near the top
+    int firstVisibleIndex = positions
+        .where((p) => p.itemTrailingEdge > 0.05)
+        .reduce((min, p) => p.itemLeadingEdge < min.itemLeadingEdge ? p : min)
+        .index;
+
+    String? activeCategoryId;
+    for (int i = 0; i <= firstVisibleIndex; i++) {
+      final item = _flatList[i];
+      if (item is MenuCategory) {
+        activeCategoryId = item.id;
+      }
+    }
+
+    if (activeCategoryId != null && activeCategoryId != _selectedCategoryId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedCategoryId = activeCategoryId;
+          });
+          _scrollToTab(activeCategoryId!);
+        }
+      });
+    }
+  }
+
+  void _scrollToTab(String categoryId) {
+    if (!_tabScrollController.hasClients) return;
+    int tabIndex = _filteredCategories.indexWhere((c) => c.id == categoryId);
+    if (tabIndex != -1) {
+      double offset = tabIndex * 110.0; // Approximate tab width
+      double maxScroll = _tabScrollController.position.maxScrollExtent;
+      if (offset > maxScroll) offset = maxScroll;
+      
+      _tabScrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _scrollToCategory(String categoryId) async {
     if (_categoryIndices.containsKey(categoryId)) {
       setState(() => _selectedCategoryId = categoryId);
-      _itemScrollController.scrollTo(
+      _scrollToTab(categoryId);
+      _isAutoScrolling = true;
+      await _itemScrollController.scrollTo(
         index: _categoryIndices[categoryId]!,
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeInOutCubic,
       );
+      await Future.delayed(const Duration(milliseconds: 100));
+      _isAutoScrolling = false;
     }
   }
 
@@ -92,30 +141,36 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
     }
   }
 
+  // Format phone for display (+90...) and URL (90...)
+  String _formatWhatsApp(String rawPhone, {required bool forUrl}) {
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '90${cleanPhone.substring(1)}';
+    } else if (!cleanPhone.startsWith('90')) {
+      cleanPhone = '90$cleanPhone';
+    }
+    return forUrl ? cleanPhone : '+$cleanPhone';
+  }
+
   @override
   Widget build(BuildContext context) {
     final tenant = widget.tenant;
     final config = tenant.designConfig;
     final bool useTexture = config['texture'] ?? true; 
-    
-    // Background Color: Warm White / Paper
     final bgColor = const Color(0xFFFDFBF7);
 
     return Scaffold(
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          // 1. Noise Texture
           if (useTexture)
             Positioned.fill(
               child: CustomPaint(painter: NoisePainter(opacity: 0.05)),
             ),
 
-          // 2. Content
           NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
-                // LOGO / BRANDING (SliverToBoxAdapter - STATIC)
                 SliverToBoxAdapter(
                   child: Container(
                     color: bgColor.withValues(alpha: 0.95),
@@ -143,11 +198,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                             ),
                           ),
                         const SizedBox(height: 16),
-                        // SOCIAL & WIFI ICONS ROW
                         Builder(builder: (context) {
                           final List<Widget> headerItems = [];
 
-                          // 1. Instagram
                           if (tenant.instagramHandle != null && tenant.instagramHandle!.isNotEmpty) {
                             headerItems.add(
                               InkWell(
@@ -157,8 +210,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                   children: [
                                     Image.asset(
                                       'assets/icons/instagram.png', 
-                                      width: 14, 
-                                      height: 14,
+                                      width: 14, height: 14,
                                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.camera_alt, size: 14, color: Colors.black54),
                                     ),
                                     const SizedBox(width: 4),
@@ -169,33 +221,32 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                             );
                           }
 
-                          // 2. WhatsApp
                           if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty) {
                             if (headerItems.isNotEmpty) {
                               headerItems.add(const Text('   |   ', style: TextStyle(color: Colors.black26, fontSize: 12)));
                             }
-                            final cleanPhone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
+                            final cleanUrlPhone = _formatWhatsApp(tenant.phoneNumber!, forUrl: true);
+                            final displayPhone = _formatWhatsApp(tenant.phoneNumber!, forUrl: false);
+                            
                             headerItems.add(
                               InkWell(
-                                onTap: () => _launchUrl('https://wa.me/$cleanPhone'),
+                                onTap: () => _launchUrl('https://wa.me/$cleanUrlPhone'),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Image.asset(
                                       'assets/icons/whatsapp.png', 
-                                      width: 14, 
-                                      height: 14,
+                                      width: 14, height: 14,
                                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, size: 14, color: Colors.black54),
                                     ),
                                     const SizedBox(width: 4),
-                                    Text(tenant.phoneNumber!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                                    Text(displayPhone, style: const TextStyle(fontSize: 12, color: Colors.black54)),
                                   ],
                                 ),
                               ),
                             );
                           }
 
-                          // 3. WiFi
                           if (tenant.wifiName != null && tenant.wifiName!.isNotEmpty) {
                             if (headerItems.isNotEmpty) {
                               headerItems.add(const Text('   |   ', style: TextStyle(color: Colors.black26, fontSize: 12)));
@@ -213,10 +264,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                             children: [
                                               const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                                               const SizedBox(width: 8),
-                                              Text(
-                                                'WiFi şifresi kopyalandı: ${tenant.wifiPassword}',
-                                                style: const TextStyle(fontSize: 13),
-                                              ),
+                                              Text('WiFi şifresi kopyalandı: ${tenant.wifiPassword}', style: const TextStyle(fontSize: 13)),
                                             ],
                                           ),
                                           duration: const Duration(seconds: 2),
@@ -258,7 +306,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                   ),
                 ),
 
-                // STICKY CATEGORY HEADER
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _StickyCategoryHeaderDelegate(
@@ -266,6 +313,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                     selectedCategoryId: _selectedCategoryId,
                     onSelect: _scrollToCategory,
                     bgColor: bgColor,
+                    tabScrollController: _tabScrollController,
                   ),
                 ),
               ];
@@ -320,24 +368,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
   }
 
   Widget _buildProductRow(MenuProduct product, Tenant tenant) {
-    final nameStyle = GoogleFonts.lora(
-      fontSize: 16, 
-      fontWeight: FontWeight.w700, 
-      color: Colors.black87
-    );
-    
-    final priceStyle = GoogleFonts.lora(
-      fontSize: 16, 
-      fontWeight: FontWeight.w600, 
-      color: Colors.black87
-    );
-    
-    final descStyle = GoogleFonts.lora(
-      fontSize: 13, 
-      fontStyle: FontStyle.italic, 
-      color: Colors.black54,
-      height: 1.4,
-    );
+    final nameStyle = GoogleFonts.lora(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87);
+    final priceStyle = GoogleFonts.lora(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87);
+    final descStyle = GoogleFonts.lora(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.black54, height: 1.4);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -356,13 +389,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                '${product.price} ${tenant.currencySymbol}', 
-                style: priceStyle
-              ),
+              Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
             ],
           ),
-          
           if (product.description != null && product.description!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Padding(
@@ -383,7 +412,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
           Container(height: 1, width: 60, color: Colors.black12),
           const SizedBox(height: 40),
           
-          // Instagram Button
           if (tenant.instagramHandle != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -400,26 +428,21 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                   children: [
                     Image.asset(
                       'assets/icons/instagram.png', 
-                      width: 24, 
-                      height: 24,
+                      width: 24, height: 24,
                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.camera_alt, size: 24, color: Colors.black87),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      "Bizi Instagram'da Takip Edin",
-                      style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
+                    Text("Bizi Instagram'da Takip Edin", style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
             ),
 
-          // WhatsApp Button
           if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty)
             OutlinedButton(
               onPressed: () {
-                final cleanPhone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
-                _launchUrl('https://wa.me/$cleanPhone');
+                final cleanUrlPhone = _formatWhatsApp(tenant.phoneNumber!, forUrl: true);
+                _launchUrl('https://wa.me/$cleanUrlPhone');
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.black87,
@@ -432,15 +455,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                 children: [
                   Image.asset(
                     'assets/icons/whatsapp.png', 
-                    width: 24, 
-                    height: 24,
+                    width: 24, height: 24,
                     errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, size: 24, color: Colors.black87),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                     "WhatsApp'tan Sipariş Ver",
-                     style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
+                  Text("WhatsApp'tan Sipariş Ver", style: GoogleFonts.lora(fontSize: 14, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -464,18 +483,20 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String? selectedCategoryId;
   final Function(String) onSelect;
   final Color bgColor;
+  final ScrollController tabScrollController;
 
   _StickyCategoryHeaderDelegate({
     required this.categories,
     required this.selectedCategoryId,
     required this.onSelect,
     required this.bgColor,
+    required this.tabScrollController,
   });
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: bgColor.withValues(alpha: 0.95), // slightly transparent paper
+      color: bgColor.withValues(alpha: 0.95),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -485,6 +506,7 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
               border: Border(bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05))),
             ),
             child: ListView.builder(
+              controller: tabScrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: categories.length,
@@ -516,7 +538,6 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
               },
             ),
           ),
-          // Optional: Tiny shadow line
           if (overlapsContent)
             Container(height: 1, color: Colors.black.withValues(alpha: 0.03)),
         ],
@@ -525,7 +546,7 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => 50; // Height of the bar
+  double get maxExtent => 50;
 
   @override
   double get minExtent => 50;
@@ -551,7 +572,7 @@ class _DottedLinePainter extends CustomPainter {
     double startX = 0;
     while (startX < size.width) {
       canvas.drawCircle(Offset(startX, size.height), 0.8, paint);
-      startX += 6; // Space between dots
+      startX += 6; 
     }
   }
   
