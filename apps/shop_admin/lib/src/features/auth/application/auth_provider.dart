@@ -70,8 +70,36 @@ class TenantState {
       currencySymbol: json['currency_symbol'] as String? ?? '₺',
       phoneNumber: json['phone_number'] as String?,
       instagramHandle: json['instagram_handle'] as String?,
-      wifiName: json['wifi_name'] as String?,
-      wifiPassword: json['wifi_password'] as String?,
+    );
+  }
+
+  TenantState copyWith({
+    String? id,
+    String? name,
+    String? slug,
+    String? ownerEmail,
+    String? bannerUrl,
+    String? primaryColor,
+    String? fontFamily,
+    String? currencySymbol,
+    String? phoneNumber,
+    String? instagramHandle,
+    String? wifiName,
+    String? wifiPassword,
+  }) {
+    return TenantState(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      slug: slug ?? this.slug,
+      ownerEmail: ownerEmail ?? this.ownerEmail,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
+      primaryColor: primaryColor ?? this.primaryColor,
+      fontFamily: fontFamily ?? this.fontFamily,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      instagramHandle: instagramHandle ?? this.instagramHandle,
+      wifiName: wifiName ?? this.wifiName,
+      wifiPassword: wifiPassword ?? this.wifiPassword,
     );
   }
 }
@@ -98,16 +126,17 @@ final currentTenantSlugProvider = Provider<String?>((ref) {
 class ShopAuthService {
   /// Login shield flag - prevents ghost signedOut events during login
   static bool _isPerformingLogin = false;
-  
+
   /// Manual session cache - buffers against Supabase race conditions
   static Session? _manualSession;
-  
+
   /// Check if login is currently in progress (for AuthNotifier)
   static bool get isPerformingLogin => _isPerformingLogin;
-  
+
   /// Get current session (prioritizes manual cache during race conditions)
-  static Session? get currentSession => _manualSession ?? SupabaseService.client.auth.currentSession;
-  
+  static Session? get currentSession =>
+      _manualSession ?? SupabaseService.client.auth.currentSession;
+
   /// Sign in and fetch tenant
   /// IMPORTANT: Does NOT auto-logout on validation failure
   /// Throws exceptions with user-friendly messages
@@ -117,7 +146,7 @@ class ShopAuthService {
     required String password,
   }) async {
     final startTime = DateTime.now();
-    
+
     try {
       // 🛡️ ACTIVATE LOGIN SHIELD
       _isPerformingLogin = true;
@@ -126,7 +155,7 @@ class ShopAuthService {
       print('🕒 [AUTH] ${startTime.toIso8601String()}');
       print('🔐 [AUTH] signIn() STARTED for: $email');
       print('═══════════════════════════════════════════════════════');
-      
+
       // 1. Authenticate with Supabase
       print('⏳ [AUTH] Step 1/3: Calling Supabase signInWithPassword...');
       final response = await SupabaseService.client.auth.signInWithPassword(
@@ -142,22 +171,28 @@ class ShopAuthService {
       // 🛡️ FORCE SESSION UPDATE
       // Manually ensuring session is set to override any ghost events
       _manualSession = response.session;
-      print('🛡️ [AUTH SHIELD] Manual session cached: ${_manualSession?.user.id}');
+      print(
+        '🛡️ [AUTH SHIELD] Manual session cached: ${_manualSession?.user.id}',
+      );
 
       print('✅ [AUTH] Supabase signIn SUCCESS');
       print('   User ID: ${response.user!.id}');
       print('   Session exists: ${response.session != null}');
-      print('   Session token: ${response.session?.accessToken?.substring(0, 20) ?? "NULL"}...');
+      print(
+        '   Session token: ${response.session?.accessToken?.substring(0, 20) ?? "NULL"}...',
+      );
 
       // CRITICAL: Wait for Supabase internal state to propagate
       print('⏳ [AUTH] Waiting 50ms for Supabase state propagation...');
       await Future.delayed(const Duration(milliseconds: 50));
-      
+
       // Verify session is set (checking our getter now)
       final session = ShopAuthService.currentSession;
       print('🔍 [AUTH] Session verification after delay:');
       print('   currentSession exists: ${session != null}');
-      print('   currentUser exists: ${SupabaseService.client.auth.currentUser != null}');
+      print(
+        '   currentUser exists: ${SupabaseService.client.auth.currentUser != null}',
+      );
 
       // 2. Fetch user role (NO AUTO-LOGOUT if fails)
       print('⏳ [AUTH] Step 2/3: Fetching user profile...');
@@ -169,8 +204,12 @@ class ShopAuthService {
             .maybeSingle();
 
         if (profileResponse == null) {
-          print('❌ [AUTH] Profile fetch FAILED - NULL response (NOT signing out)');
-          throw Exception('Profil bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
+          print(
+            '❌ [AUTH] Profile fetch FAILED - NULL response (NOT signing out)',
+          );
+          throw Exception(
+            'Profil bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.',
+          );
         }
 
         final role = profileResponse['role'] as String?;
@@ -179,9 +218,11 @@ class ShopAuthService {
 
         if (role != 'shop_owner') {
           print('⛔ [AUTH] Access DENIED - Wrong role: $role (NOT signing out)');
-          throw Exception('⛔ Yetkisiz Erişim!\n\nBu panel yalnızca Dükkan Sahipleri içindir.\nHesap rolünüz: "${role ?? 'tanımsız'}"\n\nLütfen doğru hesapla giriş yapın.');
+          throw Exception(
+            '⛔ Yetkisiz Erişim!\n\nBu panel yalnızca Dükkan Sahipleri içindir.\nHesap rolünüz: "${role ?? 'tanımsız'}"\n\nLütfen doğru hesapla giriş yapın.',
+          );
         }
-        
+
         print('✅ [AUTH] Role verification PASSED - user is shop_owner');
       } catch (e) {
         if (e is Exception && e.toString().contains('Exception:')) {
@@ -200,14 +241,18 @@ class ShopAuthService {
             .eq('owner_email', email);
 
         if (tenants.isEmpty) {
-          print('❌ [AUTH] Tenant fetch FAILED - Empty result (NOT signing out)');
-          throw Exception('Bu hesaba bağlı dükkan bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.');
+          print(
+            '❌ [AUTH] Tenant fetch FAILED - Empty result (NOT signing out)',
+          );
+          throw Exception(
+            'Bu hesaba bağlı dükkan bulunamadı.\n\nLütfen sistem yöneticinizle iletişime geçin.',
+          );
         }
 
         final tenant = TenantState.fromJson(tenants.first);
         final endTime = DateTime.now();
         final duration = endTime.difference(startTime);
-        
+
         print('✅ [AUTH] Tenant loaded successfully!');
         print('   Tenant ID: ${tenant.id}');
         print('   Tenant name: ${tenant.name}');
@@ -216,7 +261,7 @@ class ShopAuthService {
         print('💡 [AUTH] Auth state fully synchronized - SAFE TO NAVIGATE');
         print('⏱️  [AUTH] Total signIn duration: ${duration.inMilliseconds}ms');
         print('═══════════════════════════════════════════════════════');
-        
+
         return tenant;
       } catch (e) {
         if (e is Exception && e.toString().contains('Exception:')) {
@@ -237,11 +282,29 @@ class ShopAuthService {
     print('═══════════════════════════════════════════════════════');
     print('👋 [AUTH] MANUAL SIGN OUT initiated');
     print('═══════════════════════════════════════════════════════');
-    
+
     // Clear manual session cache
     _manualSession = null;
-    
+
     await SupabaseService.client.auth.signOut();
     print('✅ [AUTH] Sign out complete');
+  }
+
+  /// Update Tenant Banner (Phase 4)
+  static Future<void> updateTenantBanner(
+    String? bannerUrl,
+    String tenantId,
+  ) async {
+    print('🎨 [AUTH] Updating Tenant Banner for $tenantId');
+    try {
+      await SupabaseService.client
+          .from('tenants')
+          .update({'banner_url': bannerUrl})
+          .eq('id', tenantId);
+      print('✅ [AUTH] Tenant Banner updated successfully');
+    } catch (e) {
+      print('❌ [AUTH] Tenant Banner update failed: $e');
+      throw Exception('Banner güncellenemedi: $e');
+    }
   }
 }
