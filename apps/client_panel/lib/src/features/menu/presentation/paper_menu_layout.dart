@@ -405,7 +405,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset('assets/icons/instagram.png', width: 24, height: 24),
+                    Image.asset(
+                      'assets/icons/instagram.png', 
+                      width: 24, 
+                      height: 24,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.camera_alt, size: 24, color: Colors.black87),
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       "Bizi Instagram'da Takip Edin",
@@ -432,7 +437,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/icons/whatsapp.png', width: 24, height: 24),
+                  Image.asset(
+                    'assets/icons/whatsapp.png', 
+                    width: 24, 
+                    height: 24,
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, size: 24, color: Colors.black87),
+                  ),
                   const SizedBox(width: 12),
                   Text(
                      "WhatsApp'tan Sipariş Ver",
