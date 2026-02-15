@@ -141,6 +141,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
     }
   }
 
+  String _getIconUrl(String fileName) {
+    final String supabaseUrl = 'https://jswvvrxpjvsdqcayynzi.supabase.co'; 
+    return '$supabaseUrl/storage/v1/object/public/assets/icons/$fileName';
+  }
+
   // Format phone for display (+90...) and URL (90...)
   String _formatWhatsApp(String rawPhone, {required bool forUrl}) {
     String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -208,8 +213,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Image.asset(
-                                      'assets/icons/instagram.png', 
+                                    Image.network(
+                                      _getIconUrl('instagram.png'), 
                                       width: 14, height: 14,
                                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.camera_alt, size: 14, color: Colors.black54),
                                     ),
@@ -234,8 +239,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Image.asset(
-                                      'assets/icons/whatsapp.png', 
+                                    Image.network(
+                                      _getIconUrl('whatsapp.png'), 
                                       width: 14, height: 14,
                                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, size: 14, color: Colors.black54),
                                     ),
@@ -281,7 +286,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.wifi, size: 14, color: Colors.black54),
+                                    Image.network(
+                                      _getIconUrl('wifi.png'), 
+                                      width: 14, height: 14,
+                                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.wifi, size: 14, color: Colors.black54),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(tenant.wifiName!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
                                   ],
@@ -426,8 +435,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/icons/instagram.png', 
+                    Image.network(
+                      _getIconUrl('instagram.png'), 
                       width: 24, height: 24,
                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.camera_alt, size: 24, color: Colors.black87),
                     ),
@@ -453,8 +462,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> with SingleTickerProv
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/icons/whatsapp.png', 
+                  Image.network(
+                    _getIconUrl('whatsapp.png'), 
                     width: 24, height: 24,
                     errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, size: 24, color: Colors.black87),
                   ),
