@@ -7,10 +7,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_core/shared_core.dart'; // TenantState için
+import 'package:image_picker/image_picker.dart';
+
 import '../../auth/application/auth_provider.dart';
 import '../application/settings_provider.dart';
 import '../../products/data/mock_storage_service.dart';
-import 'package:image_picker/image_picker.dart';
+import 'components/design_settings_section.dart'; // YENİ: Design Settings Widget'ı
 
 /// Pre-defined brand colors for quick selection
 const _presetColors = [
@@ -26,7 +29,7 @@ const _presetColors = [
   '#607D8B', // Blue Grey
 ];
 
-/// Available Google Fonts
+/// Available Google Fonts (For App UI)
 const _fontFamilies = ['Roboto', 'Lato', 'Montserrat', 'Open Sans', 'Poppins', 'Inter', 'Nunito', 'Raleway'];
 
 /// Currency options
@@ -48,9 +51,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _wifiNameController;
   late TextEditingController _wifiPasswordController;
 
+  // App Appearance Settings
   String _selectedFont = 'Roboto';
   String _selectedCurrency = '₺';
   String? _bannerUrl;
+  
+  // NEW: Menu Design Settings
+  String _layoutMode = 'grid';
+  String _designFontFamily = 'Inter';
+  bool _enableTexture = false;
+
   bool _isUploadingBanner = false;
   bool _isSaving = false;
   bool _initialized = false;
@@ -87,6 +97,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _selectedFont = tenant.fontFamily;
     _selectedCurrency = tenant.currencySymbol;
     _bannerUrl = tenant.bannerUrl;
+
+    // YENİ: Design Config'i doldur
+    final designConfig = tenant.designConfig;
+    _layoutMode = designConfig['layout'] as String? ?? 'grid';
+    _designFontFamily = designConfig['font'] as String? ?? 'Inter';
+    _enableTexture = designConfig['texture'] as bool? ?? false;
   }
 
   Future<void> _uploadBanner() async {
@@ -98,7 +114,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       final service = ref.read(storageServiceProvider);
-      // Phase 4 Logic: Multi-tenant isolated path
       final url = await service.uploadTenantBanner(image);
       
       if (mounted) {
@@ -154,6 +169,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'instagram_handle': _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
           'wifi_name': _wifiNameController.text.trim().isEmpty ? null : _wifiNameController.text.trim(),
           'wifi_password': _wifiPasswordController.text.trim().isEmpty ? null : _wifiPasswordController.text.trim(),
+          // YENİ: Design Config Kaydı
+          'design_config': {
+            'layout': _layoutMode,
+            'font': _designFontFamily,
+            'texture': _enableTexture,
+          },
         },
       );
 
@@ -483,6 +504,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 32),
 
             // ═══════════════════════════════════════
+            // SECTION 1.5: TASARIM & LAYOUT (Design)
+            // ═══════════════════════════════════════
+             _SectionHeader(
+              icon: Icons.design_services,
+              title: 'Menü Tasarımı',
+              subtitle: 'Müşteri menüsünün görünümünü özelleştirin',
+            ),
+            const SizedBox(height: 12),
+
+            DesignSettingsSection(
+              layoutMode: _layoutMode,
+              fontFamily: _designFontFamily,
+              enableTexture: _enableTexture,
+              onLayoutChanged: (v) => setState(() => _layoutMode = v ?? 'grid'),
+              onFontChanged: (v) => setState(() => _designFontFamily = v ?? 'Inter'),
+              onTextureChanged: (v) => setState(() => _enableTexture = v),
+            ),
+
+            const SizedBox(height: 32),
+
+            // ═══════════════════════════════════════
             // SECTION 2: İLETİŞİM (Contact)
             // ═══════════════════════════════════════
             _SectionHeader(
@@ -603,67 +645,3 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(
-                _isSaving ? 'Kaydediliyor...' : 'Ayarları Kaydet',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Section header widget
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _SectionHeader({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 20, color: theme.colorScheme.onPrimaryContainer),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}

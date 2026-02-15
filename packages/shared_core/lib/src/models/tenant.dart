@@ -23,6 +23,7 @@ class Tenant {
   final String? instagramHandle;
   final String? wifiName;
   final String? wifiPassword;
+  final Map<String, dynamic> designConfig;
 
   const Tenant({
     required this.id,
@@ -41,6 +42,7 @@ class Tenant {
     this.instagramHandle,
     this.wifiName,
     this.wifiPassword,
+    this.designConfig = const {'layout': 'grid', 'font': 'Inter', 'texture': false},
   });
 
   factory Tenant.fromJson(Map<String, dynamic> json) {
@@ -63,6 +65,9 @@ class Tenant {
       instagramHandle: json['instagram_handle'] as String?,
       wifiName: json['wifi_name'] as String?,
       wifiPassword: json['wifi_password'] as String?,
+      designConfig: json['design_config'] != null
+          ? Map<String, dynamic>.from(json['design_config'] as Map)
+          : const {'layout': 'grid', 'font': 'Inter', 'texture': false},
     );
   }
 
@@ -83,6 +88,7 @@ class Tenant {
         'instagram_handle': instagramHandle,
         'wifi_name': wifiName,
         'wifi_password': wifiPassword,
+        'design_config': designConfig,
       };
 
   Tenant copyWith({
@@ -102,6 +108,7 @@ class Tenant {
     String? instagramHandle,
     String? wifiName,
     String? wifiPassword,
+    Map<String, dynamic>? designConfig,
   }) {
     return Tenant(
       id: id ?? this.id,
@@ -120,6 +127,7 @@ class Tenant {
       instagramHandle: instagramHandle ?? this.instagramHandle,
       wifiName: wifiName ?? this.wifiName,
       wifiPassword: wifiPassword ?? this.wifiPassword,
+      designConfig: designConfig ?? this.designConfig,
     );
   }
 
