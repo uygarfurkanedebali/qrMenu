@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AdminLayout extends StatefulWidget {
   final Widget child;
@@ -10,29 +11,48 @@ class AdminLayout extends StatefulWidget {
 }
 
 class _AdminLayoutState extends State<AdminLayout> {
-  int _selectedIndex = 0;
   bool _isRailExtended = false;
 
   final Color _bgColor = const Color(0xFFF8F9FA);
   final Color _primaryColor = const Color(0xFFFF5722);
 
+  int _calculateSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/dashboard')) return 0;
+    if (location.startsWith('/products')) return 1;
+    if (location.startsWith('/categories')) return 2;
+    if (location.startsWith('/settings')) return 3;
+    return 0;
+  }
+
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Navigation logic will be injected here later (e.g., GoRouter or Navigator)
+    switch (index) {
+      case 0:
+        context.go('/dashboard');
+        break;
+      case 1:
+        context.go('/products');
+        break;
+      case 2:
+        context.go('/categories');
+        break;
+      case 3:
+        context.go('/settings');
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width >= 800;
+    final int selectedIndex = _calculateSelectedIndex(context);
 
     return Scaffold(
       backgroundColor: _bgColor,
       bottomNavigationBar: isDesktop
           ? null
           : BottomNavigationBar(
-              currentIndex: _selectedIndex,
+              currentIndex: selectedIndex,
               onTap: _onItemTapped,
               selectedItemColor: _primaryColor,
               unselectedItemColor: Colors.grey,
@@ -56,7 +76,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                 extended: _isRailExtended,
                 minExtendedWidth: 200,
                 backgroundColor: Colors.white,
-                selectedIndex: _selectedIndex,
+                selectedIndex: selectedIndex,
                 onDestinationSelected: _onItemTapped,
                 selectedIconTheme: IconThemeData(color: _primaryColor),
                 selectedLabelTextStyle: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold),

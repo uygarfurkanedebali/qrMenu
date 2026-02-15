@@ -9,14 +9,13 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../layouts/admin_layout.dart';
 import '../features/auth/presentation/login_screen.dart';
-import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/dashboard/presentation/dashboard_overview_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
 import '../features/products/presentation/category_list_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
-import '../features/landing/presentation/landing_screen.dart';
 import '../features/auth/application/auth_provider.dart';
 
 /// Tracks whether role has been verified for the current session
@@ -68,19 +67,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
   
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/login', // BYPASS LANDING PAGE -> DIRECT LOGIN
     refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
     redirect: (context, state) {
-      // 1. PUBLIC ZONE (VİTRİN)
-      // Early exit for root route to allow public access
-      // [PHYSICAL WRITE CHECK]
-      if (state.matchedLocation == '/') {
-        debugPrint('🚨 ANTIGRAVITY REDIRECT BYPASS ACTIVE');
-        print('║ DECISION RULE 0: Public Landing Page (Early Exit)');
-        print('║   → Maintaining: /');
-        return null;
-      }
-
       print('╔═══════════════════════════════════════════════════════╗');
       print('║ 🧭 [ROUTER] REDIRECT CHECK                            ║');
       print('╠═══════════════════════════════════════════════════════╣');
@@ -144,19 +133,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
       
-      // Root redirect
-      // Landing Page (Public)
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const LandingScreen(),
-        // Explicitly prevent parent redirect logic from interfering if needed locally
-        redirect: (_, __) => null, 
-      ),
+      // Removed Landing Page Route
+
       
       // Dashboard Shell with nested routes
       ShellRoute(
         builder: (context, state, child) {
-          return DashboardScreen(child: child);
+          return AdminLayout(child: child); // REPLACED DashboardScreen -> AdminLayout
         },
         routes: [
           GoRoute(
