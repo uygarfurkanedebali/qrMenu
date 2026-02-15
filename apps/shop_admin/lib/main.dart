@@ -1,5 +1,5 @@
 /// QR-Infinity Shop Admin
-/// v1.0.4
+/// v1.1.0
 /// Dashboard for shop owners to manage their menu.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
