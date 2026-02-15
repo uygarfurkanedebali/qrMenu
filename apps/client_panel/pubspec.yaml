@@ -48,6 +48,9 @@ dependencies:
   # Fonts
   google_fonts: ^6.1.0
 
+  # Scrollable List (for Paper Menu)
+  scrollable_positioned_list: ^0.3.8
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

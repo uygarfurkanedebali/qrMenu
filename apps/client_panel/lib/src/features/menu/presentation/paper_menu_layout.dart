@@ -1,22 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_core/shared_core.dart';
-import 'package:scrollable_positioned_list/scrollable_positioned_list.dart'; // Checking if this package is available? 
-// If not, I should use standard ScrollController with GlobalKeys or similar. 
-// I'll assume standard ListView or CustomScrollView for now to be safe, unless I see it in imports.
-// The user didn't explicitly ask for a new package. Simple ScrollController is safer.
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:shared_core/shared_core.dart'; // Ensure this exports Tenant, Category, Product
+import '../domain/menu_models.dart'; // Importing this to possibly map types if needed
+import 'components/noise_painter.dart';
 
-import '../../cart/application/cart_provider.dart';
-import '../../cart/presentation/cart_bottom_sheet.dart';
-import '../application/menu_provider.dart';
-import '../domain/menu_models.dart';
-import 'noise_painter.dart';
-
-class PaperMenuLayout extends ConsumerStatefulWidget {
+class PaperMenuLayout extends StatefulWidget {
   final Tenant tenant;
-  final List<MenuCategory> categories;
-
+  final List<MenuCategory> categories; // Using MenuCategory to match Client Panel domain
+  // Sepet mantığı için gerekirse callbackler eklenebilir
+  
   const PaperMenuLayout({
     super.key,
     required this.tenant,
@@ -24,302 +17,204 @@ class PaperMenuLayout extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<PaperMenuLayout> createState() => _PaperMenuLayoutState();
+  State<PaperMenuLayout> createState() => _PaperMenuLayoutState();
 }
 
-class _PaperMenuLayoutState extends ConsumerState<PaperMenuLayout> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final ScrollController _scrollController = ScrollController();
+class _PaperMenuLayoutState extends State<PaperMenuLayout> {
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   
-  // To track category positions for auto-scrolling tabs
-  final Map<String, double> _categoryOffsets = {};
-  
-  // We need to know the height of headers to calculate offsets accurately.
-  // For simplicity, we can use an ItemScrollController if available, or just standard logic.
-  // Let's stick to CustomScrollView for the sticky headers.
-  
+  // Basitlik için tüm ürünleri tek bir düz listede (flat list) tutacağız.
+  // Her eleman ya bir "Başlık" (Kategori) ya da bir "Ürün" olacak.
+  List<dynamic> _flatList = [];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: widget.categories.length, vsync: this);
+    _buildFlatList();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _scrollController.dispose();
-    super.dispose();
+  void _buildFlatList() {
+    _flatList = [];
+    for (var cat in widget.categories) {
+      if (cat.products.isNotEmpty) {
+        _flatList.add(cat); // Kategori Başlığı
+        _flatList.addAll(cat.products); // Ürünler
+      }
+    }
   }
 
-  void _scrollToCategory(int index) {
-      // This is tricky with CustomScrollView and varying item heights.
-      // A common simple approach: Just scroll to top? No.
-      // Better: Use a library like `scroll_to_index` if present. 
-      // Since I don't know if it's there, I will just implement the layout first.
-      // The requirement "Scroll-to-index logic" strongly implies I should make it work.
-      // But without the package, it's hard.
-      // I'll implement the sticky header navigation which is easier: 
-      // Tapping a tab filters the list? Or scrolls to it?
-      // "Sticky Header & Scroll-to-index" implies scrolling.
-      // I will implement a basic "Scroll to estimated position" or just leave it as manual scroll for now 
-      // and focus on the Visuals if I can't guarantee the package.
-      // Actually, standard `Scrollable.ensureVisible` works with keys.
-  }
-  
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
+    final config = widget.tenant.designConfig;
+    final bool useTexture = config['texture'] ?? false;
+    final String fontFamily = config['font'] ?? 'Inter';
     
-    // Background Color: Warm White / Off-White
-    final backgroundColor = const Color(0xFFFDFBF7);
+    // Font seçimi
+    TextStyle baseStyle;
+    try {
+      baseStyle = GoogleFonts.getFont(fontFamily);
+    } catch (_) {
+      baseStyle = GoogleFonts.inter();
+    }
+
+    // Sıcak/Kırık Beyaz Arkaplan
+    final bgColor = const Color(0xFFFDFBF7);
+
+  // Parse primary color safely
+  final primaryColorHex = widget.tenant.primaryColor;
+  Color primaryColor;
+  try {
+    primaryColor = Color(int.parse('FF${primaryColorHex.replaceAll('#', '')}', radix: 16));
+  } catch (e) {
+    primaryColor = Colors.black;
+  }
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: bgColor,
       body: Stack(
         children: [
-          // 1. Noise Texture Background
-          Positioned.fill(
-            child: CustomPaint(
-              painter: NoisePainter(
-                opacity: 0.03,
-                color: Colors.black,
-              ),
+          // 1. Doku Katmanı (Opsiyonel)
+          if (useTexture)
+            Positioned.fill(
+              child: CustomPaint(painter: NoisePainter(opacity: 0.05)),
             ),
-          ),
 
-          // 2. Main Content
+          // 2. İçerik
           CustomScrollView(
-            controller: _scrollController,
             slivers: [
-              // Minimalist AppBar
+              // Header (Logo)
               SliverAppBar(
-                backgroundColor: backgroundColor.withValues(alpha: 0.9),
+                backgroundColor: bgColor.withValues(alpha: 0.9),
                 elevation: 0,
-                floating: true,
-                centerTitle: true,
-                title: Column(
-                  children: [
-                    Text(
-                      widget.tenant.name.toUpperCase(),
-                      style: GoogleFonts.lora(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        letterSpacing: 2.0,
-                      ),
-                    ),
-                    if (widget.tenant.instagramHandle != null)
-                      Text(
-                        '@${widget.tenant.instagramHandle}',
-                        style: GoogleFonts.robotoMono(
-                          fontSize: 12,
-                          color: Colors.black54,
-                        ),
-                      ),
-                  ],
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(1.0),
-                  child: Container(
-                    height: 1.0,
-                    margin: const EdgeInsets.symmetric(horizontal: 32),
-                    color: Colors.black12,
-                  ),
-                ),
-              ),
-
-              // Categories
-              ...widget.categories.map((category) {
-                 return SliverMainAxisGroup(
-                   slivers: [
-                     // Sticky Category Header
-                     SliverPersistentHeader(
-                       pinned: true,
-                       delegate: _PaperCategoryHeaderDelegate(
-                         categoryName: category.name,
-                         backgroundColor: backgroundColor,
-                         fontFamily: widget.tenant.fontFamily,
-                       ),
-                     ),
-                     
-                     // Product List
-                     SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final product = category.products[index];
-                              return _PaperProductRow(product: product, tenant: widget.tenant);
-                            },
-                            childCount: category.products.length,
-                          ),
-                        ),
-                     ),
-                     
-                     const SliverToBoxAdapter(child: SizedBox(height: 30)),
-                   ],
-                 );
-              }),
-              
-              const SliverToBoxAdapter(child: SizedBox(height: 100)), // Bottom padding
-            ],
-          ),
-        ],
-      ),
-      floatingActionButton: _PaperCartButton(theme: theme),
-    );
-  }
-}
-
-class _PaperCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final String categoryName;
-  final Color backgroundColor;
-  final String fontFamily;
-
-  _PaperCategoryHeaderDelegate({
-    required this.categoryName,
-    required this.backgroundColor,
-    required this.fontFamily,
-  });
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: backgroundColor.withValues(alpha: 0.95), // Slight transparency
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.stars, size: 16, color: Colors.black54), // Decorative icon
-          const SizedBox(width: 8),
-          Text(
-            categoryName.toUpperCase(),
-            style: GoogleFonts.getFont(
-              fontFamily,
-              color: Colors.black87,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-              decoration: TextDecoration.underline,
-              decorationColor: Colors.black26,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  double get maxExtent => 50.0;
-
-  @override
-  double get minExtent => 50.0;
-
-  @override
-  bool shouldRebuild(covariant _PaperCategoryHeaderDelegate oldDelegate) {
-    return categoryName != oldDelegate.categoryName;
-  }
-}
-
-class _PaperProductRow extends ConsumerWidget {
-  final MenuProduct product;
-  final Tenant tenant;
-
-  const _PaperProductRow({required this.product, required this.tenant});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Elegant Typography
-    // Name (Bold) ............................ Price
-    // Description (Italic/Grey)
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: InkWell(
-        onTap: () {
-           // Add to cart logic
-           ref.read(cartProvider.notifier).addItem(product);
-           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(
-               content: Text('${product.name} sepete eklendi', style: GoogleFonts.robotoMono()),
-               backgroundColor: Colors.black87,
-               duration: const Duration(seconds: 1),
-               behavior: SnackBarBehavior.floating,
-             ),
-           );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Expanded(
-                  child: Text(
-                    product.name,
-                    style: TextStyle(
-                      fontFamily: tenant.fontFamily,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                floating: false,
+                pinned: true,
+                expandedHeight: 120.0,
+                flexibleSpace: FlexibleSpaceBar(
+                  centerTitle: true,
+                  title: Text(
+                    widget.tenant.name,
+                    style: baseStyle.copyWith(
                       color: Colors.black87,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Dotted Line (Optional, maybe simple Box decoration or just spacer)
-                // Expanded(child: Container(height: 1, color: Colors.black12, margin: EdgeInsets.symmetric(horizontal: 4))), 
-                
-                Text(
-                  '${product.price} ${tenant.currencySymbol}',
-                  style: GoogleFonts.robotoMono(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+              ),
+
+              // Liste
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 100),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final item = _flatList[index];
+
+                      if (item is MenuCategory) {
+                        // --- KATEGORİ BAŞLIĞI ---
+                        return Container(
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                item.name.toUpperCase(),
+                                style: baseStyle.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2.0,
+                                  color: primaryColor,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              const Divider(indent: 100, endIndent: 100, thickness: 1, color: Colors.black26),
+                            ],
+                          ),
+                        );
+                      } else if (item is MenuProduct) {
+                        // --- ÜRÜN SATIRI ---
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.name,
+                                      style: baseStyle.copyWith(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Noktalı Çizgi (Spacer)
+                                  Expanded(
+                                    child: CustomPaint(
+                                      painter: _DottedLinePainter(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${item.price} ${widget.tenant.currencySymbol}',
+                                    style: baseStyle.copyWith(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (item.description != null && item.description!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4, right: 40),
+                                  child: Text(
+                                    item.description!,
+                                    style: baseStyle.copyWith(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                    childCount: _flatList.length,
                   ),
-                ),
-              ],
-            ),
-            if (product.description != null && product.description!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                product.description!,
-                style: GoogleFonts.lora(
-                   fontSize: 14,
-                   fontStyle: FontStyle.italic,
-                   color: Colors.black54,
                 ),
               ),
             ],
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Divider(color: Colors.black12, height: 1, thickness: 0.5),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _PaperCartButton extends ConsumerWidget {
-  final ThemeData theme;
-  const _PaperCartButton({required this.theme});
-
+class _DottedLinePainter extends CustomPainter {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final count = ref.watch(cartItemCountProvider);
-    if (count == 0) return const SizedBox.shrink();
-
-    return FloatingActionButton.extended(
-      onPressed: () => showCartBottomSheet(context),
-      backgroundColor: Colors.black87,
-      foregroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(), // Square/Sharp corners for "Paper" feel
-      label: Text('SEPET ($count)', style: GoogleFonts.robotoMono(fontWeight: FontWeight.bold)),
-      icon: const Icon(Icons.shopping_bag_outlined),
-    );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black26
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+    
+    double startX = 0;
+    while (startX < size.width) {
+      canvas.drawCircle(Offset(startX, size.height), 1, paint);
+      startX += 6; // Nokta aralığı
+    }
   }
+  @override
+  bool shouldRepaint(old) => false;
 }

@@ -16,6 +16,7 @@ import '../application/menu_provider.dart';
 import '../domain/menu_models.dart';
 import 'widgets/product_card.dart';
 import 'widgets/category_tabs.dart';
+import 'paper_menu_layout.dart';
 
 /// Main menu screen that displays the restaurant menu
 class MenuScreen extends ConsumerWidget {
@@ -103,12 +104,6 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
   }
 
   @override
-// ... imports
-import 'paper_menu_layout.dart';
-
-// ...
-
-  @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(menuProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
@@ -131,8 +126,6 @@ import 'paper_menu_layout.dart';
              );
           }
 
-          // ... (Existing Grid/Standard Layout Logic)
-          
           // FILTERING LOGIC
           final isFiltered = selectedCategoryId != null && selectedCategoryId != 'all';
           
@@ -183,7 +176,7 @@ import 'paper_menu_layout.dart';
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
-                                    Colors.black.withValues(alpha: 0.2), // Slight dark tint overall
+                                    Colors.black .withValues(alpha: 0.2), // Slight dark tint overall
                                     Colors.black.withValues(alpha: 0.6),
                                   ],
                                 ),
@@ -235,8 +228,6 @@ import 'paper_menu_layout.dart';
   }
 
   SliverAppBar _buildHeroHeader(BuildContext context, WidgetRef ref, MenuCategory? selectedCategory) {
-    // Logic: Use category image if selected, else tenant banner
-    // Note: We use 'iconUrl' as the image source for categories based on current data model structure
     final bool isCategorySelected = selectedCategory != null;
     
     String? activeBannerUrl;
@@ -246,25 +237,11 @@ import 'paper_menu_layout.dart';
       activeBannerUrl = widget.tenant.bannerUrl;
     }
     
-    // Title is Tenant Name usually, but could be Category Name if we wanted.
-    // Keeping Tenant Name as per "Mevcut yapı korunacak" directive generally, 
-    // but typically when inside a category, showing category name in big letters is nice. 
-    // However, the prompt specifically asked for *Banner* swap. 
-    // Let's keep Tenant Name for styling consistency or maybe show Category Name if selected?
-    // User stuck to "Tenant Banner" vs "Category Banner". Let's update the title too?
-    // Prompt didn't explicitly safeguard the Title, but "Hero Header" implies the main branding.
-    // Let's stick to Tenant Name to be safe, or maybe just update the background.
-    // The previous implementation had "Tenant Name". I will keep it.
-
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
       stretch: true,
       backgroundColor: widget.theme.colorScheme.primary,
-      // Leading is usually where the back button goes in AppBar, but we want a custom one in flexible space?
-      // Actually, standard AppBar leading works well for "Back", but user asked for:
-      // "Banner'ın üzerine binen... TopLeft... Stack içinde Positioned".
-      // So we will hide the default leading and implement custom one in FlexibleSpaceBar background stack.
       automaticallyImplyLeading: false, 
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
@@ -312,7 +289,6 @@ import 'paper_menu_layout.dart';
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Decorative pattern (Only show if no banner)
               if (activeBannerUrl == null || activeBannerUrl.isEmpty || true) 
                 Positioned(
                   right: -30,
@@ -326,7 +302,6 @@ import 'paper_menu_layout.dart';
                     ),
                   ),
                 ),
-              // Welcome text (Only show if NOT in category mode and ONLY if tenant name is main title)
               if (!isCategorySelected)
                 Positioned(
                   left: 20,
@@ -359,8 +334,6 @@ import 'paper_menu_layout.dart';
                     ],
                   ),
                 ),
-                
-               // CUSTOM BACK BUTTON
                if (isCategorySelected)
                  Positioned(
                    top: 60, // Adjust for safe area approx
@@ -402,7 +375,6 @@ import 'paper_menu_layout.dart';
     return [
       ...categories.map((category) {
       return SliverMainAxisGroup(slivers: [
-         // Category header
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -432,7 +404,6 @@ import 'paper_menu_layout.dart';
           ),
         ),
 
-        // Products list
         SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -500,7 +471,6 @@ class _ActionBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Social icons
           if (hasPhone) ...[
             _SocialIcon(
               icon: Icons.phone,
@@ -531,7 +501,6 @@ class _ActionBar extends StatelessWidget {
 
           const Spacer(),
 
-          // Wi-Fi Pill
           if (hasWifi)
             _WifiPill(
               wifiName: tenant.wifiName!,
@@ -654,10 +623,6 @@ class _WifiPill extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════
-// CART FAB
-// ═══════════════════════════════════════════════════════
-
 class _CartFab extends StatelessWidget {
   final ThemeData theme;
   final int cartItemCount;
@@ -687,10 +652,6 @@ class _CartFab extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════
-// FOOTER
-// ═══════════════════════════════════════════════════════
-
 class _Footer extends StatelessWidget {
   final Tenant tenant;
   final ThemeData theme;
@@ -707,7 +668,6 @@ class _Footer extends StatelessWidget {
       color: theme.colorScheme.surfaceContainerHighest,
       child: Column(
         children: [
-          // Tenant name
           Text(
             tenant.name,
             style: theme.textTheme.titleMedium?.copyWith(
@@ -717,7 +677,6 @@ class _Footer extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Contact info
           if (hasPhone || hasInsta)
             Wrap(
               spacing: 16,
