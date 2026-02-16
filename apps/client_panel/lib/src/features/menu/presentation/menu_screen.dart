@@ -1,7 +1,8 @@
 /// Menu Screen — Modern QR Menu
 ///
-/// Dynamic theme from tenant settings, hero header with socials, 
-/// sticky category tabs, Wi-Fi pill, and currency-aware product cards.
+/// Dynamic theme from tenant settings, hero header with socials,
+/// horizontal category chips, Wi-Fi pill, and currency-aware product cards.
+/// Supports Paper List layout mode via design_config['layout_mode'].
 library;
 
 import 'package:flutter/material.dart';
@@ -46,7 +47,6 @@ class _ThemedMenuScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Build dynamic theme from tenant's primary color
     final primaryColor = ThemeFactory.parseHexColor(
       tenant.primaryColor,
       fallback: const Color(0xFFFF5722),
@@ -103,15 +103,41 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
     _scrollToTop();
   }
 
+  /// Parse design_config colors with fallback
+  Color _parseDesignColor(String? hex, Color fallback) {
+    if (hex == null || hex.isEmpty) return fallback;
+    try {
+      final cleaned = hex.replaceAll('#', '').trim();
+      if (cleaned.length == 6) return Color(int.parse('FF$cleaned', radix: 16));
+      if (cleaned.length == 8) return Color(int.parse(cleaned, radix: 16));
+    } catch (_) {}
+    return fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(menuProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
 
-    // Check Layout Mode
-    final layoutMode = widget.tenant.designConfig['layout'] as String? ?? 'grid';
-    final isPaperMode = layoutMode == 'paper';
+    // ─── Layout Mode Detection (ROBUST) ───
+    final dc = widget.tenant.designConfig;
+    final layoutMode = dc['layout_mode'] as String?
+        ?? dc['layout'] as String?
+        ?? 'grid';
+    final isPaperMode = layoutMode == 'paper_list'
+        || layoutMode == 'paper'
+        || layoutMode == 'minimal_list';
+
+    // ─── Design Colors ───
+    final headingColor = _parseDesignColor(
+      dc['heading_color'] as String?,
+      widget.theme.colorScheme.primary,
+    );
+    final bodyColor = _parseDesignColor(
+      dc['body_color'] as String?,
+      widget.theme.colorScheme.onSurfaceVariant,
+    );
 
     return Scaffold(
       backgroundColor: widget.theme.colorScheme.surface,
@@ -120,22 +146,22 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
         error: (error, stack) => Center(child: Text('Error loading menu: $error')),
         data: (allCategories) {
           if (isPaperMode) {
-             return PaperMenuLayout(
-               tenant: widget.tenant,
-               categories: allCategories,
-             );
+            return PaperMenuLayout(
+              tenant: widget.tenant,
+              categories: allCategories,
+            );
           }
 
           // FILTERING LOGIC
           final isFiltered = selectedCategoryId != null && selectedCategoryId != 'all';
-          
+
           final displayedCategories = isFiltered
               ? allCategories.where((c) => c.id == selectedCategoryId).toList()
               : allCategories;
-              
+
           // Identify selected category object for banner swap
-          final selectedCategory = isFiltered && displayedCategories.isNotEmpty 
-              ? displayedCategories.first 
+          final selectedCategory = isFiltered && displayedCategories.isNotEmpty
+              ? displayedCategories.first
               : null;
 
           return CustomScrollView(
@@ -147,75 +173,82 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
               // Social Action Bar + Wi-Fi
               SliverToBoxAdapter(child: _ActionBar(tenant: widget.tenant, theme: widget.theme)),
 
-              // TOP SECTION: Category Grid (Only in standard mode)
+              // ─── HORIZONTAL CATEGORY CHIPS (Replaces old Grid) ───
               if (!isFiltered && allCategories.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  sliver: SliverGrid(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final category = allCategories[index];
-                        // Fallback image if category has no image
-                        final imageUrl = category.iconUrl ?? 
-                            'https://source.unsplash.com/random/800x600?food,${category.name}'; 
-
-                        return InkWell(
-                          onTap: () => _selectCategory(category.id),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(
-                                image: NetworkImage(imageUrl),
-                                fit: BoxFit.cover,
+                SliverToBoxAdapter(
+                  child: Container(
+                    height: 56,
+                    color: widget.theme.colorScheme.surface,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: allCategories.length + 1, // +1 for "All"
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          final isSelected = selectedCategoryId == null || selectedCategoryId == 'all';
+                          return ChoiceChip(
+                            label: Text(
+                              'Tümü',
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black87,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.black .withValues(alpha: 0.2), // Slight dark tint overall
-                                    Colors.black.withValues(alpha: 0.6),
-                                  ],
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              padding: const EdgeInsets.all(12),
-                              child: Text(
-                                category.name,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 24,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black,
-                                      blurRadius: 10,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            selected: isSelected,
+                            onSelected: (_) => _selectCategory(null),
+                            selectedColor: widget.theme.colorScheme.primary,
+                            backgroundColor: Colors.white,
+                            side: BorderSide(
+                              color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                            ),
+                            showCheckmark: false,
+                          );
+                        }
+
+                        final category = allCategories[index - 1];
+                        final isSelected = selectedCategoryId == category.id;
+                        return ChoiceChip(
+                          label: Text(
+                            category.name,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
+                          selected: isSelected,
+                          onSelected: (_) => _selectCategory(category.id),
+                          selectedColor: widget.theme.colorScheme.primary,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                          ),
+                          showCheckmark: false,
                         );
                       },
-                      childCount: allCategories.length,
-                    ),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
-                      childAspectRatio: 3.5,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
                     ),
                   ),
                 ),
 
-              // Menu items (Filtered List)
-              ..._buildMenuSlivers(context, ref, displayedCategories),
+              // Back to all button when filtered
+              if (isFiltered)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: TextButton.icon(
+                      onPressed: () => _selectCategory(null),
+                      icon: const Icon(Icons.arrow_back, size: 18),
+                      label: const Text('Tüm Kategoriler'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: widget.theme.colorScheme.primary,
+                        alignment: Alignment.centerLeft,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Menu items (Filtered List) — APPLIES DESIGN COLORS
+              ..._buildMenuSlivers(context, ref, displayedCategories, headingColor, bodyColor),
 
               // Footer
               SliverToBoxAdapter(child: _Footer(tenant: widget.tenant, theme: widget.theme)),
@@ -229,20 +262,20 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
 
   SliverAppBar _buildHeroHeader(BuildContext context, WidgetRef ref, MenuCategory? selectedCategory) {
     final bool isCategorySelected = selectedCategory != null;
-    
+
     String? activeBannerUrl;
     if (isCategorySelected && selectedCategory.iconUrl != null && selectedCategory.iconUrl!.isNotEmpty) {
       activeBannerUrl = selectedCategory.iconUrl;
     } else {
       activeBannerUrl = widget.tenant.bannerUrl;
     }
-    
+
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
       stretch: true,
       backgroundColor: widget.theme.colorScheme.primary,
-      automaticallyImplyLeading: false, 
+      automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
         titlePadding: const EdgeInsets.only(bottom: 16),
@@ -255,7 +288,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
             fontFamily: widget.tenant.fontFamily,
             shadows: [
               Shadow(
-                color: Colors.black.withValues(alpha: 0.4),
+                color: Colors.black.withOpacity(0.4),
                 blurRadius: 8,
               ),
             ],
@@ -269,7 +302,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                     image: NetworkImage(activeBannerUrl),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withValues(alpha: 0.4),
+                      Colors.black.withOpacity(0.4),
                       BlendMode.darken,
                     ),
                   )
@@ -280,8 +313,8 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                     end: Alignment.bottomRight,
                     colors: [
                       widget.theme.colorScheme.primary,
-                      widget.theme.colorScheme.primary.withValues(alpha: 0.8),
-                      widget.theme.colorScheme.tertiary.withValues(alpha: 0.6),
+                      widget.theme.colorScheme.primary.withOpacity(0.8),
+                      widget.theme.colorScheme.tertiary.withOpacity(0.6),
                     ],
                   )
                 : null,
@@ -289,19 +322,18 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (activeBannerUrl == null || activeBannerUrl.isEmpty || true) 
-                Positioned(
-                  right: -30,
-                  top: -30,
-                  child: Opacity(
-                    opacity: 0.08,
-                    child: Icon(
-                      Icons.restaurant_menu,
-                      size: 250,
-                      color: widget.theme.colorScheme.onPrimary,
-                    ),
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Opacity(
+                  opacity: 0.08,
+                  child: Icon(
+                    Icons.restaurant_menu,
+                    size: 250,
+                    color: widget.theme.colorScheme.onPrimary,
                   ),
                 ),
+              ),
               if (!isCategorySelected)
                 Positioned(
                   left: 20,
@@ -312,18 +344,18 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.qr_code_2, size: 14, color: Colors.white.withValues(alpha: 0.9)),
+                            Icon(Icons.qr_code_2, size: 14, color: Colors.white.withOpacity(0.9)),
                             const SizedBox(width: 4),
                             Text(
                               'Dijital Menü',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
+                                color: Colors.white.withOpacity(0.9),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -334,27 +366,23 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                     ],
                   ),
                 ),
-               if (isCategorySelected)
-                 Positioned(
-                   top: 60, // Adjust for safe area approx
-                   left: 16,
-                   child: Material(
-                     color: Colors.black.withValues(alpha: 0.3), // Semi-transparent dark bg
-                     shape: const CircleBorder(),
-                     child: InkWell(
-                       customBorder: const CircleBorder(),
-                       onTap: () => _selectCategory(null),
-                       child: const Padding(
-                         padding: EdgeInsets.all(8.0),
-                         child: Icon(
-                           Icons.arrow_back,
-                           color: Colors.white,
-                           size: 24,
-                         ),
-                       ),
-                     ),
-                   ),
-                 ),
+              if (isCategorySelected)
+                Positioned(
+                  top: 60,
+                  left: 16,
+                  child: Material(
+                    color: Colors.black.withOpacity(0.3),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _selectCategory(null),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -363,7 +391,12 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
   }
 
   List<Widget> _buildMenuSlivers(
-      BuildContext context, WidgetRef ref, List<MenuCategory> categories) {
+    BuildContext context,
+    WidgetRef ref,
+    List<MenuCategory> categories,
+    Color headingColor,
+    Color bodyColor,
+  ) {
     if (categories.isEmpty) {
       return [
         const SliverFillRemaining(
@@ -374,68 +407,66 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
 
     return [
       ...categories.map((category) {
-      return SliverMainAxisGroup(slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category.name,
-                  style: widget.theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: widget.theme.colorScheme.primary,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                if (category.description != null) ...[
-                  const SizedBox(height: 4),
+        return SliverMainAxisGroup(slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    category.description!,
-                    style: widget.theme.textTheme.bodyMedium?.copyWith(
-                      color: widget.theme.colorScheme.onSurfaceVariant,
+                    category.name,
+                    style: widget.theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: headingColor,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                ],
-                const Divider(height: 24),
-              ],
-            ),
-          ),
-        ),
-
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final product = category.products[index];
-              return ProductCard(
-                product: product,
-                currencySymbol: widget.tenant.currencySymbol,
-                onAddToCart: () {
-                  ref.read(cartProvider.notifier).addItem(product);
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${product.name} sepete eklendi'),
-                      duration: const Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                      action: SnackBarAction(
-                        label: 'Sepeti Gör',
-                        onPressed: () => showCartBottomSheet(context),
+                  if (category.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      category.description!,
+                      style: widget.theme.textTheme.bodyMedium?.copyWith(
+                        color: bodyColor,
                       ),
                     ),
-                  );
-                },
-              );
-            },
-            childCount: category.products.length,
+                  ],
+                  const Divider(height: 24),
+                ],
+              ),
+            ),
           ),
-        ),
-        
-        const SliverToBoxAdapter(child: SizedBox(height: 16)), // Spacing between categories
-      ]);
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final product = category.products[index];
+                return ProductCard(
+                  product: product,
+                  currencySymbol: widget.tenant.currencySymbol,
+                  onAddToCart: () {
+                    ref.read(cartProvider.notifier).addItem(product);
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product.name} sepete eklendi'),
+                        duration: const Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                        action: SnackBarAction(
+                          label: 'Sepeti Gör',
+                          onPressed: () => showCartBottomSheet(context),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              childCount: category.products.length,
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        ]);
       }),
-      const SliverToBoxAdapter(child: SizedBox(height: 80)), // Bottom padding
+      const SliverToBoxAdapter(child: SizedBox(height: 80)),
     ];
   }
 }
@@ -465,7 +496,7 @@ class _ActionBar extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerLow,
         border: Border(
           bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: theme.colorScheme.outlineVariant.withOpacity(0.3),
           ),
         ),
       ),
@@ -498,9 +529,7 @@ class _ActionBar extends StatelessWidget {
               onTap: () => _launchUrl('https://instagram.com/${tenant.instagramHandle}'),
             ),
           ],
-
           const Spacer(),
-
           if (hasWifi)
             _WifiPill(
               wifiName: tenant.wifiName!,
@@ -526,17 +555,12 @@ class _SocialIcon extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _SocialIcon({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _SocialIcon({required this.icon, required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withValues(alpha: 0.1),
+      color: color.withOpacity(0.1),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -548,10 +572,7 @@ class _SocialIcon extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: color),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
-              ),
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
             ],
           ),
         ),
@@ -565,16 +586,12 @@ class _WifiPill extends StatelessWidget {
   final String wifiPassword;
   final ThemeData theme;
 
-  const _WifiPill({
-    required this.wifiName,
-    required this.wifiPassword,
-    required this.theme,
-  });
+  const _WifiPill({required this.wifiName, required this.wifiPassword, required this.theme});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+      color: theme.colorScheme.primaryContainer.withOpacity(0.5),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -583,13 +600,11 @@ class _WifiPill extends StatelessWidget {
             Clipboard.setData(ClipboardData(text: wifiPassword));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Wi-Fi şifresi kopyalandı: $wifiPassword'),
-                  ],
-                ),
+                content: Row(children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Wi-Fi şifresi kopyalandı: $wifiPassword'),
+                ]),
                 behavior: SnackBarBehavior.floating,
                 backgroundColor: Colors.green.shade700,
               ),
@@ -613,7 +628,7 @@ class _WifiPill extends StatelessWidget {
               ),
               if (wifiPassword.isNotEmpty) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.content_copy, size: 12, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+                Icon(Icons.content_copy, size: 12, color: theme.colorScheme.primary.withOpacity(0.6)),
               ],
             ],
           ),
@@ -676,7 +691,6 @@ class _Footer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
           if (hasPhone || hasInsta)
             Wrap(
               spacing: 16,
@@ -686,30 +700,25 @@ class _Footer extends StatelessWidget {
                 if (hasPhone)
                   Text(
                     '📞 ${tenant.phoneNumber}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 if (hasInsta)
                   Text(
                     '📷 @${tenant.instagramHandle}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
               ],
             ),
-
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.qr_code_2, size: 16, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+              Icon(Icons.qr_code_2, size: 16, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
                 'Powered by QR-Infinity',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),

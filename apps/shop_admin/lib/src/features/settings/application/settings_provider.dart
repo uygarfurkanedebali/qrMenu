@@ -47,6 +47,7 @@ Future<void> saveSettings({
         name: updatedTenant.name,
         slug: currentTenant.slug,
         ownerEmail: currentTenant.ownerEmail,
+        bannerUrl: updatedTenant.bannerUrl,
         primaryColor: updatedTenant.primaryColor,
         fontFamily: updatedTenant.fontFamily,
         currencySymbol: updatedTenant.currencySymbol,
@@ -54,6 +55,7 @@ Future<void> saveSettings({
         instagramHandle: updatedTenant.instagramHandle,
         wifiName: updatedTenant.wifiName,
         wifiPassword: updatedTenant.wifiPassword,
+        designConfig: updatedTenant.designConfig,
       );
     }
 

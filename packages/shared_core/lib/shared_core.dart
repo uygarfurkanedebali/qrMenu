@@ -17,3 +17,6 @@ export 'src/services/services.dart';
 
 // Repositories
 export 'src/repositories/repositories.dart';
+
+// Widgets
+export 'src/widgets/hex_color_picker.dart';
