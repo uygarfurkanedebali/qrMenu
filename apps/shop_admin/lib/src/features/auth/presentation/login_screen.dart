@@ -60,7 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       
       // Navigation - router should now see authenticated state
-      context.go('/products');
+      context.go('/dashboard');
       
     } catch (e) {
       if (!mounted) return;

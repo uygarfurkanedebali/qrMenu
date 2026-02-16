@@ -106,7 +106,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         print('║ DECISION RULE 1: Not authenticated');
         print('║   → Redirecting to: /login');
       }
-      // Rule 2: Logged in + on login page + role verified → go to products
+      // Rule 2: Logged in + on login page + role verified → go to dashboard
       else if (isLoggedIn && isOnLoginPage && roleVerified) {
         decision = '/dashboard';
         print('║ DECISION RULE 2: Authenticated & verified');
