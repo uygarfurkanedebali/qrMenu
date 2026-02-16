@@ -1,4 +1,7 @@
-/// Shop Settings Screen (Advanced Customization)
+/// Shop Settings Screen — Advanced Design Engine
+/// 
+/// Granular font & color controls, layout selection, and contact info.
+/// Uses Supabase `tenants` table `design_config` JSON column for design data.
 library;
 
 import 'package:flutter/material.dart';
@@ -20,45 +23,56 @@ class ShopSettingsScreen extends ConsumerStatefulWidget {
 
 class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers
-  late TextEditingController _colorController;
+  late TextEditingController _primaryColorCtrl;
+  late TextEditingController _bgColorCtrl;
+  late TextEditingController _headingColorCtrl;
+  late TextEditingController _bodyColorCtrl;
   late TextEditingController _phoneController;
   late TextEditingController _instagramController;
   late TextEditingController _wifiNameController;
   late TextEditingController _wifiPasswordController;
 
-  // State Variables
-  String _selectedFont = 'Roboto';
+  // State
+  String _headingFont = 'Roboto';
+  String _bodyFont = 'Roboto';
   String _selectedLayout = 'modern_grid';
   String? _bannerUrl;
   bool _enablePaperTexture = false;
-  
   bool _isUploadingBanner = false;
   bool _isSaving = false;
   bool _initialized = false;
 
   // Constants
-  static const _fontOptions = ['Roboto', 'Inter', 'Lora', 'Open Sans', 'Montserrat', 'Playfair Display'];
+  static const _fontOptions = ['Roboto', 'Lora', 'Open Sans', 'Montserrat'];
   static const _layoutOptions = [
     {'id': 'modern_grid', 'label': 'Modern Grid', 'icon': Icons.grid_view},
     {'id': 'minimal_list', 'label': 'Paper List (Minimal)', 'icon': Icons.list_alt},
     {'id': 'tinder_cards', 'label': 'Tinder Cards', 'icon': Icons.swipe},
   ];
-  static const _presetColors = [
-    Color(0xFFFF5722), // Deep Orange
-    Color(0xFFE91E63), // Pink
-    Color(0xFF2196F3), // Blue
-    Color(0xFF4CAF50), // Green
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF607D8B), // Blue Grey
-    Color(0xFF000000), // Black
+
+  // Preset Colors for each section
+  static const _primaryPresets = [
+    Color(0xFFFF5722), Color(0xFFE91E63), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFF9C27B0),
+  ];
+  static const _bgPresets = [
+    Color(0xFFFFFFFF), Color(0xFFF9FAFB), Color(0xFFFFF8E1), Color(0xFF263238), Color(0xFF1A1A1A),
+  ];
+  static const _headingTextPresets = [
+    Color(0xFF000000), Color(0xFF212121), Color(0xFF37474F), Color(0xFFFFFFFF), Color(0xFFFF5722),
+  ];
+  static const _bodyTextPresets = [
+    Color(0xFF424242), Color(0xFF616161), Color(0xFF37474F), Color(0xFFBDBDBD), Color(0xFFFFFFFF),
   ];
 
   @override
   void initState() {
     super.initState();
-    _colorController = TextEditingController();
+    _primaryColorCtrl = TextEditingController();
+    _bgColorCtrl = TextEditingController();
+    _headingColorCtrl = TextEditingController();
+    _bodyColorCtrl = TextEditingController();
     _phoneController = TextEditingController();
     _instagramController = TextEditingController();
     _wifiNameController = TextEditingController();
@@ -67,7 +81,10 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
 
   @override
   void dispose() {
-    _colorController.dispose();
+    _primaryColorCtrl.dispose();
+    _bgColorCtrl.dispose();
+    _headingColorCtrl.dispose();
+    _bodyColorCtrl.dispose();
     _phoneController.dispose();
     _instagramController.dispose();
     _wifiNameController.dispose();
@@ -79,20 +96,24 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
     if (_initialized) return;
     _initialized = true;
 
-    _colorController.text = tenant.primaryColor ?? '#000000';
+    _primaryColorCtrl.text = tenant.primaryColor ?? '#FF5722';
     _phoneController.text = tenant.phoneNumber ?? '';
     _instagramController.text = tenant.instagramHandle ?? '';
     _wifiNameController.text = tenant.wifiName ?? '';
     _wifiPasswordController.text = tenant.wifiPassword ?? '';
     _bannerUrl = tenant.bannerUrl;
 
-    // Design Config
-    final designConfig = tenant.designConfig ?? {};
-    _selectedFont = designConfig['font_family'] as String? ?? 'Roboto';
-    if (!_fontOptions.contains(_selectedFont)) _selectedFont = 'Roboto';
-    
-    _selectedLayout = designConfig['layout_mode'] as String? ?? 'modern_grid';
-    _enablePaperTexture = designConfig['enable_paper_texture'] as bool? ?? false;
+    final dc = tenant.designConfig ?? {};
+    _headingFont = dc['heading_font'] as String? ?? dc['font_family'] as String? ?? 'Roboto';
+    _bodyFont = dc['body_font'] as String? ?? 'Roboto';
+    if (!_fontOptions.contains(_headingFont)) _headingFont = 'Roboto';
+    if (!_fontOptions.contains(_bodyFont)) _bodyFont = 'Roboto';
+
+    _selectedLayout = dc['layout_mode'] as String? ?? 'modern_grid';
+    _enablePaperTexture = dc['enable_paper_texture'] as bool? ?? false;
+    _bgColorCtrl.text = dc['bg_color'] as String? ?? '#F9FAFB';
+    _headingColorCtrl.text = dc['heading_color'] as String? ?? '#000000';
+    _bodyColorCtrl.text = dc['body_color'] as String? ?? '#424242';
   }
 
   Future<void> _uploadBanner() async {
@@ -105,7 +126,7 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
     try {
       final service = ref.read(storageServiceProvider);
       final url = await service.uploadTenantBanner(image);
-      
+
       if (mounted) {
         setState(() {
           _bannerUrl = url;
@@ -132,23 +153,27 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
 
     try {
       final designConfig = {
-        'font_family': _selectedFont,
+        'heading_font': _headingFont,
+        'body_font': _bodyFont,
+        'font_family': _headingFont, // Legacy compat
         'layout_mode': _selectedLayout,
         'enable_paper_texture': _enablePaperTexture,
+        'bg_color': _bgColorCtrl.text.trim(),
+        'heading_color': _headingColorCtrl.text.trim(),
+        'body_color': _bodyColorCtrl.text.trim(),
       };
 
       await saveSettings(
         ref: ref,
         tenantId: tenant.id,
         updates: {
-          'primary_color': _colorController.text.trim(),
+          'primary_color': _primaryColorCtrl.text.trim(),
           'banner_url': _bannerUrl,
           'phone_number': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           'instagram_handle': _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
           'wifi_name': _wifiNameController.text.trim().isEmpty ? null : _wifiNameController.text.trim(),
           'wifi_password': _wifiPasswordController.text.trim().isEmpty ? null : _wifiPasswordController.text.trim(),
           'design_config': designConfig,
-          // 'font_family': _selectedFont, // Sync legacy fields if needed
         },
       );
 
@@ -205,7 +230,7 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
               style: FilledButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
             ),
           ),
-           Builder(
+          Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu),
               onPressed: () => Scaffold.of(context).openEndDrawer(),
@@ -220,190 +245,143 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            // --- Section 1: Görünüm & Tasarım ---
+            // ──────────────── SECTION 1: GÖRÜNÜM & TASARIM ────────────────
             const _SectionTitle(title: 'Görünüm & Tasarım'),
             const SizedBox(height: 16),
-            
-            // Banner & Renk
-            Container(
-              decoration: _cardDecoration,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Mekan Afişi', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: _uploadBanner,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 140,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                        image: _bannerUrl != null
-                            ? DecorationImage(image: NetworkImage(_bannerUrl!), fit: BoxFit.cover)
-                            : null,
-                      ),
-                      alignment: Alignment.center,
-                      child: _bannerUrl == null
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined, size: 32, color: Colors.grey.shade500),
-                                const SizedBox(height: 8),
-                                Text('Afiş Yükle', style: TextStyle(color: Colors.grey.shade600)),
-                              ],
-                            )
+
+            // Banner Card
+            _SettingsCard(
+              children: [
+                const Text('Mekan Afişi', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: _isUploadingBanner ? null : _uploadBanner,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 140,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                      image: _bannerUrl != null
+                          ? DecorationImage(image: NetworkImage(_bannerUrl!), fit: BoxFit.cover)
                           : null,
                     ),
+                    alignment: Alignment.center,
+                    child: _isUploadingBanner
+                        ? const CircularProgressIndicator()
+                        : (_bannerUrl == null
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate_outlined, size: 32, color: Colors.grey.shade500),
+                                  const SizedBox(height: 8),
+                                  Text('Afiş Yükle', style: TextStyle(color: Colors.grey.shade600)),
+                                ],
+                              )
+                            : null),
                   ),
-                  const SizedBox(height: 24),
-                  
-                  const Text('Marka Rengi', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ..._presetColors.map((color) => 
-                        GestureDetector(
-                          onTap: () {
-                             final hex = '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-                             setState(() => _colorController.text = hex);
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300),
-                              boxShadow: [
-                                if (_colorController.text.toUpperCase().endsWith(color.value.toRadixString(16).substring(2).toUpperCase()))
-                                  BoxShadow(color: color.withOpacity(0.4), blurRadius: 6, spreadRadius: 2)
-                              ]
-                            ),
-                          ),
-                        )
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _colorController,
-                     decoration: const InputDecoration(
-                      hintText: '#000000',
-                      labelText: 'Hex Kodu',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                      prefixIcon: Icon(Icons.colorize, size: 20),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
 
-             // Tipografi & Düzen
-            Container(
-              decoration: _cardDecoration,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Tipografi', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedFont,
-                    decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12)),
-                    items: _fontOptions.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                    onChanged: (val) => setState(() => _selectedFont = val!),
-                  ),
-                  const SizedBox(height: 24),
-
-                  const Text('Menü Düzeni', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedLayout,
-                    decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12)),
-                    items: _layoutOptions.map((l) => DropdownMenuItem(
-                      value: l['id'] as String, 
-                      child: Row(children: [
-                        Icon(l['icon'] as IconData, size: 18), 
-                        const SizedBox(width: 8), 
-                        Text(l['label'] as String)
-                      ]),
-                    )).toList(),
-                    onChanged: (val) => setState(() {
-                       _selectedLayout = val!;
-                       if (_selectedLayout != 'minimal_list') _enablePaperTexture = false;
-                    }),
-                  ),
-                  
-                  // Paper Texture Option
-                  if (_selectedLayout == 'minimal_list') ...[
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Kağıt Dokusu (Texture)', style: TextStyle(fontSize: 14)),
-                      subtitle: const Text('Arka plana kağıt efekti ekler'),
-                      value: _enablePaperTexture,
-                      activeColor: Colors.black,
-                      onChanged: (val) => setState(() => _enablePaperTexture = val),
-                    ),
-                  ],
-                ],
-              ),
+            // ──────────────── COLOR PALETTE ────────────────
+            _SettingsCard(
+              children: [
+                const Text('Renk Paleti', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                const SizedBox(height: 6),
+                Text('Menünüzün genel rengini belirleyin', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                const SizedBox(height: 20),
+                _ColorPickerRow(label: 'Marka Rengi (Primary)', controller: _primaryColorCtrl, presets: _primaryPresets, onChanged: () => setState(() {})),
+                const Divider(height: 32),
+                _ColorPickerRow(label: 'Arka Plan Rengi', controller: _bgColorCtrl, presets: _bgPresets, onChanged: () => setState(() {})),
+                const Divider(height: 32),
+                _ColorPickerRow(label: 'Başlık Metin Rengi', controller: _headingColorCtrl, presets: _headingTextPresets, onChanged: () => setState(() {})),
+                const Divider(height: 32),
+                _ColorPickerRow(label: 'Gövde Metin Rengi', controller: _bodyColorCtrl, presets: _bodyTextPresets, onChanged: () => setState(() {})),
+              ],
             ),
-            
+            const SizedBox(height: 20),
+
+            // ──────────────── TYPOGRAPHY ────────────────
+            _SettingsCard(
+              children: [
+                const Text('Tipografi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                const SizedBox(height: 16),
+                _FontDropdown(label: 'Başlık Fontu', value: _headingFont, onChanged: (v) => setState(() => _headingFont = v!)),
+                const SizedBox(height: 16),
+                _FontDropdown(label: 'Gövde Fontu', value: _bodyFont, onChanged: (v) => setState(() => _bodyFont = v!)),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ──────────────── LAYOUT ────────────────
+            _SettingsCard(
+              children: [
+                const Text('Menü Düzeni', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _selectedLayout,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                  ),
+                  style: const TextStyle(color: Colors.black87, fontSize: 15),
+                  dropdownColor: Colors.white,
+                  items: _layoutOptions.map((l) => DropdownMenuItem(
+                    value: l['id'] as String,
+                    child: Row(children: [
+                      Icon(l['icon'] as IconData, size: 18, color: Colors.black54),
+                      const SizedBox(width: 10),
+                      Text(l['label'] as String),
+                    ]),
+                  )).toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedLayout = val!;
+                    if (_selectedLayout != 'minimal_list') _enablePaperTexture = false;
+                  }),
+                ),
+
+                // Paper Texture Toggle
+                if (_selectedLayout == 'minimal_list') ...[
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Kağıt Dokusu (Texture)', style: TextStyle(fontSize: 14, color: Colors.black87)),
+                    subtitle: const Text('Arka plana kağıt efekti ekler'),
+                    value: _enablePaperTexture,
+                    activeColor: Colors.black,
+                    onChanged: (val) => setState(() => _enablePaperTexture = val),
+                  ),
+                ],
+              ],
+            ),
+
             const SizedBox(height: 32),
 
-            // --- Section 2: İletişim & İnternet ---
+            // ──────────────── SECTION 2: İLETİŞİM & İNTERNET ────────────────
             const _SectionTitle(title: 'İletişim & İnternet'),
             const SizedBox(height: 16),
-            
-            Container(
-              decoration: _cardDecoration,
-              child: Column(
-                children: [
-                  _SettingsListTile(
-                    label: 'Telefon',
-                    icon: Icons.phone_outlined,
-                    controller: _phoneController,
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _SettingsListTile(
-                    label: 'Instagram',
-                    icon: Icons.camera_alt_outlined,
-                    controller: _instagramController,
-                    prefixText: '@',
-                  ),
-                ],
-              ),
+
+            _SettingsCard(
+              children: [
+                _SettingsListTile(label: 'Telefon', icon: Icons.phone_outlined, controller: _phoneController),
+                const Divider(height: 1, indent: 56),
+                _SettingsListTile(label: 'Instagram', icon: Icons.camera_alt_outlined, controller: _instagramController, prefixText: '@'),
+              ],
             ),
             const SizedBox(height: 20),
-            
-            Container(
-              decoration: _cardDecoration,
-              child: Column(
-                children: [
-                  _SettingsListTile(
-                    label: 'Wi-Fi Adı',
-                    icon: Icons.wifi,
-                    controller: _wifiNameController,
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _SettingsListTile(
-                    label: 'Şifre',
-                    icon: Icons.lock_outline,
-                    controller: _wifiPasswordController,
-                    isObscure: false,
-                  ),
-                ],
-              ),
+
+            _SettingsCard(
+              children: [
+                _SettingsListTile(label: 'Wi-Fi Adı', icon: Icons.wifi, controller: _wifiNameController),
+                const Divider(height: 1, indent: 56),
+                _SettingsListTile(label: 'Şifre', icon: Icons.lock_outline, controller: _wifiPasswordController),
+              ],
             ),
 
             const SizedBox(height: 60),
@@ -412,15 +390,32 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
       ),
     );
   }
+}
 
-  BoxDecoration get _cardDecoration => BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: Colors.grey.shade200),
-    boxShadow: [
-      BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2))
-    ],
-  );
+// ─── Reusable Widgets ──────────────────────────────────────────
+
+class _SettingsCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SettingsCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -431,11 +426,143 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title.toUpperCase(),
       style: TextStyle(
-        fontSize: 13, 
-        fontWeight: FontWeight.bold, 
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
         color: Colors.grey.shade600,
         letterSpacing: 1.0,
       ),
+    );
+  }
+}
+
+class _ColorPickerRow extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final List<Color> presets;
+  final VoidCallback onChanged;
+
+  const _ColorPickerRow({
+    required this.label,
+    required this.controller,
+    required this.presets,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            ...presets.map((color) {
+              final hex = '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+              final isSelected = controller.text.toUpperCase() == hex;
+              return GestureDetector(
+                onTap: () {
+                  controller.text = hex;
+                  onChanged();
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? Colors.black : Colors.grey.shade300,
+                      width: isSelected ? 2.5 : 1,
+                    ),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(color: color.withOpacity(0.4), blurRadius: 8, spreadRadius: 2),
+                    ],
+                  ),
+                  child: isSelected
+                      ? Icon(Icons.check, size: 16, color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                      : null,
+                ),
+              );
+            }),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: 180,
+          child: TextFormField(
+            controller: controller,
+            style: const TextStyle(color: Colors.black87, fontSize: 14, fontFamily: 'monospace'),
+            decoration: InputDecoration(
+              hintText: '#000000',
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              labelText: 'HEX Kodu',
+              labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              prefixIcon: Container(
+                margin: const EdgeInsets.all(8),
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: _parseColor(controller.text),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+            onChanged: (_) => onChanged(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _parseColor(String hex) {
+    try {
+      final cleaned = hex.replaceAll('#', '');
+      if (cleaned.length == 6) return Color(int.parse('FF$cleaned', radix: 16));
+    } catch (_) {}
+    return Colors.grey;
+  }
+}
+
+class _FontDropdown extends StatelessWidget {
+  final String label;
+  final String value;
+  final ValueChanged<String?> onChanged;
+
+  const _FontDropdown({required this.label, required this.value, required this.onChanged});
+
+  static const _fonts = ['Roboto', 'Lora', 'Open Sans', 'Montserrat'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            filled: true,
+            fillColor: const Color(0xFFF5F5F5),
+          ),
+          style: const TextStyle(color: Colors.black87, fontSize: 15),
+          dropdownColor: Colors.white,
+          items: _fonts.map((f) => DropdownMenuItem(
+            value: f,
+            child: Text(f, style: TextStyle(fontFamily: f)),
+          )).toList(),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }
@@ -467,14 +594,15 @@ class _SettingsListTile extends StatelessWidget {
       subtitle: TextFormField(
         controller: controller,
         obscureText: isObscure,
+        style: const TextStyle(fontSize: 16, color: Colors.black87),
         decoration: InputDecoration(
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 4),
           border: InputBorder.none,
           hintText: 'Belirtilmedi',
+          hintStyle: TextStyle(color: Colors.grey.shade400),
           prefixText: prefixText,
         ),
-        style: const TextStyle(fontSize: 16, color: Colors.black87),
       ),
     );
   }

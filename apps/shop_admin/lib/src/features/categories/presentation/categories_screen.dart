@@ -1,10 +1,14 @@
-import 'dart:io';
+/// Categories Screen — Banner-Supported Category Management
+/// 
+/// Instagram-style visual category cards with image upload via Supabase Storage.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_core/shared_core.dart';
 import '../../products/application/categories_provider.dart';
+import '../../products/data/mock_storage_service.dart';
 import '../../navigation/admin_menu_drawer.dart';
 
 class CategoriesScreen extends ConsumerWidget {
@@ -25,8 +29,9 @@ class CategoriesScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.sort),
             onPressed: () {
-              // Sort logic placeholder or separate screen
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sıralama yakında...')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Sıralama özelliği yakında...')),
+              );
             },
             tooltip: 'Sıralama Düzenle',
           ),
@@ -41,13 +46,13 @@ class CategoriesScreen extends ConsumerWidget {
       ),
       endDrawer: const AdminMenuDrawer(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCategorySheet(context, ref),
+        onPressed: () => _openCategorySheet(context),
         backgroundColor: Colors.black,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: categoriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Hata: $err')),
+        error: (err, _) => Center(child: Text('Hata: $err', style: const TextStyle(color: Colors.black87))),
         data: (categories) {
           if (categories.isEmpty) {
             return Center(
@@ -57,6 +62,8 @@ class CategoriesScreen extends ConsumerWidget {
                   Icon(Icons.category_outlined, size: 64, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
                   Text('Henüz kategori yok', style: TextStyle(color: Colors.grey.shade500)),
+                  const SizedBox(height: 8),
+                  Text('Yeni eklemek için + butonuna basın', style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
                 ],
               ),
             );
@@ -76,15 +83,20 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  void _showCategorySheet(BuildContext context, WidgetRef ref, [Category? category]) {
+  void _openCategorySheet(BuildContext context, [Category? category]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => _CategoryEditSheet(category: category),
     );
   }
 }
+
+// ─── Banner Card ───────────────────────────────────────────────
 
 class _CategoryBannerCard extends ConsumerWidget {
   final Category category;
@@ -93,43 +105,46 @@ class _CategoryBannerCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hasImage = category.imageUrl != null;
+
     return Container(
       height: 140,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Colors.black, // Fallback color
-        image: category.imageUrl != null
-            ? DecorationImage(
-                image: NetworkImage(category.imageUrl!),
-                fit: BoxFit.cover,
-              )
-            : null,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          // Gradient Overlay
+          // Layer 1: Background (Image or Gradient Fallback)
+          if (hasImage)
+            Image.network(category.imageUrl!, fit: BoxFit.cover)
+          else
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.grey.shade700, Colors.grey.shade900],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+
+          // Layer 2: Gradient Overlay for readability
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.1),
-                  Colors.black.withOpacity(0.7),
-                ],
+                colors: [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.65)],
               ),
             ),
           ),
 
-          // Content
+          // Layer 3: Category Name
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -138,14 +153,9 @@ class _CategoryBannerCard extends ConsumerWidget {
               children: [
                 Text(
                   category.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                 ),
-                if (category.description != null)
+                if (category.description != null && category.description!.isNotEmpty)
                   Text(
                     category.description!,
                     style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
@@ -156,7 +166,7 @@ class _CategoryBannerCard extends ConsumerWidget {
             ),
           ),
 
-          // Actions
+          // Layer 4: Action Buttons
           Positioned(
             top: 8,
             right: 8,
@@ -165,11 +175,14 @@ class _CategoryBannerCard extends ConsumerWidget {
                 _GlassIconButton(
                   icon: Icons.edit,
                   onTap: () {
-                     showModalBottomSheet(
+                    showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => _CategoryEditSheet(category: category),
+                      backgroundColor: Colors.white,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (ctx) => _CategoryEditSheet(category: category),
                     );
                   },
                 ),
@@ -180,94 +193,19 @@ class _CategoryBannerCard extends ConsumerWidget {
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Sil?'),
-                        content: Text('${category.name} silinecek. Emin misiniz?'),
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        title: const Text('Kategoriyi Sil?', style: TextStyle(color: Colors.black87)),
+                        content: Text('${category.name} silinecek. Emin misiniz?', style: const TextStyle(color: Colors.black54)),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
-                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sil', style: TextStyle(color: Colors.red))),
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Sil', style: TextStyle(color: Colors.red)),
+                          ),
                         ],
                       ),
                     );
-
-                    if (confirm == true) {
-                      await ref.read(categoriesProvider.notifier).deleteCategory(category.id);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          
-          // No Image Fallback Gradient
-          if (category.imageUrl == null)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.grey.shade800,
-                      Colors.grey.shade900,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-              )
-            ),
-            // Re-render content on top of fallback
-             Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  category.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Re-render actions on top of fallback
-           Positioned(
-            top: 8,
-            right: 8,
-            child: Row(
-              children: [
-                _GlassIconButton(
-                  icon: Icons.edit,
-                  onTap: () {
-                     showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => _CategoryEditSheet(category: category),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                _GlassIconButton(
-                  icon: Icons.delete_outline,
-                  color: Colors.redAccent,
-                  onTap: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Sil?'),
-                        content: Text('${category.name} silinecek. Emin misiniz?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
-                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sil', style: TextStyle(color: Colors.red))),
-                        ],
-                      ),
-                    );
-
                     if (confirm == true) {
                       await ref.read(categoriesProvider.notifier).deleteCategory(category.id);
                     }
@@ -281,6 +219,8 @@ class _CategoryBannerCard extends ConsumerWidget {
     );
   }
 }
+
+// ─── Glass Icon Button ─────────────────────────────────────────
 
 class _GlassIconButton extends StatelessWidget {
   final IconData icon;
@@ -292,7 +232,7 @@ class _GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withOpacity(0.35),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -306,9 +246,10 @@ class _GlassIconButton extends StatelessWidget {
   }
 }
 
+// ─── Category Edit Sheet ───────────────────────────────────────
+
 class _CategoryEditSheet extends ConsumerStatefulWidget {
   final Category? category;
-
   const _CategoryEditSheet({this.category});
 
   @override
@@ -318,7 +259,8 @@ class _CategoryEditSheet extends ConsumerStatefulWidget {
 class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
   final _nameController = TextEditingController();
   final _picker = ImagePicker();
-  File? _imageFile;
+  XFile? _pickedFile;
+  String? _previewUrl; // For showing existing image
   bool _isLoading = false;
 
   @override
@@ -326,52 +268,62 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
     super.initState();
     if (widget.category != null) {
       _nameController.text = widget.category!.name;
+      _previewUrl = widget.category!.imageUrl;
     }
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1200);
     if (picked != null) {
-      setState(() => _imageFile = File(picked.path));
+      setState(() {
+        _pickedFile = picked;
+        _previewUrl = null; // Will show local file instead
+      });
     }
   }
 
   Future<void> _save() async {
-    if (_nameController.text.trim().isEmpty) return;
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kategori adı boş olamaz')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // 1. Upload Image logic (Placeholder)
+      // 1. Upload image if picked
       String? imageUrl = widget.category?.imageUrl;
-      if (_imageFile != null) {
-        // TODO: Implement actual Supabase Storage upload
-        // For now we just pretend or keep logic simple
-        // imageUrl = await SupabaseStorage...
-        // Assuming we have a service for this, or just ignoring for this specific task scope
-        // as user said "Logic şimdilik dummy olabilir"
+      if (_pickedFile != null) {
+        final storageService = ref.read(storageServiceProvider);
+        imageUrl = await storageService.uploadCategoryImage(_pickedFile!);
       }
 
-      // 2. Save Category
+      // 2. Save category
       if (widget.category == null) {
-        // Create
-         await ref.read(categoriesProvider.notifier).addCategory(
-            name: _nameController.text.trim(),
-            // imageUrl: imageUrl, // Add support in provider
-          );
+        // Create new
+        await ref.read(categoriesProvider.notifier).addCategory(
+          name: name,
+          imageUrl: imageUrl,
+        );
       } else {
-        // Update
+        // Update existing
         final updated = widget.category!.copyWith(
-          name: _nameController.text.trim(),
-          imageUrl: imageUrl, // Keep existing or new
+          name: name,
+          imageUrl: imageUrl,
         );
         await ref.read(categoriesProvider.notifier).updateCategory(updated);
       }
 
       if (mounted) Navigator.pop(context);
-
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hata: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -379,67 +331,118 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+    final bool hasLocalImage = _pickedFile != null;
+    final bool hasNetworkImage = _previewUrl != null;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Title
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 widget.category == null ? 'Yeni Kategori' : 'Kategori Düzenle',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.black54),
+              ),
             ],
           ),
           const SizedBox(height: 20),
 
-          // Image Picker
+          // Image Picker Area
           GestureDetector(
             onTap: _pickImage,
             child: Container(
-              height: 150,
+              height: 160,
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
-                image: _imageFile != null
-                    ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
-                    : (widget.category?.imageUrl != null
-                        ? DecorationImage(image: NetworkImage(widget.category!.imageUrl!), fit: BoxFit.cover)
+                border: Border.all(color: Colors.grey.shade300),
+                image: hasLocalImage
+                    ? DecorationImage(
+                        image: NetworkImage(_pickedFile!.path), // Web: uses path as URL
+                        fit: BoxFit.cover,
+                        onError: (_, __) {},
+                      )
+                    : (hasNetworkImage
+                        ? DecorationImage(image: NetworkImage(_previewUrl!), fit: BoxFit.cover)
                         : null),
               ),
-              child: _imageFile == null && widget.category?.imageUrl == null
+              child: !hasLocalImage && !hasNetworkImage
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.add_photo_alternate_outlined, size: 40, color: Colors.grey.shade400),
                           const SizedBox(height: 8),
-                          Text('Görsel Seç', style: TextStyle(color: Colors.grey.shade500)),
+                          Text('Görsel Seç', style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
                         ],
                       ),
                     )
-                  : null,
+                  : Align(
+                      alignment: Alignment.bottomRight,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit, color: Colors.white, size: 14),
+                              SizedBox(width: 4),
+                              Text('Değiştir', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 20),
 
-          // Name Input
+          // Name Input — HIGH CONTRAST
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
+            style: const TextStyle(color: Colors.black87, fontSize: 16),
+            decoration: InputDecoration(
               labelText: 'Kategori Adı',
-              border: OutlineInputBorder(),
+              labelStyle: const TextStyle(color: Colors.black54),
+              hintText: 'Örn: Ana Yemekler',
+              hintStyle: TextStyle(color: Colors.grey.shade400),
               filled: true,
-              fillColor: Color(0xFFFAFAFA),
+              fillColor: const Color(0xFFF5F5F5),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.black, width: 1.5),
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -449,12 +452,13 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
             onPressed: _isLoading ? null : _save,
             style: FilledButton.styleFrom(
               backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: _isLoading
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Kaydet', style: TextStyle(fontSize: 16)),
+                : Text(widget.category == null ? 'Oluştur' : 'Güncelle', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

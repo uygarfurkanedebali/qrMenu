@@ -1,16 +1,20 @@
+/// Admin Dashboard V2 — Working Navigation
+/// 
+/// Main entry point for the shop admin.
+/// Quick action buttons use Navigator.push for reliable navigation.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_core/shared_core.dart';
 import '../../auth/application/auth_provider.dart';
 import '../../products/application/products_provider.dart';
 import '../../navigation/admin_menu_drawer.dart';
+import '../../products/presentation/products_list_screen.dart';
+import '../../categories/presentation/categories_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
+import '../../qr_studio/presentation/qr_studio_screen.dart';
 
-/// Admin Dashboard V2
-/// 
-/// Main entry point for the shop admin.
-/// Replaces old dashboard overview and layout logic.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -24,13 +28,13 @@ class DashboardScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Dummy Stats
+    // Stats
     final int productCount = productsAsync.valueOrNull?.length ?? 0;
     final int activeOrders = 0;
     final int totalViews = 1530;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // Off-white
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,14 +84,14 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.inventory_2_outlined,
                     color: Colors.blue,
                   ),
-                   const SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   _StatCard(
                     title: 'Görüntülenme',
                     value: '$totalViews',
                     icon: Icons.visibility_outlined,
                     color: Colors.purple,
                   ),
-                   const SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   _StatCard(
                     title: 'Aktif Sipariş',
                     value: '$activeOrders',
@@ -116,7 +120,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
 
-          // 3. Quick Actions Grid
+          // 3. Quick Actions Grid — WIRED UP
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             sliver: SliverGrid.count(
@@ -128,31 +132,39 @@ class DashboardScreen extends ConsumerWidget {
                 _QuickActionBtn(
                   icon: Icons.inventory_2,
                   label: 'Ürün Yönetimi',
-                  onTap: () => context.go('/products'),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsListScreen())),
                   color: Colors.blue,
                 ),
                 _QuickActionBtn(
-                  icon: Icons.category, // Changed to category
+                  icon: Icons.category,
                   label: 'Kategoriler',
-                  onTap: () => context.go('/products'), // Goes to Product List (where categories are)
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesScreen())),
                   color: Colors.indigo,
                 ),
                 _QuickActionBtn(
                   icon: Icons.qr_code_2,
                   label: 'QR İşlemleri',
-                  onTap: () => context.push('/qr-studio'),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrStudioScreen())),
                   color: Colors.black87,
                 ),
                 _QuickActionBtn(
                   icon: Icons.settings,
                   label: 'Mekan Ayarları',
-                  onTap: () => context.push('/settings'),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopSettingsScreen())),
                   color: Colors.blueGrey,
                 ),
                 _QuickActionBtn(
                   icon: Icons.shopping_cart,
                   label: 'Siparişler',
-                  onTap: () => context.go('/orders'),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Bu özellik çok yakında aktif olacak!'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.orange.shade700,
+                      ),
+                    );
+                  },
                   color: Colors.orange,
                   badge: 'Yakında',
                 ),
@@ -225,14 +237,14 @@ class _QuickActionBtn extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
-             borderRadius: BorderRadius.circular(16),
-             boxShadow: [
-               BoxShadow(
-                 color: Colors.black.withOpacity(0.03),
-                 blurRadius: 8,
-                 offset: const Offset(0, 2),
-               )
-             ]
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )
+            ],
           ),
           child: Stack(
             children: [
