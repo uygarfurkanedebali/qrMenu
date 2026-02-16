@@ -107,9 +107,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       // Rule 2: Logged in + on login page + role verified → go to products
       else if (isLoggedIn && isOnLoginPage && roleVerified) {
-        decision = '/products';
+        decision = '/dashboard';
         print('║ DECISION RULE 2: Authenticated & verified');
-        print('║   → Redirecting to: /products');
+        print('║   → Redirecting to: /dashboard');
       }
       // Rule 3: Logged in but trying to access protected route without role verification
       else if (isLoggedIn && !isOnLoginPage && !roleVerified) {
