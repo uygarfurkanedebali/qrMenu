@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_core/shared_core.dart';
 import '../application/products_provider.dart';
 import '../../auth/application/auth_provider.dart';
+import '../../navigation/admin_menu_drawer.dart';
 
 class ProductsListScreen extends ConsumerWidget {
   const ProductsListScreen({super.key});
@@ -22,6 +23,7 @@ class ProductsListScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB), // Off-White Background
+      endDrawer: const AdminMenuDrawer(),
       body: productsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
@@ -51,6 +53,7 @@ class ProductsListScreen extends ConsumerWidget {
                 surfaceTintColor: Colors.white,
                 elevation: 0,
                 centerTitle: false,
+                automaticallyImplyLeading: true, // Show Back Button
                 title: Text(
                   'Ürünler',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -59,19 +62,12 @@ class ProductsListScreen extends ConsumerWidget {
                       ),
                 ),
                 actions: [
-                  IconButton(
-                    onPressed: () {
-                      // Settings action placeholder
-                    },
-                    icon: const Icon(Icons.settings_outlined, color: Colors.black),
-                    tooltip: 'Ayarlar',
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      // QR Code action placeholder
-                    },
-                    icon: const Icon(Icons.qr_code, color: Colors.black),
-                    tooltip: 'QR Kod',
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.black),
+                      onPressed: () => Scaffold.of(context).openEndDrawer(),
+                      tooltip: 'Menüler',
+                    ),
                   ),
                   const SizedBox(width: 8),
                 ],
