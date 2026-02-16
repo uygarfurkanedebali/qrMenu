@@ -102,11 +102,11 @@ class ProductsListScreen extends ConsumerWidget {
                     data: (categories) => ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      itemCount: categories.length + 2, // +1 for "All", +1 for "Manage"
+                      itemCount: categories.length + 2, // +1 for "Manage", +1 for "All"
                       separatorBuilder: (context, index) => const SizedBox(width: 8),
                       itemBuilder: (context, index) {
-                        // Special Item: Manage Categories Button
-                        if (index == categories.length + 1) {
+                        // 1. Manage Categories Button (First Item)
+                        if (index == 0) {
                           return ActionChip(
                             avatar: const Icon(Icons.edit, size: 16, color: Colors.black),
                             label: const Text('Düzenle'),
@@ -116,8 +116,8 @@ class ProductsListScreen extends ConsumerWidget {
                           );
                         }
 
-                        // Special Item: "All"
-                        if (index == 0) {
+                        // 2. "All" Filter
+                        if (index == 1) {
                           final isSelected = selectedCategoryId == null;
                           return ChoiceChip(
                             label: Text('Tümü', style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
@@ -130,8 +130,8 @@ class ProductsListScreen extends ConsumerWidget {
                           );
                         }
 
-                        // Actual Categories
-                        final category = categories[index - 1]; // Offset by 1
+                        // 3. Actual Categories
+                        final category = categories[index - 2]; // Offset by 2
                         final isSelected = selectedCategoryId == category.id;
                         return ChoiceChip(
                           label: Text(category.name, style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
@@ -192,7 +192,7 @@ class ProductsListScreen extends ConsumerWidget {
   void _showCategoryManagementSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      isScrollControlled: true, // Tam ekran hissi için
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => const _CategoryManagementSheet(),
@@ -341,42 +341,37 @@ class _CategoryManagementSheet extends ConsumerStatefulWidget {
 }
 
 class _CategoryManagementSheetState extends ConsumerState<_CategoryManagementSheet> {
-  bool _isAdding = false;
   final _addController = TextEditingController();
 
-  Future<void> _addCategory() async {
-    final name = _addController.text.trim();
-    if (name.isEmpty) return;
-
-    setState(() => _isAdding = true);
-    try {
-      await ref.read(categoriesProvider.notifier).addCategory(name: name);
-      _addController.clear();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hata: $e')));
-    } finally {
-      if (mounted) setState(() => _isAdding = false);
-    }
-  }
-
-  void _showEditDialog(Category category) {
-    final controller = TextEditingController(text: category.name);
-    showDialog(
+  Future<void> _showAddCategoryDialog() async {
+    _addController.clear();
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Kategori Düzenle'),
-        content: TextField(controller: controller, autofocus: true),
+        title: const Text('Yeni Kategori'),
+        content: TextField(
+          controller: _addController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Kategori Adı',
+            border: OutlineInputBorder(),
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
           FilledButton(
             onPressed: () async {
-              if (controller.text.isNotEmpty) {
-                final updated = category.copyWith(name: controller.text.trim());
-                 await ref.read(categoriesProvider.notifier).updateCategory(updated);
-                 if (context.mounted) Navigator.pop(context);
+              final name = _addController.text.trim();
+              if (name.isNotEmpty) {
+                try {
+                  await ref.read(categoriesProvider.notifier).addCategory(name: name);
+                  if (context.mounted) Navigator.pop(context); // Close Dialog
+                } catch (e) {
+                  // Error handling
+                }
               }
             },
-            child: const Text('Kaydet'),
+            child: const Text('Ekle'),
           ),
         ],
       ),
@@ -387,7 +382,7 @@ class _CategoryManagementSheetState extends ConsumerState<_CategoryManagementShe
      showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Katedrali Sil?'),
+        title: const Text('Kategoriyi Sil?'),
         content: Text('${category.name} kategorisini silmek istediğine emin misin?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Vazgeç')),
@@ -410,7 +405,7 @@ class _CategoryManagementSheetState extends ConsumerState<_CategoryManagementShe
 
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.6,
+      initialChildSize: 0.5,
       maxChildSize: 0.9,
       builder: (context, scrollController) {
         return Column(
@@ -425,7 +420,7 @@ class _CategoryManagementSheetState extends ConsumerState<_CategoryManagementShe
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Kategori Yönetimi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  const Text('Kategorilerim', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                 ],
               ),
@@ -438,25 +433,21 @@ class _CategoryManagementSheetState extends ConsumerState<_CategoryManagementShe
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, _) => Center(child: Text('Hata: $err')),
                 data: (categories) {
-                  return ReorderableListView.builder(
-                    scrollController: scrollController,
+                  if (categories.isEmpty) {
+                    return const Center(child: Text('Henüz kategori yok.'));
+                  }
+                  return ListView.separated(
+                    controller: scrollController,
                     padding: const EdgeInsets.only(bottom: 80),
                     itemCount: categories.length,
-                    onReorder: (oldIndex, newIndex) {
-                      ref.read(categoriesProvider.notifier).reorderCategories(oldIndex, newIndex);
-                    },
+                    separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
                     itemBuilder: (context, index) {
                       final category = categories[index];
                       return ListTile(
-                        key: ValueKey(category.id),
-                        leading: const Icon(Icons.drag_indicator, color: Colors.grey),
                         title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(onPressed: () => _showEditDialog(category), icon: const Icon(Icons.edit, size: 20)),
-                            IconButton(onPressed: () => _confirmDelete(category), icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red)),
-                          ],
+                        trailing: IconButton(
+                          onPressed: () => _confirmDelete(category),
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
                         ),
                       );
                     },
@@ -465,34 +456,21 @@ class _CategoryManagementSheetState extends ConsumerState<_CategoryManagementShe
               ),
             ),
 
-            // Add Input (Sticky Bottom)
-            Container(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _addController,
-                      decoration: const InputDecoration(
-                        hintText: 'Yeni Kategori Adı',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                    ),
+            // Add Button (Footer)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _showAddCategoryDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Yeni Kategori Ekle'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    onPressed: _isAdding ? null : _addCategory,
-                    style: FilledButton.styleFrom(backgroundColor: Colors.black),
-                    child: _isAdding
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.add),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
