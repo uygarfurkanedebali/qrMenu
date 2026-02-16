@@ -1,125 +1,125 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/application/auth_provider.dart';
+import '../dashboard/presentation/dashboard_screen.dart';
+import '../products/presentation/products_list_screen.dart';
+import '../settings/presentation/settings_screen.dart';
+import '../qr_studio/presentation/qr_studio_screen.dart';
 
-class AdminMenuDrawer extends ConsumerWidget {
+class AdminMenuDrawer extends StatelessWidget {
   const AdminMenuDrawer({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
+  Widget build(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
       child: Column(
         children: [
-          // 1. Header Section
+          // --- HEADER ---
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 60, 16, 24),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Shop Admin',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    letterSpacing: -0.5,
+                const CircleAvatar(
+                  backgroundColor: Colors.black,
+                  radius: 20,
+                  child: Icon(Icons.store, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Shop Admin",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        "Yönetici Paneli",
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
+                  icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.black54),
                 ),
               ],
             ),
           ),
 
-          // 2. Menu Items
+          // --- MENU ITEMS ---
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               children: [
                 _DrawerItem(
+                  title: "Panel",
                   icon: Icons.dashboard_outlined,
-                  label: 'Panel',
                   onTap: () {
-                    Navigator.pop(context);
-                    if (GoRouterState.of(context).uri.path != '/dashboard') {
-                      context.go('/dashboard');
-                    }
+                    Navigator.pop(context); // Önce menüyü kapat
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                    );
                   },
                 ),
                 _DrawerItem(
+                  title: "Menü Yönetimi",
                   icon: Icons.restaurant_menu,
-                  label: 'Menü Yönetimi',
                   onTap: () {
                     Navigator.pop(context);
-                    context.push('/products');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProductsListScreen()),
+                    );
                   },
                 ),
-                 _DrawerItem(
+                _DrawerItem(
+                  title: "Siparişler",
                   icon: Icons.receipt_long_outlined,
-                  label: 'Siparişler',
-                  badge: 'Yakında',
-                  iconColor: Colors.grey,
-                  textColor: Colors.grey,
+                  badge: "Yakında",
+                  color: Colors.grey,
+                  onTap: () {}, // Henüz işlevsiz
+                ),
+                const Divider(height: 30, thickness: 0.5),
+                _DrawerItem(
+                  title: "QR Stüdyosu",
+                  icon: Icons.qr_code_2,
                   onTap: () {
                      Navigator.pop(context);
-                     context.push('/orders');
+                     Navigator.push(context, MaterialPageRoute(builder: (_) => const QrStudioScreen()));
                   },
                 ),
                 _DrawerItem(
-                  icon: Icons.qr_code_2,
-                  label: 'QR Stüdyosu',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/qr-studio');
-                  },
-                ),
-                _DrawerItem(
+                  title: "Mekan Ayarları",
                   icon: Icons.settings_outlined,
-                  label: 'Mekan Ayarları',
                   onTap: () {
                     Navigator.pop(context);
-                    context.push('/settings'); 
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ShopSettingsScreen()),
+                    );
                   },
-                ),
-                const Divider(height: 32, thickness: 1),
-                 _DrawerItem(
-                  icon: Icons.person_outline,
-                  label: 'Hesabım',
-                  onTap: () {},
                 ),
               ],
             ),
           ),
 
-          // 3. Logout Section
+          // --- FOOTER ---
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: _DrawerItem(
-                _DrawerItem(
-                  icon: Icons.logout,
-                  label: 'Çıkış Yap',
-                  iconColor: Colors.red.shade700,
-                  textColor: Colors.red.shade700,
-                  onTap: () async {
-                     Navigator.pop(context);
-                     // Fix: Use Supabase.instance.client directly as requested
-                     await Supabase.instance.client.auth.signOut();
-                     ref.read(currentTenantProvider.notifier).state = null;
-                     if (context.mounted) context.go('/login');
-                  },
-                ),
-              ],
+              title: "Çıkış Yap",
+              icon: Icons.logout,
+              color: Colors.red,
+              onTap: () async {
+                await Supabase.instance.client.auth.signOut();
+                // Login sayfasına yönlendir (main.dart auth state'i dinliyorsa otomatik olur)
+              },
             ),
           ),
         ],
@@ -128,60 +128,52 @@ class AdminMenuDrawer extends ConsumerWidget {
   }
 }
 
+// --- DRAWER ITEM WIDGET ---
 class _DrawerItem extends StatelessWidget {
+  final String title;
   final IconData icon;
-  final String label;
   final VoidCallback onTap;
-  final String? badge; // Added badge parameter
-  final Color? iconColor;
-  final Color? textColor;
+  final String? badge;
+  final Color? color;
 
   const _DrawerItem({
+    required this.title,
     required this.icon,
-    required this.label,
     required this.onTap,
-    this.badge, // Added to constructor
-    this.iconColor,
-    this.textColor,
+    this.badge,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final itemColor = color ?? Colors.black87;
+    
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? Colors.black87, size: 24),
-      title: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor ?? Colors.black87,
-              fontWeight: FontWeight.w500,
-              fontSize: 16,
-            ),
-          ),
-          if (badge != null) ...[
-            const SizedBox(width: 8),
-            Container(
+      leading: Icon(icon, color: itemColor),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: itemColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: badge != null
+          ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 badge!,
-                style: TextStyle(
-                  color: Colors.orange.shade900,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
-        ],
-      ),
+            )
+          : null,
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
     );
   }
 }
