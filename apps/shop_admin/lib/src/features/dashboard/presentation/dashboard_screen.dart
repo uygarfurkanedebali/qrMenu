@@ -1,366 +1,284 @@
-/// Dashboard Screen
-/// 
-/// The main shell for the Shop Admin application.
-/// Contains the sidebar navigation and the main content area.
-/// Shows dynamic tenant info and client URL.
-library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_core/shared_core.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../auth/application/auth_provider.dart';
+import '../../products/application/products_provider.dart';
+import '../../../navigation/admin_menu_drawer.dart';
 
+/// Admin Dashboard V2
+/// 
+/// Main entry point for the shop admin.
+/// Replaces old dashboard overview and layout logic.
 class DashboardScreen extends ConsumerWidget {
-  final Widget child;
-
-  const DashboardScreen({super.key, required this.child});
+  const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDesktop = MediaQuery.of(context).size.width >= 800;
     final tenant = ref.watch(currentTenantProvider);
+    final productsAsync = ref.watch(productsProvider);
+    final theme = Theme.of(context);
+
+    if (tenant == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // Dummy Stats
+    final int productCount = productsAsync.valueOrNull?.length ?? 0;
+    final int activeOrders = 0;
+    final int totalViews = 1530;
 
     return Scaffold(
-      body: Row(
-        children: [
-          // Sidebar Navigation (Always visible on desktop)
-          if (isDesktop)
-            SizedBox(
-              width: 250,
-              child: _Sidebar(theme: theme, tenant: tenant, ref: ref),
+      backgroundColor: const Color(0xFFF9FAFB), // Off-white
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hoşgeldin,',
+              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
             ),
-
-          // Main Content Area
-          Expanded(
-            child: Column(
-              children: [
-                // AppBar
-                AppBar(
-                  title: Text(tenant?.name ?? 'Shop Admin'),
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  backgroundColor: theme.colorScheme.surface,
-                  // Show drawer menu only on mobile
-                  leading: !isDesktop
-                      ? Builder(
-                          builder: (context) => IconButton(
-                            icon: const Icon(Icons.menu),
-                            onPressed: () {
-                              Scaffold.of(context).openDrawer();
-                            },
-                          ),
-                        )
-                      : null,
-                ),
-                
-                // Route Content
-                Expanded(
-                  child: Container(
-                    color: const Color(0xFF0F172A), // Slate 900 - force dark theme
-                    child: child,
-                  ),
-                ),
-              ],
+            Text(
+              tenant.name,
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        actions: [
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu, color: Colors.black87),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              tooltip: 'Menü',
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      // Drawer for mobile navigation
-      drawer: !isDesktop ? Drawer(child: _Sidebar(theme: theme, tenant: tenant, ref: ref)) : null,
-    );
-  }
-}
+      endDrawer: const AdminMenuDrawer(),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-class _Sidebar extends StatelessWidget {
-  final ThemeData theme;
-  final TenantState? tenant;
-  final WidgetRef ref;
-
-  const _Sidebar({required this.theme, this.tenant, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    // Get current location to highlight active tab
-    final String location = GoRouterState.of(context).uri.path;
-
-    return Container(
-      color: theme.colorScheme.surface,
-      child: Column(
-        children: [
-          // Logo Area
-          Container(
-            height: 120,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.qr_code_scanner,
-                  size: 40,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'QR-Infinity',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Client URL Card (if tenant is loaded)
-          if (tenant != null)
-            Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // 1. Stats Horizontal Scroll
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 140,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.link, size: 16, color: theme.colorScheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Your Live Menu',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
+                  _StatCard(
+                    title: 'Toplam Ürün',
+                    value: '$productCount',
+                    icon: Icons.inventory_2_outlined,
+                    color: Colors.blue,
                   ),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () => _launchUrl(tenant!.clientUrl),
-                    child: Text(
-                      tenant!.clientUrl,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
+                   const SizedBox(width: 12),
+                  _StatCard(
+                    title: 'Görüntülenme',
+                    value: '$totalViews',
+                    icon: Icons.visibility_outlined,
+                    color: Colors.purple,
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _launchUrl(tenant!.clientUrl),
-                          icon: const Icon(Icons.open_in_new, size: 16),
-                          label: const Text('Open'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _copyUrl(context, tenant!.clientUrl),
-                          icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('Copy'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
-                    ],
+                   const SizedBox(width: 12),
+                  _StatCard(
+                    title: 'Aktif Sipariş',
+                    value: '$activeOrders',
+                    icon: Icons.shopping_bag_outlined,
+                    color: Colors.orange,
                   ),
                 ],
               ),
             ),
-
-          const SizedBox(height: 8),
-
-          // Navigation Links
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                _NavTile(
-                  title: 'Dashboard',
-                  icon: Icons.dashboard_outlined,
-                  selectedIcon: Icons.dashboard,
-                  isActive: location == '/dashboard',
-                  onTap: () => context.go('/dashboard'),
-                  theme: theme,
-                ),
-                const SizedBox(height: 4),
-                _NavTile(
-                  title: 'Products',
-                  icon: Icons.inventory_2_outlined,
-                  selectedIcon: Icons.inventory_2,
-                  isActive: location == '/products',
-                  onTap: () => context.go('/products'),
-                  theme: theme,
-                ),
-                const SizedBox(height: 4),
-                _NavTile(
-                  title: 'Categories',
-                  icon: Icons.category_outlined,
-                  selectedIcon: Icons.category,
-                  isActive: location == '/categories',
-                  onTap: () => context.go('/categories'),
-                  theme: theme,
-                ),
-                const SizedBox(height: 4),
-                _NavTile(
-                  title: 'Orders',
-                  icon: Icons.shopping_bag_outlined,
-                  selectedIcon: Icons.shopping_bag,
-                  isActive: location == '/orders',
-                  onTap: () => context.go('/orders'),
-                  theme: theme,
-                ),
-                const Divider(height: 32),
-                _NavTile(
-                  title: 'Settings',
-                  icon: Icons.settings_outlined,
-                  selectedIcon: Icons.settings,
-                  isActive: location == '/settings',
-                  onTap: () => context.go('/settings'),
-                  theme: theme,
-                ),
-              ],
-            ),
           ),
-          
-          // User Info / Logout
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
-                  width: 1,
+
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+          // 2. Quick Actions Header
+          const SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'Hızlı İşlemler',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
               ),
             ),
-            child: Row(
+          ),
+
+          // 3. Quick Actions Grid
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverGrid.count(
+              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.1,
               children: [
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    tenant?.name.isNotEmpty == true ? tenant!.name[0].toUpperCase() : 'A',
-                    style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
-                  ),
+                _QuickActionBtn(
+                  icon: Icons.inventory_2,
+                  label: 'Ürün Yönetimi',
+                  onTap: () => context.go('/products'),
+                  color: Colors.blue,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tenant?.name ?? 'Shop Owner',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      InkWell(
-                        onTap: () => _logout(context),
-                        child: Text(
-                          'Logout',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _QuickActionBtn(
+                  icon: Icons.qr_code_2,
+                  label: 'QR İşlemleri',
+                  onTap: () {}, // Future impl
+                  color: Colors.black87,
+                ),
+                _QuickActionBtn(
+                  icon: Icons.settings,
+                  label: 'Mekan Ayarları',
+                  onTap: () {}, // Future impl
+                  color: Colors.blueGrey,
+                ),
+                _QuickActionBtn(
+                  icon: Icons.shopping_cart,
+                  label: 'Siparişler',
+                  onTap: () => context.go('/orders'),
+                  color: Colors.orange,
+                  badge: 'Yakında',
                 ),
               ],
             ),
           ),
+
+          const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
         ],
       ),
     );
   }
-
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  void _copyUrl(BuildContext context, String url) {
-    Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('URL copied to clipboard!')),
-    );
-  }
-
-  void _logout(BuildContext context) async {
-    await SupabaseService.client.auth.signOut();
-    ref.read(currentTenantProvider.notifier).state = null;
-    if (context.mounted) {
-      context.go('/login');
-    }
-  }
 }
 
-class _NavTile extends StatelessWidget {
+class _StatCard extends StatelessWidget {
   final String title;
+  final String value;
   final IconData icon;
-  final IconData selectedIcon;
-  final bool isActive;
-  final VoidCallback onTap;
-  final ThemeData theme;
+  final Color color;
 
-  const _NavTile({
-    required this.title,
-    required this.icon,
-    required this.selectedIcon,
-    required this.isActive,
-    required this.onTap,
-    required this.theme,
-  });
+  const _StatCard({required this.title, required this.value, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = theme.colorScheme;
-    
-    return ListTile(
-      leading: Icon(
-        isActive ? selectedIcon : icon,
-        color: isActive ? colorScheme.primary : colorScheme.onSurfaceVariant,
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isActive ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const Spacer(),
+          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
+          Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+  final String? badge;
+
+  const _QuickActionBtn({required this.icon, required this.label, required this.onTap, required this.color, this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 0,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+             borderRadius: BorderRadius.circular(16),
+             boxShadow: [
+               BoxShadow(
+                 color: Colors.black.withOpacity(0.03),
+                 blurRadius: 8,
+                 offset: const Offset(0, 2),
+               )
+             ]
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: color, size: 28),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (badge != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      badge!,
+                      style: TextStyle(
+                        color: Colors.orange.shade800,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-      selected: isActive,
-      selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      onTap: onTap,
     );
   }
 }
