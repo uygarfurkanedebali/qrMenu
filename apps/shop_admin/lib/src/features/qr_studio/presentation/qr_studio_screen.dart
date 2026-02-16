@@ -28,7 +28,7 @@ class QrStudioScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.qr_code_Scanner, size: 80, color: Colors.grey.shade300),
+            Icon(Icons.qr_code_2, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
               'Çok Yakında',
