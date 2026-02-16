@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_core/shared_core.dart';
 import '../../auth/application/auth_provider.dart';
 import '../../products/application/products_provider.dart';
-import '../../../navigation/admin_menu_drawer.dart';
+import '../../navigation/admin_menu_drawer.dart';
 
 /// Admin Dashboard V2
 /// 
