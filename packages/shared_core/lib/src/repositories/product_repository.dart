@@ -16,7 +16,7 @@ class ProductRepository {
     try {
       final response = await _client
           .from('products')
-          .select()
+          .select('*, product_categories(category_id)')
           .eq('tenant_id', tenantId)
           .order('sort_order', ascending: true);
 

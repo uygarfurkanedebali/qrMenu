@@ -42,7 +42,7 @@ class Product {
       tenantId: json['tenant_id'] as String,
       categoryId: json['category_id'] as String?,
       // Extract IDs from joined product_categories table if present
-      categoryIds: (json['product_categories'] as List?)
+      categoryIds: (json['product_categories'] as List<dynamic>?)
               ?.map((e) => e['category_id'] as String)
               .toList() ??
           [],
