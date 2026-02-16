@@ -20,9 +20,24 @@ class ProductRepository {
           .eq('tenant_id', tenantId)
           .order('sort_order', ascending: true);
 
-      return (response as List)
+      final products = (response as List)
           .map((json) => Product.fromJson(json))
           .toList();
+
+      // --- DEBUG BAŞLANGIÇ ---
+      if (products.isNotEmpty) {
+        print('🔎 TEST LOG: Toplam ${products.length} ürün çekildi.');
+        final firstProduct = products.first;
+        print('🔎 TEST LOG: İlk Ürün: ${firstProduct.name}');
+        print('🔎 TEST LOG: İlk Ürün Kategori IDleri: ${firstProduct.categoryIds}');
+        // Casting the first item to Map to access key
+        print('🔎 TEST LOG: Ham JSON (product_categories): ${(response.first as Map)['product_categories']}');
+      } else {
+        print('🔎 TEST LOG: Hiç ürün bulunamadı!');
+      }
+      // --- DEBUG BİTİŞ ---
+
+      return products;
     } catch (e) {
       throw Exception('Failed to fetch products: $e');
     }
