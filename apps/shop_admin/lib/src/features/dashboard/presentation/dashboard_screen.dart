@@ -132,15 +132,21 @@ class DashboardScreen extends ConsumerWidget {
                   color: Colors.blue,
                 ),
                 _QuickActionBtn(
+                  icon: Icons.category, // Changed to category
+                  label: 'Kategoriler',
+                  onTap: () => context.go('/products'), // Goes to Product List (where categories are)
+                  color: Colors.indigo,
+                ),
+                _QuickActionBtn(
                   icon: Icons.qr_code_2,
                   label: 'QR İşlemleri',
-                  onTap: () {}, // Future impl
+                  onTap: () => context.push('/qr-studio'),
                   color: Colors.black87,
                 ),
                 _QuickActionBtn(
                   icon: Icons.settings,
                   label: 'Mekan Ayarları',
-                  onTap: () {}, // Future impl
+                  onTap: () => context.push('/settings'),
                   color: Colors.blueGrey,
                 ),
                 _QuickActionBtn(

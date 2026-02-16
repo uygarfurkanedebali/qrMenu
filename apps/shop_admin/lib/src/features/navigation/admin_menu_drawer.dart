@@ -47,46 +47,62 @@ class AdminMenuDrawer extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               children: [
                 _DrawerItem(
-                  icon: Icons.home_outlined,
+                  icon: Icons.dashboard_outlined,
                   label: 'Panel',
                   onTap: () {
-                    Navigator.pop(context); // Close drawer
-                    // Only navigate if not already on dashboard
+                    Navigator.pop(context);
                     if (GoRouterState.of(context).uri.path != '/dashboard') {
                       context.go('/dashboard');
                     }
                   },
                 ),
                 _DrawerItem(
-                  icon: Icons.inventory_2_outlined,
-                  label: 'Ürünler',
+                  icon: Icons.restaurant_menu,
+                  label: 'Menü Yönetimi',
                   onTap: () {
                     Navigator.pop(context);
                     context.push('/products');
                   },
                 ),
-                _DrawerItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Ayarlar',
+                 _DrawerItem(
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Siparişler',
+                  badge: 'Yakında',
+                  iconColor: Colors.grey,
+                  textColor: Colors.grey,
                   onTap: () {
-                    Navigator.pop(context);
-                    context.push('/settings'); 
+                     Navigator.pop(context);
+                     context.push('/orders');
                   },
                 ),
                 _DrawerItem(
                   icon: Icons.qr_code_2,
-                  label: 'QR Kod',
+                  label: 'QR Stüdyosu',
                   onTap: () {
                     Navigator.pop(context);
                     context.push('/qr-studio');
                   },
                 ),
+                _DrawerItem(
+                  icon: Icons.settings_outlined,
+                  label: 'Mekan Ayarları',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/settings'); 
+                  },
+                ),
+                const Divider(height: 32, thickness: 1),
+                 _DrawerItem(
+                  icon: Icons.person_outline,
+                  label: 'Hesabım',
+                  onTap: () {},
+                ),
               ],
             ),
           ),
-          
-          // 3. Footer / Logout
-           Padding(
+
+          // 3. Logout Section
+          Padding(
             padding: const EdgeInsets.all(24),
             child: _DrawerItem(
               icon: Icons.logout,
@@ -94,14 +110,10 @@ class AdminMenuDrawer extends ConsumerWidget {
               iconColor: Colors.red.shade700,
               textColor: Colors.red.shade700,
               onTap: () async {
-                 // Close drawer first
                  Navigator.pop(context);
-                 // Sign out
-                 // Using the provider method if available or direct supabase
-                 // For now, re-using logic from previous implementation
-                 // Assuming SupabaseService is available globally or via import, 
-                 // but since we don't have it imported here, let's keep it simple or import it.
-                 // Better to just redirect to login which handles cleanup or use a provider method.
+                 await SupabaseService.client.auth.signOut();
+                 ref.read(currentTenantProvider.notifier).state = null;
+                 if (context.mounted) context.go('/login');
               },
             ),
           ),
