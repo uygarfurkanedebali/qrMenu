@@ -1,33 +1,25 @@
-/// Shop Settings Screen
+/// Shop Settings Screen (Refactored)
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_core/shared_core.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_core/shared_core.dart';
 
 import '../../auth/application/auth_provider.dart';
 import '../application/settings_provider.dart';
 import '../../products/data/mock_storage_service.dart';
 import 'components/design_settings_section.dart';
+import '../../navigation/admin_menu_drawer.dart';
 
-const _presetColors = [
-  '#FF5722', '#E91E63', '#9C27B0', '#3F51B5', '#2196F3',
-  '#009688', '#4CAF50', '#FF9800', '#795548', '#607D8B',
-];
-
-const _fontFamilies = ['Roboto', 'Lato', 'Montserrat', 'Open Sans', 'Poppins', 'Inter', 'Nunito', 'Raleway'];
-const _currencies = ['₺', '\$', '€', '£', '¥'];
-
-class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+class ShopSettingsScreen extends ConsumerStatefulWidget {
+  const ShopSettingsScreen({super.key});
 
   @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<ShopSettingsScreen> createState() => _ShopSettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _colorController;
@@ -118,15 +110,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Color _parseHexColor(String hex) {
-    try {
-      hex = hex.replaceAll('#', '');
-      if (hex.length == 3) hex = hex.split('').map((c) => '$c$c').join();
-      if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
-    } catch (_) {}
-    return const Color(0xFFFF5722);
-  }
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final tenant = ref.read(currentTenantProvider);
@@ -162,7 +145,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Text('Ayarlar başarıyla kaydedildi!'),
+                Text('Ayarlar kaydedildi!'),
               ],
             ),
             backgroundColor: Colors.green.shade700,
@@ -185,18 +168,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final tenant = ref.watch(currentTenantProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     if (tenant == null) return const Scaffold(body: Center(child: Text('Giriş yapın')));
 
     _populateForm(tenant);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB), // Off-white
       appBar: AppBar(
-        title: const Text('Dükkan Ayarları'),
+        title: const Text('Mekan Ayarları', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: 8),
             child: FilledButton.icon(
               onPressed: _isSaving ? null : _save,
               icon: _isSaving
@@ -204,112 +191,164 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       width: 16, height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.save, size: 18),
-              label: Text(_isSaving ? 'Kaydediliyor...' : 'Kaydet'),
+              label: Text(_isSaving ? 'Kaydediliyor' : 'Kaydet'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
             ),
           ),
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
+      endDrawer: const AdminMenuDrawer(),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           children: [
-            // Section 1: Görünüm
-            _SectionHeader(icon: Icons.palette, title: 'Görünüm', subtitle: 'Marka rengi ve afiş'),
-            const SizedBox(height: 12),
+            // Section 1: Genel Bilgiler (Placeholder List as requested, but keeping functionality for real use)
+            const Text('Genel Bilgiler', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 16),
             
-            // Banner & Color Cards...
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                children: [
+                  _SettingsTile(
+                    label: 'Telefon',
+                    child: TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(border: InputBorder.none, prefixIcon: Icon(Icons.phone_outlined, size: 20)),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  _SettingsTile(
+                    label: 'Instagram',
+                    child: TextFormField(
+                      controller: _instagramController,
+                      decoration: const InputDecoration(border: InputBorder.none, prefixIcon: Icon(Icons.camera_alt_outlined, size: 20)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+
+            // Section 2: Wi-Fi
+            const Text('Kablosuz İnternet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                children: [
+                   _SettingsTile(
+                    label: 'Wi-Fi Adı',
+                    child: TextFormField(
+                      controller: _wifiNameController,
+                      decoration: const InputDecoration(border: InputBorder.none, prefixIcon: Icon(Icons.wifi, size: 20)),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  _SettingsTile(
+                    label: 'Şifre',
+                    child: TextFormField(
+                      controller: _wifiPasswordController,
+                      obscureText: false,
+                      decoration: const InputDecoration(border: InputBorder.none, prefixIcon: Icon(Icons.lock_outline, size: 20)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Section 3: Görünüm & Tasarım
+            const Text('Görünüm ve Marka', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 16),
+            
+             // Banner Upload
+             InkWell(
                 onTap: _uploadBanner,
+                borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  height: 150,
+                  height: 160,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
                     image: _bannerUrl != null
                         ? DecorationImage(image: NetworkImage(_bannerUrl!), fit: BoxFit.cover)
                         : null,
                   ),
-                  child: Center(
-                    child: _isUploadingBanner
-                        ? const CircularProgressIndicator()
-                        : Icon(Icons.add_a_photo, size: 40, color: Colors.grey.shade700),
-                  ),
+                  child: _bannerUrl == null 
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate_outlined, size: 32, color: Colors.grey.shade400),
+                          const SizedBox(height: 8),
+                          Text('Afiş Yükle', style: TextStyle(color: Colors.grey.shade500)),
+                        ],
+                      )
+                    : null,
                 ),
+             ),
+             
+             const SizedBox(height: 16),
+             
+             Container(
+               padding: const EdgeInsets.all(16),
+               decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
               ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Renk Seçimi
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextFormField(
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   const Text('Marka Rengi (Hex)', style: TextStyle(fontWeight: FontWeight.w500)),
+                   const SizedBox(height: 8),
+                   TextFormField(
                       controller: _colorController,
-                      decoration: const InputDecoration(labelText: 'Hex Renk Kodu', prefixIcon: Icon(Icons.colorize)),
+                      decoration: const InputDecoration(
+                        hintText: '#FF5722',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
                       onChanged: (_) => setState(() {}),
                     ),
-                  ],
-                ),
+                 ],
+               ),
+             ),
+             
+             const SizedBox(height: 16),
+             // Design Config Section Reuse
+             DesignSettingsSection(
+                layoutMode: _layoutMode,
+                fontFamily: _designFontFamily,
+                enableTexture: _enableTexture,
+                onLayoutChanged: (v) => setState(() => _layoutMode = v ?? 'grid'),
+                onFontChanged: (v) => setState(() => _designFontFamily = v ?? 'Inter'),
+                onTextureChanged: (v) => setState(() => _enableTexture = v),
               ),
-            ),
-            const SizedBox(height: 32),
 
-            // Section 2: Menü Tasarımı (NEW)
-            _SectionHeader(icon: Icons.design_services, title: 'Menü Tasarımı', subtitle: 'Müşteri ekranı özelleştirme'),
-            const SizedBox(height: 12),
-            DesignSettingsSection(
-              layoutMode: _layoutMode,
-              fontFamily: _designFontFamily,
-              enableTexture: _enableTexture,
-              onLayoutChanged: (v) => setState(() => _layoutMode = v ?? 'grid'),
-              onFontChanged: (v) => setState(() => _designFontFamily = v ?? 'Inter'),
-              onTextureChanged: (v) => setState(() => _enableTexture = v),
-            ),
-            const SizedBox(height: 32),
-
-            // Section 3: İletişim
-            _SectionHeader(icon: Icons.phone, title: 'İletişim', subtitle: 'Telefon ve Instagram'),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(labelText: 'Telefon', prefixIcon: Icon(Icons.phone)),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _instagramController,
-                      decoration: const InputDecoration(labelText: 'Instagram', prefixIcon: Icon(Icons.camera_alt)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Section 4: Müşteri Bilgileri
-            _SectionHeader(icon: Icons.wifi, title: 'Wi-Fi', subtitle: 'Müşteriler için internet bilgisi'),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextFormField(controller: _wifiNameController, decoration: const InputDecoration(labelText: 'Wi-Fi Adı', prefixIcon: Icon(Icons.wifi))),
-                    const SizedBox(height: 16),
-                    TextFormField(controller: _wifiPasswordController, decoration: const InputDecoration(labelText: 'Şifre', prefixIcon: Icon(Icons.lock))),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
+             const SizedBox(height: 60),
           ],
         ),
       ),
@@ -317,28 +356,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
+class _SettingsTile extends StatelessWidget {
+  final String label;
+  final Widget child;
 
-  const _SectionHeader({required this.icon, required this.title, required this.subtitle});
+  const _SettingsTile({required this.label, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, color: theme.primaryColor),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            Text(subtitle, style: theme.textTheme.bodySmall),
-          ],
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80, 
+            child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+          ),
+          Expanded(child: child),
+        ],
+      ),
     );
   }
 }

@@ -15,7 +15,8 @@ import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
 import '../features/products/presentation/category_list_screen.dart';
-import '../features/settings/presentation/settings_screen.dart';
+import '../features/settings/presentation/settings_screen.dart'; // Exporting ShopSettingsScreen class
+import '../features/qr_studio/presentation/qr_studio_screen.dart';
 import '../features/auth/application/auth_provider.dart';
 
 /// Tracks whether role has been verified for the current session
@@ -182,7 +183,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: SettingsScreen(),
+              child: ShopSettingsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/qr-studio',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: QrStudioScreen(),
             ),
           ),
         ],

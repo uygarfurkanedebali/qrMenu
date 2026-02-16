@@ -182,7 +182,11 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
         title: Text(widget.productId == null ? 'Add Product' : 'Edit Product'),
         actions: [
           if (kDebugMode)

@@ -62,7 +62,6 @@ class AdminMenuDrawer extends ConsumerWidget {
                   label: 'Ürünler',
                   onTap: () {
                     Navigator.pop(context);
-                    // Using push to allow "Back" button history as requested
                     context.push('/products');
                   },
                 ),
@@ -79,7 +78,7 @@ class AdminMenuDrawer extends ConsumerWidget {
                   label: 'QR Kod',
                   onTap: () {
                     Navigator.pop(context);
-                    // Placeholder or dialog
+                    context.push('/qr-studio');
                   },
                 ),
               ],
