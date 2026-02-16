@@ -68,7 +68,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
   
   return GoRouter(
-    initialLocation: '/login', // BYPASS LANDING PAGE -> DIRECT LOGIN
+    initialLocation: '/dashboard', // DIRECT ENTRY POINT -> PROTECTED BY REDIRECT
     refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
     redirect: (context, state) {
       print('╔═══════════════════════════════════════════════════════╗');
