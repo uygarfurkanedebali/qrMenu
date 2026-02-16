@@ -4,6 +4,7 @@ import '../dashboard/presentation/dashboard_screen.dart';
 import '../products/presentation/products_list_screen.dart';
 import '../settings/presentation/settings_screen.dart';
 import '../qr_studio/presentation/qr_studio_screen.dart';
+import '../categories/presentation/categories_screen.dart';
 
 class AdminMenuDrawer extends StatelessWidget {
   const AdminMenuDrawer({super.key});
@@ -68,13 +69,24 @@ class AdminMenuDrawer extends StatelessWidget {
                   },
                 ),
                 _DrawerItem(
-                  title: "Menü Yönetimi",
+                  title: "Ürünler",
                   icon: Icons.restaurant_menu,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ProductsListScreen()),
+                    );
+                  },
+                ),
+                _DrawerItem(
+                  title: "Kategoriler",
+                  icon: Icons.category_outlined,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CategoriesScreen()),
                     );
                   },
                 ),
