@@ -69,7 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
   
   return GoRouter(
-    initialLocation: '/dashboard', // DIRECT ENTRY POINT -> PROTECTED BY REDIRECT
+    initialLocation: '/shopadmin', // DIRECT ENTRY POINT -> PROTECTED BY REDIRECT
     refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
     redirect: (context, state) {
       print('╔═══════════════════════════════════════════════════════╗');
@@ -109,9 +109,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       // Rule 2: Logged in + on login page + role verified → go to dashboard
       else if (isLoggedIn && isOnLoginPage && roleVerified) {
-        decision = '/dashboard';
+        decision = '/shopadmin';
         print('║ DECISION RULE 2: Authenticated & verified');
-        print('║   → Redirecting to: /dashboard');
+        print('║   → Redirecting to: /shopadmin');
       }
       // Rule 3: Logged in but trying to access protected route without role verification
       else if (isLoggedIn && !isOnLoginPage && !roleVerified) {
@@ -144,66 +144,60 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AdminLayout(child: child); // REPLACED DashboardScreen -> AdminLayout
         },
         routes: [
+          // Tenant-aware Admin Route (New)
           GoRoute(
-            path: '/dashboard',
+            path: '/:shopId/shopadmin',
+            pageBuilder: (context, state) => const NoTransitionPage(child: DashboardScreen()),
+            routes: [
+              GoRoute(
+                path: 'products',
+                pageBuilder: (context, state) => const NoTransitionPage(child: ProductsListScreen()),
+                routes: [
+                  GoRoute(path: 'new', builder: (context, state) => const ProductEditScreen()),
+                  GoRoute(path: ':id', builder: (context, state) => ProductEditScreen(productId: state.pathParameters['id'])),
+                ],
+              ),
+              GoRoute(path: 'orders', pageBuilder: (context, state) => const NoTransitionPage(child: _PlaceholderParams(title: 'Order Management'))),
+              GoRoute(path: 'categories', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
+              GoRoute(path: 'menu-manager', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
+              GoRoute(path: 'quick-products', pageBuilder: (context, state) => const NoTransitionPage(child: QuickProductManagerScreen())),
+              GoRoute(path: 'settings', pageBuilder: (context, state) => const NoTransitionPage(child: ShopSettingsScreen())),
+              GoRoute(path: 'qr-studio', pageBuilder: (context, state) => const NoTransitionPage(child: QrStudioScreen())),
+            ],
+          ),
+          
+          // Fallback Generic Admin Route (Backward compatibility & default login)
+          GoRoute(
+            path: '/shopadmin',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: DashboardScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: 'products',
+                pageBuilder: (context, state) => const NoTransitionPage(child: ProductsListScreen()),
+                routes: [
+                  GoRoute(path: 'new', builder: (context, state) => const ProductEditScreen()),
+                  GoRoute(path: ':id', builder: (context, state) => ProductEditScreen(productId: state.pathParameters['id'])),
+                ],
+              ),
+              GoRoute(path: 'orders', pageBuilder: (context, state) => const NoTransitionPage(child: _PlaceholderParams(title: 'Order Management'))),
+              GoRoute(path: 'categories', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
+              GoRoute(path: 'menu-manager', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
+              GoRoute(path: 'quick-products', pageBuilder: (context, state) => const NoTransitionPage(child: QuickProductManagerScreen())),
+              GoRoute(path: 'settings', pageBuilder: (context, state) => const NoTransitionPage(child: ShopSettingsScreen())),
+              GoRoute(path: 'qr-studio', pageBuilder: (context, state) => const NoTransitionPage(child: QrStudioScreen())),
+            ],
+          ),
+
+          // Old route redirects
+          GoRoute(
+            path: '/dashboard',
+            redirect: (context, state) => '/shopadmin',
           ),
           GoRoute(
             path: '/products',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProductsListScreen(),
-            ),
-            routes: [
-              GoRoute(
-                path: 'new',
-                builder: (context, state) => const ProductEditScreen(),
-              ),
-              GoRoute(
-                path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id'];
-                  return ProductEditScreen(productId: id);
-                },
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/orders',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: _PlaceholderParams(title: 'Order Management'),
-            ),
-          ),
-          GoRoute(
-            path: '/categories',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MenuExplorerScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/menu-manager',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MenuExplorerScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/quick-products',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: QuickProductManagerScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/settings',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ShopSettingsScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/qr-studio',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: QrStudioScreen(),
-            ),
+            redirect: (context, state) => '/shopadmin/products',
           ),
         ],
       ),

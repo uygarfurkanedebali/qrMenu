@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // <-- İŞTE EKSİK OLAN BU!
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'src/routing/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
   // 1. Supabase'i Başlat
   try {

@@ -6,7 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:url_strategy/url_strategy.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:shared_core/shared_core.dart';
 
 import 'src/routing/app_router.dart';
@@ -15,7 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Remove the # from web URLs
-  setPathUrlStrategy();
+  usePathUrlStrategy();
   
   // Initialize Supabase
   try {

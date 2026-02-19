@@ -34,17 +34,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       
       // Tenant routes - pattern: /shop-slug
       GoRoute(
-        path: '/:slug',
+        path: '/:shopId',
         builder: (context, state) {
-          final slug = state.pathParameters['slug']!;
+          final slug = state.pathParameters['shopId']!;
           return TenantShell(slug: slug);
         },
         routes: [
-          // Menu route
+          // menu route redirects to base shopId
           GoRoute(
             path: 'menu',
-            builder: (context, state) {
-              return const MenuScreen();
+            redirect: (context, state) {
+              final slug = state.pathParameters['shopId']!;
+              return '/$slug';
             },
           ),
         ],
