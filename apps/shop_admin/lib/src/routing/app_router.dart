@@ -14,7 +14,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
-import '../features/products/presentation/category_list_screen.dart';
+import '../features/menu_manager/presentation/menu_manager_screen.dart';
 import '../features/settings/presentation/settings_screen.dart'; // Exporting ShopSettingsScreen class
 import '../features/qr_studio/presentation/qr_studio_screen.dart';
 import '../features/auth/application/auth_provider.dart';
@@ -177,7 +177,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/categories',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: CategoryListScreen(),
+              child: MenuManagerScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/menu-manager',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: MenuManagerScreen(),
             ),
           ),
           GoRoute(
