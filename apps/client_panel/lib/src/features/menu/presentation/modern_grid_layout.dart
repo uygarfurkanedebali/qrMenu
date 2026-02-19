@@ -36,11 +36,25 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
   List<MenuCategory> _getSubCategories(String mainCategoryId) =>
       widget.categories.where((c) => c.parentId == mainCategoryId).toList();
 
-  void _openCategory(String mainCategoryId) {
+  /// Collect all products under a main category tree (direct + all subcategories).
+  List<MenuProduct> _getAllProductsForMain(String mainCategoryId) {
+    final mainCat = widget.categories.where((c) => c.id == mainCategoryId).firstOrNull;
     final subs = _getSubCategories(mainCategoryId);
+    final allProducts = <MenuProduct>[];
+    // Products directly on main category
+    if (mainCat != null) allProducts.addAll(mainCat.products);
+    // Products on each subcategory
+    for (final sub in subs) {
+      allProducts.addAll(sub.products);
+    }
+    return allProducts;
+  }
+
+  void _openCategory(String mainCategoryId) {
     setState(() {
       _selectedMainCategoryId = mainCategoryId;
-      _selectedSubCategoryId = subs.isNotEmpty ? subs.first.id : null;
+      // null means "Tümü" (all) — will show all products under this category tree
+      _selectedSubCategoryId = null;
     });
   }
 
@@ -160,12 +174,22 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
         .where((c) => c.id == _selectedMainCategoryId)
         .firstOrNull;
     final subCategories = _getSubCategories(_selectedMainCategoryId!);
-    final selectedProducts = _selectedSubCategoryId != null
-        ? widget.categories
-            .where((c) => c.id == _selectedSubCategoryId)
-            .expand((c) => c.products)
-            .toList()
-        : <MenuProduct>[];
+
+    // Determine which products to show
+    List<MenuProduct> selectedProducts;
+    if (subCategories.isEmpty) {
+      // No subcategories → show products directly linked to main category
+      selectedProducts = mainCat?.products ?? [];
+    } else if (_selectedSubCategoryId == null) {
+      // "Tümü" selected → show ALL products under this category tree
+      selectedProducts = _getAllProductsForMain(_selectedMainCategoryId!);
+    } else {
+      // Specific subcategory selected
+      selectedProducts = widget.categories
+          .where((c) => c.id == _selectedSubCategoryId)
+          .expand((c) => c.products)
+          .toList();
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -211,37 +235,25 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             ),
           ),
 
-          // Subcategory Chips (pinned)
+          // Subcategory Chips — ONLY show if subcategories exist
           if (subCategories.isNotEmpty)
             SliverPersistentHeader(
               pinned: true,
               delegate: _SubCategoryChipsDelegate(
                 subCategories: subCategories,
                 selectedId: _selectedSubCategoryId,
+                showAllTab: true, // NEW: includes "Tümü" tab
                 onSelected: (id) {
                   setState(() => _selectedSubCategoryId = id);
+                },
+                onAllSelected: () {
+                  setState(() => _selectedSubCategoryId = null);
                 },
               ),
             ),
 
-          // Empty state or product list
-          if (subCategories.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.category_outlined, size: 56, color: Colors.grey.shade300),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Bu kategoride alt kategori yok',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else if (selectedProducts.isEmpty)
+          // Products
+          if (selectedProducts.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
@@ -250,7 +262,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                     Icon(Icons.restaurant_menu, size: 56, color: Colors.grey.shade300),
                     const SizedBox(height: 12),
                     Text(
-                      'Bu alt kategoride ürün yok',
+                      'Bu kategoride ürün yok',
                       style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
                     ),
                   ],
@@ -467,11 +479,15 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   final List<MenuCategory> subCategories;
   final String? selectedId;
   final ValueChanged<String> onSelected;
+  final bool showAllTab;
+  final VoidCallback? onAllSelected;
 
   _SubCategoryChipsDelegate({
     required this.subCategories,
     required this.selectedId,
     required this.onSelected,
+    this.showAllTab = false,
+    this.onAllSelected,
   });
 
   @override
@@ -482,6 +498,9 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // Total items: optional "Tümü" + subcategories
+    final totalCount = (showAllTab ? 1 : 0) + subCategories.length;
+
     return Container(
       color: Colors.white,
       child: Column(
@@ -490,10 +509,36 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              itemCount: subCategories.length,
+              itemCount: totalCount,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final sub = subCategories[index];
+                // "Tümü" tab at index 0 when showAllTab is true
+                if (showAllTab && index == 0) {
+                  final isAllSelected = selectedId == null;
+                  return ChoiceChip(
+                    label: Text(
+                      'Tümü',
+                      style: TextStyle(
+                        color: isAllSelected ? Colors.white : Colors.grey.shade800,
+                        fontWeight: isAllSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                    selected: isAllSelected,
+                    onSelected: (_) => onAllSelected?.call(),
+                    selectedColor: Colors.black,
+                    backgroundColor: Colors.grey.shade100,
+                    side: BorderSide(
+                      color: isAllSelected ? Colors.transparent : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  );
+                }
+
+                final subIndex = showAllTab ? index - 1 : index;
+                final sub = subCategories[subIndex];
                 final isSelected = sub.id == selectedId;
 
                 return ChoiceChip(
@@ -528,7 +573,8 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SubCategoryChipsDelegate oldDelegate) =>
       selectedId != oldDelegate.selectedId ||
-      subCategories != oldDelegate.subCategories;
+      subCategories != oldDelegate.subCategories ||
+      showAllTab != oldDelegate.showAllTab;
 }
 
 // ═══════════════════════════════════════════════════════════════

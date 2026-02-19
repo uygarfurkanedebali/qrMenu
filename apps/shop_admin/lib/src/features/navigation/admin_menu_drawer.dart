@@ -4,6 +4,7 @@ import '../dashboard/presentation/dashboard_screen.dart';
 import '../settings/presentation/settings_screen.dart';
 import '../qr_studio/presentation/qr_studio_screen.dart';
 import '../menu_manager/presentation/menu_explorer_screen.dart';
+import '../products/presentation/quick_product_manager_screen.dart';
 
 class AdminMenuDrawer extends StatelessWidget {
   const AdminMenuDrawer({super.key});
@@ -75,6 +76,17 @@ class AdminMenuDrawer extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const MenuExplorerScreen()),
+                    );
+                  },
+                ),
+                _DrawerItem(
+                  title: "Hızlı Ürün Yönetimi",
+                  icon: Icons.flash_on,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QuickProductManagerScreen()),
                     );
                   },
                 ),
