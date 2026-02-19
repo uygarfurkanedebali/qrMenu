@@ -349,7 +349,7 @@ class _RightPane extends ConsumerWidget {
                 tooltip: 'Ürün Ekle',
                 onTap: () {
                   final slug = ref.read(currentTenantProvider)?.slug ?? '';
-                  context.go('/$slug/shopadmin/products/new?categoryId=$selectedId');
+                  context.go('/products/new?categoryId=$selectedId');
                 },
               ),
             ],
@@ -658,7 +658,7 @@ class _FileRow extends ConsumerWidget {
             icon: Icons.edit_outlined,
             onTap: () {
               final slug = ref.read(currentTenantProvider)?.slug ?? '';
-              context.go('/$slug/shopadmin/products/${product.id}');
+              context.go('/products/${product.id}');
             },
           ),
           ReorderableDragStartListener(

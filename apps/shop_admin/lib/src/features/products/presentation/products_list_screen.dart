@@ -30,7 +30,7 @@ class ProductsListScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF9FAFB),
       endDrawer: const AdminMenuDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/${tenant.slug}/shopadmin/products/new'),
+        onPressed: () => context.go('/products/new'),
         backgroundColor: Colors.black,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Ürün Ekle', style: TextStyle(color: Colors.white)),
@@ -463,8 +463,7 @@ class _ProductCard extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.black54),
               onPressed: () {
-                final slug = ref.read(currentTenantProvider)?.slug ?? '';
-                context.go('/$slug/shopadmin/products/${product.id}');
+                context.go('/products/${product.id}');
               },
             ),
           ],

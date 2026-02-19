@@ -60,7 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       
       // Navigation - definitely use absolute path with shopId
-      context.go('/${tenant.slug}/shopadmin');
+      context.go('/');
       
     } catch (e) {
       if (!mounted) return;

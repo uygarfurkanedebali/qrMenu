@@ -18,45 +18,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     debugLogDiagnostics: true,
     routes: [
-      // Root route - extracts slug from path
+      // Root route - matches the base_href injected (e.g. /<slug>/ or /<slug>/menu/)
       GoRoute(
         path: '/',
-        redirect: (context, state) {
-          // If accessing root, try to extract slug from URL
+        builder: (context, state) {
+          // the python deployment sets the base_href to /slug/
+          // TenantResolver pulls it from the browser URL transparently
           final slug = TenantResolver.getCurrentSlug();
           if (slug != null && slug.isNotEmpty) {
-            // Already at /slug, don't redirect to /slug/slug
-            if (state.matchedLocation == '/$slug') return null;
-            return '/$slug';
+            return TenantShell(slug: slug);
           }
-          // No slug found - show landing/error page
-          return '/not-found';
+          return const NotFoundScreen(errorMessage: 'Shop not found. Invalid URL.');
         },
-      ),
-      
-      // Tenant routes - pattern: /shop-slug
-      GoRoute(
-        path: '/:shopId',
-        builder: (context, state) {
-          final slug = state.pathParameters['shopId']!;
-          return TenantShell(slug: slug);
-        },
-        routes: [
-          // menu route redirects to base shopId
-          GoRoute(
-            path: 'menu',
-            redirect: (context, state) {
-              final slug = state.pathParameters['shopId']!;
-              return '/$slug';
-            },
-          ),
-        ],
-      ),
-      
-      // 404 route
-      GoRoute(
-        path: '/not-found',
-        builder: (context, state) => const NotFoundScreen(),
       ),
     ],
     

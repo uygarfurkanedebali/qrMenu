@@ -64,131 +64,53 @@ class AuthNotifier extends ChangeNotifier {
 
 final authNotifierProvider = Provider<AuthNotifier>((ref) => AuthNotifier());
 
-/// Helper function to extract shopId from the current web URL if available
-String? _extractShopIdFromUrl(String url) {
-  try {
-    final uri = Uri.parse(url);
-    final segments = uri.pathSegments;
-    if (segments.isNotEmpty && segments.first != 'login' && segments.first != 'shopadmin') {
-      return segments.first;
-    }
-  } catch (_) {}
-  return null;
-}
-
 // GoRouter with refresh listenable
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
   
   return GoRouter(
-    initialLocation: '/shopadmin', // DIRECT ENTRY POINT -> PROTECTED BY REDIRECT
-    refreshListenable: authNotifier, // CRITICAL: Router rebuilds on auth changes
+    initialLocation: '/', // Root is now handled by dynamic base_href from Python server
+    refreshListenable: authNotifier,
     redirect: (context, state) {
-      print('╔═══════════════════════════════════════════════════════╗');
-      print('║ 🧭 [ROUTER] REDIRECT CHECK                            ║');
-      print('╠═══════════════════════════════════════════════════════╣');
-      print('║ Time: ${DateTime.now().toIso8601String()}');
-      
-      // ROBUST CHECK: Use both Supabase session (via wrapper) AND provider state
-      // Using ShopAuthService.currentSession handles race conditions where Supabase
-      // might temporarily show null session during ghost events.
       final session = ShopAuthService.currentSession;
       final roleVerified = ref.read(roleVerifiedProvider);
       
       final isLoggedIn = session != null;
-      final isOnLoginPage = state.matchedLocation.endsWith('/login');
-
-      print('║ Location: ${state.matchedLocation}');
-      print('║ Target URI: ${state.uri}');
-      print('╠═══════════════════════════════════════════════════════╣');
-      print('║ STATE CHECKS:');
-      print('║   • Session exists: ${isLoggedIn ? "✅ YES" : "❌ NO"}');
-      if (session != null) {
-        print('║     - User ID: ${session.user.id}');
-        print('║     - Expires: ${session.expiresAt != null ? DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000).toIso8601String() : "NULL"}');
-      }
-      print('║   • Role verified: ${roleVerified ? "✅ TRUE" : "❌ FALSE"}');
-      print('║   • On login page: ${isOnLoginPage ? "YES" : "NO"}');
-      print('╠═══════════════════════════════════════════════════════╣');
+      final isOnLoginPage = state.matchedLocation == '/login';
 
       String? decision;
 
       // Rule 1: Not logged in → force login page
       if (!isLoggedIn && !isOnLoginPage) {
         decision = '/login';
-        print('║ DECISION RULE 1: Not authenticated');
-        print('║   → Redirecting to: /login');
       }
       // Rule 2: Logged in + on login page + role verified → go to dashboard
       else if (isLoggedIn && isOnLoginPage && roleVerified) {
-        final tenant = ref.read(currentTenantProvider);
-        final shopId = tenant?.slug ?? _extractShopIdFromUrl(state.uri.toString());
-        decision = (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin' : '/shopadmin';
-        
-        // Prevent infinite redirect to itself if already there
-        if (state.matchedLocation == decision) {
-           decision = null;
-        }
-
-        print('║ DECISION RULE 2: Authenticated & verified');
-        print('║   → Redirecting to: \$decision');
+        decision = '/';
       }
       // Rule 3: Logged in but trying to access protected route without role verification
       else if (isLoggedIn && !isOnLoginPage && !roleVerified) {
         decision = '/login';
-        print('║ DECISION RULE 3: Session exists but role NOT verified');
-        print('║   → Redirecting to: /login (need verification)');
-      }
-      // No redirect needed
-      else {
-        print('║ DECISION: No redirect needed');
-        print('║   ✅ Allowing navigation to: ${state.matchedLocation}');
       }
 
-      print('╚═══════════════════════════════════════════════════════╝');
       return decision;
     },
     routes: [
-      // We can also have a generic /login fallback
-      GoRoute(
-        path: '/login',
-        redirect: (context, state) {
-          final slug = _extractShopIdFromUrl(state.uri.toString()) ?? ref.read(currentTenantProvider)?.slug;
-          if (slug != null && slug.isNotEmpty) {
-             return '/$slug/shopadmin/login';
-          }
-          return null; // Stay on generic /login if no tenant
-        },
-        builder: (context, state) => const LoginScreen(),
-      ),
-      
       // Generic fallback for unauthenticated
       GoRoute(
-        path: '/shopadmin/login',
-        redirect: (context, state) {
-          final slug = _extractShopIdFromUrl(state.uri.toString()) ?? ref.read(currentTenantProvider)?.slug;
-          if (slug != null && slug.isNotEmpty) {
-             return '/$slug/shopadmin/login';
-          }
-          return '/login'; 
-        },
-      ),
-      
-      // Tenant-aware Login Route (outside shell)
-      GoRoute(
-        path: '/:shopId/shopadmin/login',
+        path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
 
       // Dashboard Shell with nested routes
       ShellRoute(
         builder: (context, state, child) {
-          return AdminLayout(child: child); // REPLACED DashboardScreen -> AdminLayout
+          return AdminLayout(child: child); 
         },
         routes: [
-          // Tenant-aware Admin Route (New)
+          // Elegant Root Dashboard Route
           GoRoute(
-            path: '/:shopId/shopadmin',
+            path: '/',
             pageBuilder: (context, state) => const NoTransitionPage(child: DashboardScreen()),
             routes: [
               GoRoute(
@@ -206,46 +128,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(path: 'settings', pageBuilder: (context, state) => const NoTransitionPage(child: ShopSettingsScreen())),
               GoRoute(path: 'qr-studio', pageBuilder: (context, state) => const NoTransitionPage(child: QrStudioScreen())),
             ],
-          ),
-          
-          // Fallback Generic Admin Route (Backward compatibility & default login)
-          GoRoute(
-            path: '/shopadmin',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: DashboardScreen(),
-            ),
-            routes: [
-              GoRoute(
-                path: 'products',
-                pageBuilder: (context, state) => const NoTransitionPage(child: ProductsListScreen()),
-                routes: [
-                  GoRoute(path: 'new', builder: (context, state) => const ProductEditScreen()),
-                  GoRoute(path: ':id', builder: (context, state) => ProductEditScreen(productId: state.pathParameters['id'])),
-                ],
-              ),
-              GoRoute(path: 'orders', pageBuilder: (context, state) => const NoTransitionPage(child: _PlaceholderParams(title: 'Order Management'))),
-              GoRoute(path: 'categories', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
-              GoRoute(path: 'menu-manager', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
-              GoRoute(path: 'quick-products', pageBuilder: (context, state) => const NoTransitionPage(child: QuickProductManagerScreen())),
-              GoRoute(path: 'settings', pageBuilder: (context, state) => const NoTransitionPage(child: ShopSettingsScreen())),
-              GoRoute(path: 'qr-studio', pageBuilder: (context, state) => const NoTransitionPage(child: QrStudioScreen())),
-            ],
-          ),
-
-          // Old route redirects
-          GoRoute(
-            path: '/dashboard',
-            redirect: (context, state) {
-              final shopId = ref.read(currentTenantProvider)?.slug ?? _extractShopIdFromUrl(state.uri.toString());
-              return (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin' : '/shopadmin';
-            },
-          ),
-          GoRoute(
-            path: '/products',
-            redirect: (context, state) {
-              final shopId = ref.read(currentTenantProvider)?.slug ?? _extractShopIdFromUrl(state.uri.toString());
-              return (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin/products' : '/shopadmin/products';
-            },
           ),
         ],
       ),

@@ -76,7 +76,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
                       ],
                     ),
                     child: IconButton(
-                      onPressed: () => context.go('/${tenant.slug}/shopadmin/settings'),
+                      onPressed: () => context.go('/settings'),
                       icon: const Icon(Icons.person_outline, color: Colors.black87),
                       tooltip: 'Profil',
                     ),
@@ -184,13 +184,13 @@ class DashboardOverviewScreen extends ConsumerWidget {
                   title: 'Ürün Yönetimi',
                   icon: Icons.inventory_2,
                   color: Colors.blue,
-                  onTap: () => context.go('/${tenant.slug}/shopadmin/products'),
+                  onTap: () => context.go('/products'),
                 ),
                 _QuickActionCard(
                   title: 'Kategoriler',
                   icon: Icons.category,
                   color: Colors.indigo,
-                  onTap: () => context.go('/${tenant.slug}/shopadmin/categories'),
+                  onTap: () => context.go('/categories'),
                 ),
                 _QuickActionCard(
                   title: 'QR İşlemleri',
@@ -202,13 +202,13 @@ class DashboardOverviewScreen extends ConsumerWidget {
                   title: 'Wifi Ayarları',
                   icon: Icons.wifi,
                   color: Colors.teal,
-                  onTap: () => context.go('/${tenant.slug}/shopadmin/settings'),
+                  onTap: () => context.go('/settings'),
                 ),
                 _QuickActionCard(
                   title: 'Siparişler',
                   icon: Icons.shopping_cart,
                   color: Colors.orange,
-                  onTap: () => context.go('/${tenant.slug}/shopadmin/orders'),
+                  onTap: () => context.go('/orders'),
                 ),
                 _QuickActionCard(
                   title: 'Önizleme',
