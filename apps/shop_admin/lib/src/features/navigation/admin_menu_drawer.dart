@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../dashboard/presentation/dashboard_screen.dart';
 import '../settings/presentation/settings_screen.dart';
 import '../qr_studio/presentation/qr_studio_screen.dart';
-import '../menu_manager/presentation/menu_manager_screen.dart';
+import '../menu_manager/presentation/menu_explorer_screen.dart';
 
 class AdminMenuDrawer extends StatelessWidget {
   const AdminMenuDrawer({super.key});
@@ -74,7 +74,7 @@ class AdminMenuDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MenuManagerScreen()),
+                      MaterialPageRoute(builder: (_) => const MenuExplorerScreen()),
                     );
                   },
                 ),
