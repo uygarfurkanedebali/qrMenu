@@ -31,9 +31,23 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
   String? _selectedSubCategoryId;
   bool _isSearchExpanded = false;
   String _searchQuery = "";
+  
+  // Screen A Global Search State
+  bool _isGlobalSearching = false;
+  String _globalSearchQuery = "";
 
   List<MenuCategory> get _mainCategories =>
       widget.categories.where((c) => c.parentId == null).toList();
+
+  List<MenuProduct> get _allProducts {
+    final uniqueMap = <String, MenuProduct>{};
+    for (final cat in widget.categories) {
+      for (final p in cat.products) {
+        uniqueMap[p.id] = p;
+      }
+    }
+    return uniqueMap.values.toList();
+  }
 
   List<MenuCategory> _getSubCategories(String mainCategoryId) =>
       widget.categories.where((c) => c.parentId == mainCategoryId).toList();
@@ -110,46 +124,157 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             ),
           ),
 
-          // Section Title
+          // Section Title & Global Search
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
-              child: Text(
-                'Kategoriler',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.grey.shade900,
-                  letterSpacing: -0.5,
-                ),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _globalSearchQuery.isEmpty ? 'Kategoriler' : 'Arama Sonuçları',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.grey.shade900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    width: _isGlobalSearching ? 200 : 44,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            if (!_isGlobalSearching) {
+                              setState(() => _isGlobalSearching = true);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 44,
+                            height: 40,
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.search, color: Colors.black87, size: 20),
+                          ),
+                        ),
+                        if (_isGlobalSearching)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: TextField(
+                                autofocus: true,
+                                onChanged: (val) {
+                                  setState(() => _globalSearchQuery = val);
+                                },
+                                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                decoration: const InputDecoration(
+                                  hintText: "Ürün ara...",
+                                  hintStyle: TextStyle(color: Colors.black38, fontSize: 13),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (_isGlobalSearching)
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _globalSearchQuery = "";
+                                _isGlobalSearching = false;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.only(right: 12.0),
+                              child: Icon(Icons.close, color: Colors.black54, size: 18),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // 2-Column Grid
-          if (mainCats.isEmpty)
-            const SliverFillRemaining(
-              child: Center(child: Text('Kategori bulunamadı', style: TextStyle(color: Colors.black45))),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.95,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _MainCategoryCard(
-                    category: mainCats[index],
-                    onTap: () => _openCategory(mainCats[index].id),
+          // Dynamic Content: Grid vs Search Results
+          if (_globalSearchQuery.isNotEmpty) ...[
+            Builder(
+              builder: (context) {
+                final q = _globalSearchQuery.toLowerCase();
+                final results = _allProducts.where((p) {
+                  return p.name.toLowerCase().contains(q) ||
+                         (p.description?.toLowerCase().contains(q) ?? false);
+                }).toList();
+
+                if (results.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 56, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Ürün bulunamadı',
+                            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _ModernProductTile(
+                      product: results[index],
+                      currencySymbol: widget.tenant.currencySymbol,
+                    ),
+                    childCount: results.length,
                   ),
-                  childCount: mainCats.length,
+                );
+              },
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ] else ...[
+            // 2-Column Grid
+            if (mainCats.isEmpty)
+              const SliverFillRemaining(
+                child: Center(child: Text('Kategori bulunamadı', style: TextStyle(color: Colors.black45))),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.95,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _MainCategoryCard(
+                      category: mainCats[index],
+                      onTap: () => _openCategory(mainCats[index].id),
+                    ),
+                    childCount: mainCats.length,
+                  ),
                 ),
               ),
-            ),
+          ],
 
           // Footer
           SliverToBoxAdapter(
