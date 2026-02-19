@@ -269,7 +269,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
           );
         },
       ),
-      floatingActionButton: !isPaperMode ? _CartFab(theme: widget.theme, cartItemCount: cartItemCount) : null,
+      ),
     );
   }
 
@@ -289,6 +289,19 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
       stretch: true,
       backgroundColor: widget.theme.colorScheme.primary,
       automaticallyImplyLeading: false,
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(0.85),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.search, color: Colors.black, size: 22),
+            onPressed: () {},
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
         titlePadding: const EdgeInsets.only(bottom: 16),

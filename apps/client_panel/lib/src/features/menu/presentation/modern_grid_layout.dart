@@ -91,6 +91,19 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.85),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.search, color: Colors.black, size: 22),
+                  onPressed: () {},
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
               titlePadding: const EdgeInsets.only(bottom: 16),
@@ -137,7 +150,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   crossAxisCount: 2,
                   mainAxisSpacing: 16,
                   crossAxisSpacing: 16,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: 0.95,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => _MainCategoryCard(
@@ -203,6 +216,19 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.85),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.search, color: Colors.black, size: 22),
+                  onPressed: () {},
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
               titlePadding: const EdgeInsets.only(bottom: 16),
@@ -294,10 +320,6 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
           ],
         ],
       ),
-      floatingActionButton: FloatingActionButton.small(
-        onPressed: () => showCartBottomSheet(context),
-        backgroundColor: Colors.black,
-        child: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
       ),
     );
   }
