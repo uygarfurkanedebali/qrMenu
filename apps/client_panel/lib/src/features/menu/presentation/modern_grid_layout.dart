@@ -29,6 +29,8 @@ class ModernGridLayout extends StatefulWidget {
 class _ModernGridLayoutState extends State<ModernGridLayout> {
   String? _selectedMainCategoryId;
   String? _selectedSubCategoryId;
+  bool _isSearchExpanded = false;
+  String _searchQuery = "";
 
   List<MenuCategory> get _mainCategories =>
       widget.categories.where((c) => c.parentId == null).toList();
@@ -91,19 +93,6 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.85),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.search, color: Colors.black, size: 22),
-                  onPressed: () {},
-                ),
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
               titlePadding: const EdgeInsets.only(bottom: 16),
@@ -204,6 +193,15 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
           .toList();
     }
 
+    // Real-time filtering by search query
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      selectedProducts = selectedProducts.where((p) {
+        return p.name.toLowerCase().contains(q) ||
+               (p.description?.toLowerCase().contains(q) ?? false);
+      }).toList();
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
@@ -216,19 +214,6 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.85),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.search, color: Colors.black, size: 22),
-                  onPressed: () {},
-                ),
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
               titlePadding: const EdgeInsets.only(bottom: 16),
@@ -261,22 +246,29 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             ),
           ),
 
-          // Subcategory Chips — ONLY show if subcategories exist
-          if (subCategories.isNotEmpty)
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SubCategoryChipsDelegate(
-                subCategories: subCategories,
-                selectedId: _selectedSubCategoryId,
-                showAllTab: true, // NEW: includes "Tümü" tab
-                onSelected: (id) {
-                  setState(() => _selectedSubCategoryId = id);
-                },
-                onAllSelected: () {
-                  setState(() => _selectedSubCategoryId = null);
-                },
-              ),
+          // Subcategory Chips & Search Bar
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _SubCategoryChipsDelegate(
+              subCategories: subCategories,
+              selectedId: _selectedSubCategoryId,
+              showAllTab: true,
+              onSelected: (id) {
+                setState(() => _selectedSubCategoryId = id);
+              },
+              onAllSelected: () {
+                setState(() => _selectedSubCategoryId = null);
+              },
+              isSearchExpanded: _isSearchExpanded,
+              searchQuery: _searchQuery,
+              onSearchToggle: () {
+                setState(() => _isSearchExpanded = !_isSearchExpanded);
+              },
+              onSearchChanged: (val) {
+                setState(() => _searchQuery = val);
+              },
             ),
+          ),
 
           // Products
           if (selectedProducts.isEmpty)
@@ -503,6 +495,10 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   final ValueChanged<String> onSelected;
   final bool showAllTab;
   final VoidCallback? onAllSelected;
+  final bool isSearchExpanded;
+  final String searchQuery;
+  final VoidCallback onSearchToggle;
+  final ValueChanged<String> onSearchChanged;
 
   _SubCategoryChipsDelegate({
     required this.subCategories,
@@ -510,6 +506,10 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
     required this.onSelected,
     this.showAllTab = false,
     this.onAllSelected,
+    required this.isSearchExpanded,
+    required this.searchQuery,
+    required this.onSearchToggle,
+    required this.onSearchChanged,
   });
 
   @override
@@ -520,70 +520,132 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Total items: optional "Tümü" + subcategories
-    final totalCount = (showAllTab ? 1 : 0) + subCategories.length;
+    final showAll = showAllTab && subCategories.isNotEmpty;
+    final totalCount = (showAll ? 1 : 0) + subCategories.length;
 
     return Container(
       color: Colors.white,
       child: Column(
         children: [
           Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              itemCount: totalCount,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                // "Tümü" tab at index 0 when showAllTab is true
-                if (showAllTab && index == 0) {
-                  final isAllSelected = selectedId == null;
-                  return ChoiceChip(
-                    label: Text(
-                      'Tümü',
-                      style: TextStyle(
-                        color: isAllSelected ? Colors.white : Colors.grey.shade800,
-                        fontWeight: isAllSelected ? FontWeight.w600 : FontWeight.w500,
-                        fontSize: 14,
+            child: Row(
+              children: [
+                Expanded(
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    itemCount: totalCount,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (showAll && index == 0) {
+                        final isAllSelected = selectedId == null;
+                        return ChoiceChip(
+                          label: Text(
+                            'Tümü',
+                            style: TextStyle(
+                              color: isAllSelected ? Colors.white : Colors.grey.shade800,
+                              fontWeight: isAllSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          selected: isAllSelected,
+                          onSelected: (_) => onAllSelected?.call(),
+                          selectedColor: Colors.black,
+                          backgroundColor: Colors.grey.shade100,
+                          side: BorderSide(
+                            color: isAllSelected ? Colors.transparent : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          showCheckmark: false,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        );
+                      }
+
+                      final subIndex = showAll ? index - 1 : index;
+                      final sub = subCategories[subIndex];
+                      final isSelected = sub.id == selectedId;
+
+                      return ChoiceChip(
+                        label: Text(
+                          sub.name,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.grey.shade800,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onSelected: (_) => onSelected(sub.id),
+                        selectedColor: Colors.black,
+                        backgroundColor: Colors.grey.shade100,
+                        side: BorderSide(
+                          color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      );
+                    },
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  width: isSearchExpanded ? 180 : 44,
+                  height: 36,
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          if (!isSearchExpanded) onSearchToggle();
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 44,
+                          height: 36,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.search, color: Colors.black87, size: 20),
+                        ),
                       ),
-                    ),
-                    selected: isAllSelected,
-                    onSelected: (_) => onAllSelected?.call(),
-                    selectedColor: Colors.black,
-                    backgroundColor: Colors.grey.shade100,
-                    side: BorderSide(
-                      color: isAllSelected ? Colors.transparent : Colors.grey.shade300,
-                    ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    showCheckmark: false,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  );
-                }
-
-                final subIndex = showAllTab ? index - 1 : index;
-                final sub = subCategories[subIndex];
-                final isSelected = sub.id == selectedId;
-
-                return ChoiceChip(
-                  label: Text(
-                    sub.name,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey.shade800,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      fontSize: 14,
-                    ),
+                      if (isSearchExpanded)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: TextField(
+                              autofocus: true,
+                              onChanged: onSearchChanged,
+                              style: const TextStyle(fontSize: 14, color: Colors.black87),
+                              decoration: const InputDecoration(
+                                hintText: "Ürün ara...",
+                                hintStyle: TextStyle(color: Colors.black38, fontSize: 13),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (isSearchExpanded)
+                        InkWell(
+                          onTap: () {
+                            onSearchChanged("");
+                            onSearchToggle();
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Padding(
+                            padding: EdgeInsets.only(right: 12.0),
+                            child: Icon(Icons.close, color: Colors.black54, size: 18),
+                          ),
+                        ),
+                    ],
                   ),
-                  selected: isSelected,
-                  onSelected: (_) => onSelected(sub.id),
-                  selectedColor: Colors.black,
-                  backgroundColor: Colors.grey.shade100,
-                  side: BorderSide(
-                    color: isSelected ? Colors.transparent : Colors.grey.shade300,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  showCheckmark: false,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                );
-              },
+                ),
+              ],
             ),
           ),
           Divider(height: 1, color: Colors.grey.shade200),
@@ -596,7 +658,9 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_SubCategoryChipsDelegate oldDelegate) =>
       selectedId != oldDelegate.selectedId ||
       subCategories != oldDelegate.subCategories ||
-      showAllTab != oldDelegate.showAllTab;
+      showAllTab != oldDelegate.showAllTab ||
+      isSearchExpanded != oldDelegate.isSearchExpanded ||
+      searchQuery != oldDelegate.searchQuery;
 }
 
 // ═══════════════════════════════════════════════════════════════
