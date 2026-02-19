@@ -14,6 +14,7 @@ import '../../products/application/products_provider.dart';
 import '../../products/application/categories_provider.dart';
 import '../../products/data/mock_storage_service.dart';
 import '../../navigation/admin_menu_drawer.dart';
+import '../../auth/application/auth_provider.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
