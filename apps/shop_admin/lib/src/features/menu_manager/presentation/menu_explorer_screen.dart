@@ -346,7 +346,10 @@ class _RightPane extends ConsumerWidget {
               _MiniButton(
                 icon: Icons.note_add_outlined,
                 tooltip: 'Ürün Ekle',
-                onTap: () => context.go('/products/new?categoryId=$selectedId'),
+                onTap: () {
+                  final slug = ref.read(currentTenantProvider)?.slug ?? '';
+                  context.go('/$slug/shopadmin/products/new?categoryId=$selectedId');
+                },
               ),
             ],
           ),
@@ -652,7 +655,10 @@ class _FileRow extends ConsumerWidget {
           ),
           _ActionIconButton(
             icon: Icons.edit_outlined,
-            onTap: () => context.go('/products/${product.id}'),
+            onTap: () {
+              final slug = ref.read(currentTenantProvider)?.slug ?? '';
+              context.go('/$slug/shopadmin/products/${product.id}');
+            },
           ),
           ReorderableDragStartListener(
             index: index,

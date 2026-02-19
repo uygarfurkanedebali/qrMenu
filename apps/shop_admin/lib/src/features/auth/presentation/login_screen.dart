@@ -59,8 +59,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       if (!mounted) return;
       
-      // Navigation - router should now see authenticated state
-      context.go('/dashboard');
+      // Navigation - definitely use absolute path with shopId
+      context.go('/${tenant.slug}/shopadmin');
       
     } catch (e) {
       if (!mounted) return;

@@ -84,7 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final roleVerified = ref.read(roleVerifiedProvider);
       
       final isLoggedIn = session != null;
-      final isOnLoginPage = state.matchedLocation == '/login';
+      final isOnLoginPage = state.matchedLocation.endsWith('/login');
 
       print('║ Location: ${state.matchedLocation}');
       print('║ Target URI: ${state.uri}');
@@ -109,9 +109,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       // Rule 2: Logged in + on login page + role verified → go to dashboard
       else if (isLoggedIn && isOnLoginPage && roleVerified) {
-        decision = '/shopadmin';
+        final tenant = ref.read(currentTenantProvider);
+        final shopId = tenant?.slug;
+        decision = (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin' : '/shopadmin';
         print('║ DECISION RULE 2: Authenticated & verified');
-        print('║   → Redirecting to: /shopadmin');
+        print('║   → Redirecting to: \$decision');
       }
       // Rule 3: Logged in but trying to access protected route without role verification
       else if (isLoggedIn && !isOnLoginPage && !roleVerified) {
@@ -129,15 +131,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       return decision;
     },
     routes: [
-      // Login route (outside shell)
+      // We can also have a generic /login fallback
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
       
-      // Removed Landing Page Route
-
+      // Generic fallback for unauthenticated
+      GoRoute(
+        path: '/shopadmin/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
       
+      // Tenant-aware Login Route (outside shell)
+      GoRoute(
+        path: '/:shopId/shopadmin/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+
       // Dashboard Shell with nested routes
       ShellRoute(
         builder: (context, state, child) {
@@ -193,11 +204,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Old route redirects
           GoRoute(
             path: '/dashboard',
-            redirect: (context, state) => '/shopadmin',
+            redirect: (context, state) {
+              final shopId = ref.read(currentTenantProvider)?.slug;
+              return (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin' : '/shopadmin';
+            },
           ),
           GoRoute(
             path: '/products',
-            redirect: (context, state) => '/shopadmin/products',
+            redirect: (context, state) {
+              final shopId = ref.read(currentTenantProvider)?.slug;
+              return (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin/products' : '/shopadmin/products';
+            },
           ),
         ],
       ),
