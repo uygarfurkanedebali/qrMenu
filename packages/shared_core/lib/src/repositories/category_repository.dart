@@ -54,6 +54,7 @@ class CategoryRepository {
     required String name,
     String? description,
     String? imageUrl,
+    String? parentId,
     int sortOrder = 0,
     String? authToken,
   }) async {
@@ -67,6 +68,7 @@ class CategoryRepository {
         'name': name,
         'description': description,
         'image_url': imageUrl,
+        'parent_id': parentId,
         'sort_order': sortOrder,
         'is_visible': true,
       };

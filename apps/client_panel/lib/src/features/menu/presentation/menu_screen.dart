@@ -18,6 +18,7 @@ import '../domain/menu_models.dart';
 import 'widgets/product_card.dart';
 import 'widgets/category_tabs.dart';
 import 'paper_menu_layout.dart';
+import 'modern_grid_layout.dart';
 
 /// Main menu screen that displays the restaurant menu
 class MenuScreen extends ConsumerWidget {
@@ -149,6 +150,18 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
             return PaperMenuLayout(
               tenant: widget.tenant,
               categories: allCategories,
+            );
+          }
+
+          // Modern Grid Layout Mode
+          final isModernGrid = layoutMode == 'modern_grid'
+              || layoutMode == 'modern'
+              || layoutMode == 'grid_modern';
+          if (isModernGrid) {
+            return ModernGridLayout(
+              tenant: widget.tenant,
+              categories: allCategories,
+              theme: widget.theme,
             );
           }
 

@@ -10,7 +10,8 @@ class Category {
   final String tenantId;
   final String name;
   final String? description;
-  final String? imageUrl; // New Field (Phase 1)
+  final String? imageUrl;
+  final String? parentId;
   final int sortOrder;
   final bool isVisible;
   final DateTime createdAt;
@@ -22,6 +23,7 @@ class Category {
     required this.name,
     this.description,
     this.imageUrl,
+    this.parentId,
     this.sortOrder = 0,
     this.isVisible = true,
     required this.createdAt,
@@ -36,6 +38,7 @@ class Category {
       name: json['name'] as String,
       description: json['description'] as String?,
       imageUrl: json['image_url'] as String?,
+      parentId: json['parent_id'] as String?,
       sortOrder: json['sort_order'] as int? ?? 0,
       isVisible: json['is_visible'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -50,6 +53,7 @@ class Category {
         'name': name,
         'description': description,
         'image_url': imageUrl,
+        'parent_id': parentId,
         'sort_order': sortOrder,
         'is_visible': isVisible,
         'created_at': createdAt.toIso8601String(),
@@ -63,6 +67,8 @@ class Category {
     String? name,
     String? description,
     String? imageUrl,
+    String? parentId,
+    bool clearParentId = false,
     int? sortOrder,
     bool? isVisible,
     DateTime? createdAt,
@@ -74,6 +80,7 @@ class Category {
       name: name ?? this.name,
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
+      parentId: clearParentId ? null : (parentId ?? this.parentId),
       sortOrder: sortOrder ?? this.sortOrder,
       isVisible: isVisible ?? this.isVisible,
       createdAt: createdAt ?? this.createdAt,
@@ -82,7 +89,7 @@ class Category {
   }
 
   @override
-  String toString() => 'Category(id: $id, name: $name, sortOrder: $sortOrder)';
+  String toString() => 'Category(id: $id, name: $name, parentId: $parentId, sortOrder: $sortOrder)';
 
   @override
   bool operator ==(Object other) =>

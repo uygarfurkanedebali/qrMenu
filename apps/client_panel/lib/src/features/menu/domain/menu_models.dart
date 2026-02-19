@@ -11,6 +11,7 @@ class MenuCategory {
   final String name;
   final String? description;
   final String? iconUrl;
+  final String? parentId;
   final int sortOrder;
   final List<MenuProduct> products;
 
@@ -20,6 +21,7 @@ class MenuCategory {
     required this.name,
     this.description,
     this.iconUrl,
+    this.parentId,
     this.sortOrder = 0,
     required this.products,
   });

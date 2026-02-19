@@ -1,6 +1,7 @@
-/// Categories Screen — Banner-Supported Category Management
+/// Categories Screen — Hierarchical Category Management
 /// 
-/// Instagram-style visual category cards with image upload via Supabase Storage.
+/// Instagram-style visual category cards with subcategory support.
+/// Main categories shown as banner cards, subcategories indented beneath their parent.
 library;
 
 import 'package:flutter/material.dart';
@@ -69,14 +70,31 @@ class CategoriesScreen extends ConsumerWidget {
             );
           }
 
+          // Build hierarchical list: main categories first, subcategories indented
+          final mainCategories = categories.where((c) => c.parentId == null).toList();
+          final List<Widget> items = [];
+
+          for (final main in mainCategories) {
+            items.add(_CategoryBannerCard(category: main, isSubcategory: false));
+            // Find subcategories for this main category
+            final subs = categories.where((c) => c.parentId == main.id).toList();
+            for (final sub in subs) {
+              items.add(_CategoryBannerCard(category: sub, isSubcategory: true));
+            }
+          }
+
+          // Also show orphaned subcategories whose parent might not be in the list
+          final knownMainIds = mainCategories.map((c) => c.id).toSet();
+          final orphanedSubs = categories.where((c) => c.parentId != null && !knownMainIds.contains(c.parentId)).toList();
+          for (final orphan in orphanedSubs) {
+            items.add(_CategoryBannerCard(category: orphan, isSubcategory: true));
+          }
+
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: categories.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return _CategoryBannerCard(category: category);
-            },
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) => items[index],
           );
         },
       ),
@@ -100,124 +118,158 @@ class CategoriesScreen extends ConsumerWidget {
 
 class _CategoryBannerCard extends ConsumerWidget {
   final Category category;
+  final bool isSubcategory;
 
-  const _CategoryBannerCard({required this.category});
+  const _CategoryBannerCard({required this.category, required this.isSubcategory});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasImage = category.imageUrl != null;
 
-    return Container(
-      height: 140,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Layer 1: Background (Image or Gradient Fallback)
-          if (hasImage)
-            Image.network(category.imageUrl!, fit: BoxFit.cover)
-          else
+    return Padding(
+      padding: EdgeInsets.only(left: isSubcategory ? 32 : 0),
+      child: Container(
+        height: isSubcategory ? 100 : 140,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Layer 1: Background (Image or Gradient Fallback)
+            if (hasImage)
+              Image.network(category.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _gradientFallback())
+            else
+              _gradientFallback(),
+
+            // Layer 2: Gradient Overlay for readability
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.grey.shade700, Colors.grey.shade900],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.65)],
                 ),
               ),
             ),
 
-          // Layer 2: Gradient Overlay for readability
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.65)],
-              ),
-            ),
-          ),
-
-          // Layer 3: Category Name
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  category.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                ),
-                if (category.description != null && category.description!.isNotEmpty)
-                  Text(
-                    category.description!,
-                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-
-          // Layer 4: Action Buttons
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Row(
-              children: [
-                _GlassIconButton(
-                  icon: Icons.edit,
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            // Layer 3: Category Name + Sub label
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (isSubcategory)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      margin: const EdgeInsets.only(bottom: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      builder: (ctx) => _CategoryEditSheet(category: category),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                _GlassIconButton(
-                  icon: Icons.delete_outline,
-                  color: Colors.redAccent,
-                  onTap: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: Colors.white,
-                        title: const Text('Kategoriyi Sil?', style: TextStyle(color: Colors.black87)),
-                        content: Text('${category.name} silinecek. Emin misiniz?', style: const TextStyle(color: Colors.black54)),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Sil', style: TextStyle(color: Colors.red)),
+                      child: const Text('Alt Kategori', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w500)),
+                    ),
+                  Row(
+                    children: [
+                      if (isSubcategory)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Text('↳', style: TextStyle(color: Colors.white70, fontSize: 18)),
+                        ),
+                      Expanded(
+                        child: Text(
+                          category.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSubcategory ? 17 : 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                           ),
-                        ],
+                        ),
                       ),
-                    );
-                    if (confirm == true) {
-                      await ref.read(categoriesProvider.notifier).deleteCategory(category.id);
-                    }
-                  },
-                ),
-              ],
+                    ],
+                  ),
+                  if (category.description != null && category.description!.isNotEmpty)
+                    Text(
+                      category.description!,
+                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Layer 4: Action Buttons
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Row(
+                children: [
+                  _GlassIconButton(
+                    icon: Icons.edit,
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        builder: (ctx) => _CategoryEditSheet(category: category),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _GlassIconButton(
+                    icon: Icons.delete_outline,
+                    color: Colors.redAccent,
+                    onTap: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: Colors.white,
+                          title: const Text('Kategoriyi Sil?', style: TextStyle(color: Colors.black87)),
+                          content: Text('${category.name} silinecek. Emin misiniz?', style: const TextStyle(color: Colors.black54)),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Sil', style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await ref.read(categoriesProvider.notifier).deleteCategory(category.id);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _gradientFallback() => Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: isSubcategory
+            ? [Colors.blueGrey.shade500, Colors.blueGrey.shade700]
+            : [Colors.grey.shade700, Colors.grey.shade900],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+  );
 }
 
 // ─── Glass Icon Button ─────────────────────────────────────────
@@ -246,7 +298,7 @@ class _GlassIconButton extends StatelessWidget {
   }
 }
 
-// ─── Category Edit Sheet ───────────────────────────────────────
+// ─── Category Edit Sheet (with Parent Dropdown) ────────────────
 
 class _CategoryEditSheet extends ConsumerStatefulWidget {
   final Category? category;
@@ -260,8 +312,9 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
   final _nameController = TextEditingController();
   final _picker = ImagePicker();
   XFile? _pickedFile;
-  String? _previewUrl; // For showing existing image
+  String? _previewUrl;
   bool _isLoading = false;
+  String? _selectedParentId; // null = Ana Kategori
 
   @override
   void initState() {
@@ -269,6 +322,7 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
     if (widget.category != null) {
       _nameController.text = widget.category!.name;
       _previewUrl = widget.category!.imageUrl;
+      _selectedParentId = widget.category!.parentId;
     }
   }
 
@@ -277,7 +331,7 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
     if (picked != null) {
       setState(() {
         _pickedFile = picked;
-        _previewUrl = null; // Will show local file instead
+        _previewUrl = null;
       });
     }
   }
@@ -307,12 +361,15 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
         await ref.read(categoriesProvider.notifier).addCategory(
           name: name,
           imageUrl: imageUrl,
+          parentId: _selectedParentId,
         );
       } else {
-        // Update existing
+        // Update existing — use copyWith with clearParentId for null assignment
         final updated = widget.category!.copyWith(
           name: name,
           imageUrl: imageUrl,
+          parentId: _selectedParentId,
+          clearParentId: _selectedParentId == null,
         );
         await ref.read(categoriesProvider.notifier).updateCategory(updated);
       }
@@ -333,6 +390,12 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
   Widget build(BuildContext context) {
     final bool hasLocalImage = _pickedFile != null;
     final bool hasNetworkImage = _previewUrl != null;
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    // Get main categories for the dropdown (exclude self if editing)
+    final mainCategories = categoriesAsync.valueOrNull
+        ?.where((c) => c.parentId == null && c.id != widget.category?.id)
+        .toList() ?? [];
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
@@ -376,7 +439,7 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
                 border: Border.all(color: Colors.grey.shade300),
                 image: hasLocalImage
                     ? DecorationImage(
-                        image: NetworkImage(_pickedFile!.path), // Web: uses path as URL
+                        image: NetworkImage(_pickedFile!.path),
                         fit: BoxFit.cover,
                         onError: (_, __) {},
                       )
@@ -420,7 +483,7 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
           ),
           const SizedBox(height: 20),
 
-          // Name Input — HIGH CONTRAST
+          // Name Input
           TextField(
             controller: _nameController,
             style: const TextStyle(color: Colors.black87, fontSize: 16),
@@ -444,6 +507,48 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
                 borderSide: const BorderSide(color: Colors.black, width: 1.5),
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // ─── Parent Category Dropdown ───
+          DropdownButtonFormField<String?>(
+            value: _selectedParentId,
+            decoration: InputDecoration(
+              labelText: 'Üst Kategori (Opsiyonel)',
+              labelStyle: const TextStyle(color: Colors.black54),
+              filled: true,
+              fillColor: const Color(0xFFF5F5F5),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.black, width: 1.5),
+              ),
+            ),
+            style: const TextStyle(color: Colors.black87, fontSize: 16),
+            dropdownColor: Colors.white,
+            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('Yok (Ana Kategori)', style: TextStyle(color: Colors.black54)),
+              ),
+              ...mainCategories.map((cat) => DropdownMenuItem<String?>(
+                value: cat.id,
+                child: Text(cat.name, style: const TextStyle(color: Colors.black87)),
+              )),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedParentId = value;
+              });
+            },
           ),
           const SizedBox(height: 24),
 

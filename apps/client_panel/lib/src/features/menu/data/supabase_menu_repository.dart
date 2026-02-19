@@ -115,6 +115,7 @@ class SupabaseMenuRepository implements MenuRepository {
             name: catJson['name'],
             description: desc?.replaceAll('[SYSTEM]', '').trim(), // Hide internal tag
             iconUrl: catJson['image_url'],
+            parentId: catJson['parent_id'] as String?,
             sortOrder: catJson['sort_order'] ?? 0,
             products: catProducts,
           ));

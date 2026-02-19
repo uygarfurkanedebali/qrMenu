@@ -38,6 +38,7 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
     required String name,
     String? description,
     String? imageUrl,
+    String? parentId,
   }) async {
     final tenantId = ref.read(currentTenantIdProvider);
     if (tenantId == null) throw Exception('Not logged in');
@@ -50,6 +51,7 @@ class CategoriesNotifier extends AsyncNotifier<List<Category>> {
       name: name,
       description: description,
       imageUrl: imageUrl,
+      parentId: parentId,
       sortOrder: (state.valueOrNull?.length ?? 0),
       authToken: token,
     );
