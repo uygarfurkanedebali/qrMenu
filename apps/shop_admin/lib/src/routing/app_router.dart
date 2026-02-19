@@ -64,6 +64,18 @@ class AuthNotifier extends ChangeNotifier {
 
 final authNotifierProvider = Provider<AuthNotifier>((ref) => AuthNotifier());
 
+/// Helper function to extract shopId from the current web URL if available
+String? _extractShopIdFromUrl(String url) {
+  try {
+    final uri = Uri.parse(url);
+    final segments = uri.pathSegments;
+    if (segments.isNotEmpty && segments.first != 'login' && segments.first != 'shopadmin') {
+      return segments.first;
+    }
+  } catch (_) {}
+  return null;
+}
+
 // GoRouter with refresh listenable
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
@@ -110,8 +122,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Rule 2: Logged in + on login page + role verified → go to dashboard
       else if (isLoggedIn && isOnLoginPage && roleVerified) {
         final tenant = ref.read(currentTenantProvider);
-        final shopId = tenant?.slug;
+        final shopId = tenant?.slug ?? _extractShopIdFromUrl(state.uri.toString());
         decision = (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin' : '/shopadmin';
+        
+        // Prevent infinite redirect to itself if already there
+        if (state.matchedLocation == decision) {
+           decision = null;
+        }
+
         print('║ DECISION RULE 2: Authenticated & verified');
         print('║   → Redirecting to: \$decision');
       }
@@ -134,13 +152,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       // We can also have a generic /login fallback
       GoRoute(
         path: '/login',
+        redirect: (context, state) {
+          final slug = _extractShopIdFromUrl(state.uri.toString()) ?? ref.read(currentTenantProvider)?.slug;
+          if (slug != null && slug.isNotEmpty) {
+             return '/$slug/shopadmin/login';
+          }
+          return null; // Stay on generic /login if no tenant
+        },
         builder: (context, state) => const LoginScreen(),
       ),
       
       // Generic fallback for unauthenticated
       GoRoute(
         path: '/shopadmin/login',
-        builder: (context, state) => const LoginScreen(),
+        redirect: (context, state) {
+          final slug = _extractShopIdFromUrl(state.uri.toString()) ?? ref.read(currentTenantProvider)?.slug;
+          if (slug != null && slug.isNotEmpty) {
+             return '/$slug/shopadmin/login';
+          }
+          return '/login'; 
+        },
       ),
       
       // Tenant-aware Login Route (outside shell)
@@ -205,14 +236,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             redirect: (context, state) {
-              final shopId = ref.read(currentTenantProvider)?.slug;
+              final shopId = ref.read(currentTenantProvider)?.slug ?? _extractShopIdFromUrl(state.uri.toString());
               return (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin' : '/shopadmin';
             },
           ),
           GoRoute(
             path: '/products',
             redirect: (context, state) {
-              final shopId = ref.read(currentTenantProvider)?.slug;
+              final shopId = ref.read(currentTenantProvider)?.slug ?? _extractShopIdFromUrl(state.uri.toString());
               return (shopId != null && shopId.isNotEmpty) ? '/$shopId/shopadmin/products' : '/shopadmin/products';
             },
           ),

@@ -25,6 +25,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           // If accessing root, try to extract slug from URL
           final slug = TenantResolver.getCurrentSlug();
           if (slug != null && slug.isNotEmpty) {
+            // Already at /slug, don't redirect to /slug/slug
+            if (state.matchedLocation == '/$slug') return null;
             return '/$slug';
           }
           // No slug found - show landing/error page
