@@ -107,9 +107,9 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       preferredSize: const Size.fromHeight(70),
       child: ClipRRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: Colors.white.withAlpha(26), // 0.1
+            color: Colors.white.withAlpha(13), // 0.05
             padding: const EdgeInsets.symmetric(horizontal: 24),
             alignment: Alignment.center,
             child: SafeArea(
@@ -130,27 +130,44 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   ),
                   const Spacer(),
                   // Actions
-                  TextButton(
-                    onPressed: _launchShopAdmin,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: TextButton(
+                        onPressed: _launchShopAdmin,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withAlpha(13), // 0.05
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                        ),
+                        child: const Text('Giriş Yap'),
+                      ),
                     ),
-                    child: const Text('Giriş Yap'),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _launchShopAdmin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black87,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: ElevatedButton(
+                        onPressed: _launchShopAdmin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withAlpha(51), // 0.2
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: BorderSide(color: Colors.white.withAlpha(77)), // 0.3
+                          ),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        child: const Text('Hemen Başla'),
+                      ),
                     ),
-                    child: const Text('Hemen Başla'),
                   ),
                 ],
               ),
@@ -168,173 +185,214 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       height: size.height,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'Menünüzü Saniyeler İçinde\nDijitale Taşıyın',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 48,
-              height: 1.1,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Uygulama indirme derdi yok, matbaa maliyeti yok.\nTemassız, hızlı ve her an güncellenebilir.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 18,
-              height: 1.5,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 40),
-          ElevatedButton(
-            onPressed: _launchShopAdmin,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black87,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-            ),
-            child: const Text('Ücretsiz Menü Oluştur'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Features Section (Opaque white, covers the parallax when scrolled)
-  Widget _buildFeaturesSection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
-      child: Column(
-        children: [
-          const Text(
-            'Nasıl Çalışır?',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: Colors.black87,
-              letterSpacing: -1,
-            ),
-          ),
-          const SizedBox(height: 60),
-          Wrap(
-            spacing: 32,
-            runSpacing: 32,
-            alignment: WrapAlignment.center,
-            children: [
-              _FeatureCard(
-                icon: Icons.app_registration,
-                title: '1. Kayıt Ol',
-                description: 'Saniyeler içinde hesabını aç ve işletmeni platforma ekle.',
-              ),
-              _FeatureCard(
-                icon: Icons.lunch_dining,
-                title: '2. Menünü Ekle',
-                description: 'Ürünleri, kategorileri, resimleri ve fiyatları dijitale taşı.',
-              ),
-              _FeatureCard(
-                icon: Icons.qr_code_2,
-                title: '3. Masaya Koy',
-                description: 'QR kodunu indir, masalara yerleştir ve anında sipariş al.',
-              ),
-            ],
-          ),
-          const SizedBox(height: 80),
-          // Neden Biz Section
-          Container(
-            width: double.infinity,
+      alignment: Alignment.center,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Colors.white.withAlpha(26), // 0.1
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  'Neden QR Infinity?',
+                  'Menünüzü Saniyeler İçinde\nDijitale Taşıyın',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                    letterSpacing: -1,
+                    color: Colors.white,
+                    fontSize: 48,
+                    height: 1.1,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.5,
                   ),
                 ),
-                const SizedBox(height: 48),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _BenefitItem(
-                        icon: Icons.print_disabled,
-                        title: 'Sıfır Baskı Maliyeti',
-                        subtitle: 'Menü değiştirmek bedava.',
+                const SizedBox(height: 24),
+                const Text(
+                  'Uygulama indirme derdi yok, matbaa maliyeti yok.\nTemassız, hızlı ve her an güncellenebilir.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 18,
+                    height: 1.5,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: ElevatedButton(
+                      onPressed: _launchShopAdmin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withAlpha(51), // 0.2
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: BorderSide(color: Colors.white.withAlpha(77)), // 0.3
+                        ),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                       ),
+                      child: const Text('Ücretsiz Menü Oluştur'),
                     ),
-                    Expanded(
-                      child: _BenefitItem(
-                        icon: Icons.update,
-                        title: 'Anında Fiyat Güncelleme',
-                        subtitle: 'Zamları anında yansıt.',
-                      ),
-                    ),
-                    Expanded(
-                      child: _BenefitItem(
-                        icon: Icons.clean_hands,
-                        title: '%100 Hijyenik',
-                        subtitle: 'Temassız güvenli deneyim.',
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  /// Features Section (Frosted glass wrapper, covers the parallax when scrolled)
+  Widget _buildFeaturesSection(BuildContext context) {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(13), // 0.05
+            border: Border(
+              top: BorderSide(color: Colors.white.withAlpha(51)),
+              bottom: BorderSide(color: Colors.white.withAlpha(51)),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
+          child: Column(
+            children: [
+              const Text(
+                'Nasıl Çalışır?',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 60),
+              Wrap(
+                spacing: 32,
+                runSpacing: 32,
+                alignment: WrapAlignment.center,
+                children: [
+                  _FeatureCard(
+                    icon: Icons.app_registration,
+                    title: '1. Kayıt Ol',
+                    description: 'Saniyeler içinde hesabını aç ve işletmeni platforma ekle.',
+                  ),
+                  _FeatureCard(
+                    icon: Icons.lunch_dining,
+                    title: '2. Menünü Ekle',
+                    description: 'Ürünleri, kategorileri, resimleri ve fiyatları dijitale taşı.',
+                  ),
+                  _FeatureCard(
+                    icon: Icons.qr_code_2,
+                    title: '3. Masaya Koy',
+                    description: 'QR kodunu indir, masalara yerleştir ve anında sipariş al.',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 80),
+              // Neden Biz Section
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(48),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(38), // 0.15
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Neden QR Infinity?',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _BenefitItem(
+                            icon: Icons.print_disabled,
+                            title: 'Sıfır Baskı Maliyeti',
+                            subtitle: 'Menü değiştirmek bedava.',
+                          ),
+                        ),
+                        Expanded(
+                          child: _BenefitItem(
+                            icon: Icons.update,
+                            title: 'Anında Fiyat Güncelleme',
+                            subtitle: 'Zamları anında yansıt.',
+                          ),
+                        ),
+                        Expanded(
+                          child: _BenefitItem(
+                            icon: Icons.clean_hands,
+                            title: '%100 Hijyenik',
+                            subtitle: 'Temassız güvenli deneyim.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   /// Footer Section
   Widget _buildFooter(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFF1A1A1A),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        child: Container(
+          width: double.infinity,
+          color: Colors.black.withAlpha(77), // 0.3
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+          child: Column(
             children: [
-              Icon(Icons.rocket_launch, color: Colors.white54, size: 24),
-              SizedBox(width: 8),
-              Text(
-                'QR Infinity',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.rocket_launch, color: Colors.white54, size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    'QR Infinity',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                '© 2026 QR Infinity. Tüm hakları saklıdır.',
+                style: TextStyle(color: Colors.white54, fontSize: 14),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          const Text(
-            '© 2026 QR Infinity. Tüm hakları saklıdır.',
-            style: TextStyle(color: Colors.white54, fontSize: 14),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -357,9 +415,9 @@ class _FeatureCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Colors.white.withAlpha(38), // 0.15
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,10 +425,10 @@ class _FeatureCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.black.withAlpha(13), // 0.05
+              color: Colors.white.withAlpha(26), // 0.1
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, size: 32, color: Colors.black87),
+            child: Icon(icon, size: 32, color: Colors.white),
           ),
           const SizedBox(height: 24),
           Text(
@@ -378,7 +436,7 @@ class _FeatureCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 12),
@@ -387,7 +445,7 @@ class _FeatureCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               height: 1.5,
-              color: Colors.grey.shade600,
+              color: Colors.white70,
             ),
           ),
         ],
@@ -414,10 +472,11 @@ class _BenefitItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.blue.withAlpha(26), // 0.1
+            color: Colors.white.withAlpha(26), // 0.1
             shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
           ),
-          child: Icon(icon, size: 32, color: Colors.blue.shade700),
+          child: Icon(icon, size: 32, color: Colors.white),
         ),
         const SizedBox(height: 16),
         Text(
@@ -426,7 +485,7 @@ class _BenefitItem extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Colors.white,
           ),
         ),
         const SizedBox(height: 8),
@@ -436,7 +495,7 @@ class _BenefitItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             height: 1.4,
-            color: Colors.grey.shade600,
+            color: Colors.white70,
           ),
         ),
       ],
