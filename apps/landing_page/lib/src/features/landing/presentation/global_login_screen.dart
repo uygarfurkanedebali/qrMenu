@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:universal_html/html.dart' as html;
+import 'dart:html' as html;
 
 class GlobalLoginScreen extends StatefulWidget {
   const GlobalLoginScreen({super.key});

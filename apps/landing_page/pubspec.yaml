@@ -19,7 +19,6 @@ dependencies:
   url_launcher: ^6.2.5
   flutter_svg: ^2.0.10
   http: ^1.2.0
-  universal_html: ^2.2.4
 
 dev_dependencies:
   flutter_test:
