@@ -54,18 +54,19 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       body: Stack(
         children: [
           // ─── Layer 1: Parallax Background ───
-          Positioned.fill(
-            child: Transform.translate(
-              // Move the background slower than the foreground (parallax effect)
-              offset: Offset(0, _scrollOffset * 0.4),
-              child: Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-1556761175-5973dc0f32e7'),
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                  ),
+          Positioned(
+            top: -(_scrollOffset * 0.2),
+            bottom: -100 + (_scrollOffset * 0.2), // Buffer to prevent clipping at bottom
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/landing_bg.jpg'),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
                 ),
+              ),
                 child: Container(
                   // Dark gradient overlay for text readability
                   decoration: BoxDecoration(
@@ -73,13 +74,12 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withAlpha(102), // 0.4
+                        Colors.black.withAlpha(153), // 0.6
                         Colors.black.withAlpha(179), // 0.7
                       ],
                     ),
                   ),
                 ),
-              ),
             ),
           ),
 
@@ -141,7 +141,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: _launchShopAdmin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black87,
@@ -172,7 +172,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            'Mekanınızı\nDijitale Taşıyın',
+            'Menünüzü Saniyeler İçinde\nDijitale Taşıyın',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
@@ -184,7 +184,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Modern restoran ve kafeler için saniyeler içinde zengin içerikli,\nhızlı ve temaya uygun dijital menüler oluşturun.',
+            'Uygulama indirme derdi yok, matbaa maliyeti yok.\nTemassız, hızlı ve her an güncellenebilir.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white70,
@@ -195,7 +195,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           ),
           const SizedBox(height: 40),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: _launchShopAdmin,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: Colors.black87,
@@ -220,7 +220,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       child: Column(
         children: [
           const Text(
-            'Neden Bizi Seçmelisiniz?',
+            'Nasıl Çalışır?',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w800,
@@ -235,21 +235,71 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
             alignment: WrapAlignment.center,
             children: [
               _FeatureCard(
-                icon: Icons.qr_code_scanner,
-                title: 'Modern Menü',
-                description: 'Karanlık ve aydınlık temalı, tamamen işletmenize özel tasarlanmış modern arayüzler.',
+                icon: Icons.app_registration,
+                title: '1. Kayıt Ol',
+                description: 'Saniyeler içinde hesabını aç ve işletmeni platforma ekle.',
               ),
               _FeatureCard(
-                icon: Icons.bolt,
-                title: 'Hızlı Sipariş',
-                description: 'Müşterilerinizin beklemeden, saniyeler içinde telefonlarından detayları incelemesini sağlayın.',
+                icon: Icons.lunch_dining,
+                title: '2. Menünü Ekle',
+                description: 'Ürünleri, kategorileri, resimleri ve fiyatları dijitale taşı.',
               ),
               _FeatureCard(
-                icon: Icons.dashboard_customize,
-                title: 'Kolay Yönetim',
-                description: 'Gelişmiş admin paneli ile ürünleri, kategorileri ve fiyatları saniyeler içinde güncelleyin.',
+                icon: Icons.qr_code_2,
+                title: '3. Masaya Koy',
+                description: 'QR kodunu indir, masalara yerleştir ve anında sipariş al.',
               ),
             ],
+          ),
+          const SizedBox(height: 80),
+          // Neden Biz Section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(48),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'Neden QR Infinity?',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _BenefitItem(
+                        icon: Icons.print_disabled,
+                        title: 'Sıfır Baskı Maliyeti',
+                        subtitle: 'Menü değiştirmek bedava.',
+                      ),
+                    ),
+                    Expanded(
+                      child: _BenefitItem(
+                        icon: Icons.update,
+                        title: 'Anında Fiyat Güncelleme',
+                        subtitle: 'Zamları anında yansıt.',
+                      ),
+                    ),
+                    Expanded(
+                      child: _BenefitItem(
+                        icon: Icons.clean_hands,
+                        title: '%100 Hijyenik',
+                        subtitle: 'Temassız güvenli deneyim.',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -342,6 +392,54 @@ class _FeatureCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BenefitItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _BenefitItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.withAlpha(26), // 0.1
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 32, color: Colors.blue.shade700),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.4,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
     );
   }
 }
