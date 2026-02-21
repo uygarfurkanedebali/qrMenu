@@ -742,7 +742,7 @@ class _Footer extends StatelessWidget {
               Icon(Icons.qr_code_2, size: 16, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
-                'Powered by QR-Infinity',
+                'Powered by QVitrin',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
                   fontWeight: FontWeight.w500,

@@ -24,7 +24,7 @@ class LandingRepository {
         return LandingPageConfig(
           id: _singletonId,
           heroTitle: 'Restoranınızın Dijital Geleceği',
-          heroDescription: 'QR-Infinity ile tanışın.',
+          heroDescription: 'QVitrin ile tanışın.',
           updatedAt: DateTime.now(),
         );
       }
@@ -36,7 +36,7 @@ class LandingRepository {
       return LandingPageConfig(
         id: _singletonId,
         heroTitle: 'Restoranınızın Dijital Geleceği',
-        heroDescription: 'QR-Infinity ile tanışın. (Offline)',
+        heroDescription: 'QVitrin ile tanışın. (Offline)',
         updatedAt: DateTime.now(),
       );
     }

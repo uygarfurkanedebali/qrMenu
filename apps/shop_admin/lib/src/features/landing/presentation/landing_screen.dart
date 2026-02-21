@@ -57,7 +57,7 @@ class LandingScreen extends ConsumerWidget {
               Icon(Icons.qr_code_2, size: 32, color: Colors.blue),
               SizedBox(width: 8),
               Text(
-                'QR-Infinity',
+                'QVitrin',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -241,7 +241,7 @@ class LandingScreen extends ConsumerWidget {
           const Icon(Icons.qr_code_2, size: 48, color: Colors.white),
           const SizedBox(height: 16),
           const Text(
-            'QR-Infinity',
+            'QVitrin',
             style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 32),

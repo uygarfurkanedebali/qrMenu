@@ -306,7 +306,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
               padding: const EdgeInsets.all(32),
               child: Center(
                 child: Text(
-                  'Powered by QR-Infinity',
+                  'Powered by QVitrin',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.w500),
                 ),
               ),
