@@ -139,6 +139,16 @@ def client_menu_files(slug, path):
 
 
 # ========================================
+# FLUTTER WEB GLOBAL ASSETS
+# ========================================
+
+@app.route('/assets/<path:path>')
+def serve_global_assets(path):
+    # Assets are always served from the Client Panel build
+    return serve_flutter_app(CLIENT_PANEL_BUILD, f'assets/{path}')
+
+
+# ========================================
 # ROOT (LANDING PAGE)
 # ========================================
 
