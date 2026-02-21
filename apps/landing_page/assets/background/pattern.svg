@@ -1,25 +1,2 @@
-<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
-  <!-- Soft grey background with QR Menu related icons in a subtle pattern -->
-  <defs>
-    <pattern id="qricons" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-      <g fill="#E0E5EC" opacity="0.6">
-        <!-- QR Code Icon -->
-        <rect x="10" y="10" width="8" height="8" rx="1"/>
-        <rect x="22" y="10" width="8" height="8" rx="1"/>
-        <rect x="10" y="22" width="8" height="8" rx="1"/>
-        <!-- Knife & Fork -->
-        <path d="M50 70 q 4-10 0-20 l 2-10 l 2 10 q -4 10 0 20 Z" />
-        <path d="M60 70 l 0-15 C 55 50, 55 45, 60 40 l 0 15 Z" />
-        <!-- Phone -->
-        <rect x="80" y="50" width="12" height="20" rx="2" stroke="#E0E5EC" stroke-width="2" fill="none"/>
-        <circle cx="86" cy="66" r="1" fill="#E0E5EC"/>
-      </g>
-      <g fill="#D3D9E2" opacity="0.4">
-         <circle cx="50" cy="20" r="3" />
-         <circle cx="20" cy="80" r="2" />
-         <circle cx="80" cy="20" r="1.5" />
-      </g>
-    </pattern>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#qricons)" />
-</svg>
+<?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+<svg width="800px" height="800px" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><title>ionicons-v5-k</title><rect x="336" y="336" width="80" height="80" rx="8" ry="8"/><rect x="272" y="272" width="64" height="64" rx="8" ry="8"/><rect x="416" y="416" width="64" height="64" rx="8" ry="8"/><rect x="432" y="272" width="48" height="48" rx="8" ry="8"/><rect x="272" y="432" width="48" height="48" rx="8" ry="8"/><rect x="336" y="96" width="80" height="80" rx="8" ry="8"/><rect x="288" y="48" width="176" height="176" rx="16" ry="16" style="fill:none;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-width:32px"/><rect x="96" y="96" width="80" height="80" rx="8" ry="8"/><rect x="48" y="48" width="176" height="176" rx="16" ry="16" style="fill:none;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-width:32px"/><rect x="96" y="336" width="80" height="80" rx="8" ry="8"/><rect x="48" y="288" width="176" height="176" rx="16" ry="16" style="fill:none;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-width:32px"/></svg>
