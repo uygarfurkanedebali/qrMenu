@@ -70,25 +70,9 @@ class SupabaseMenuRepository implements MenuRepository {
         (c) => (c['description'] as String?)?.contains('[SYSTEM]') ?? false,
         orElse: () => {},
       );
-      final hasSystemCategory = systemCategory.isNotEmpty;
 
       // ---------------------------------------------------------
-      // 2. ADD "ALL PRODUCTS" VIRTUAL CATEGORY (If no DB version exists)
-      // ---------------------------------------------------------
-      if (!hasSystemCategory && allMenuProducts.isNotEmpty) {
-        menu.add(MenuCategory(
-          id: 'all_products',
-          tenantId: tenantId,
-          name: 'Tüm Ürünler',
-          description: 'Lezzet şölenine hoş geldiniz',
-          iconUrl: tenantBanner, 
-          sortOrder: -999, // Ensure it's always first
-          products: allMenuProducts,
-        ));
-      }
-
-      // ---------------------------------------------------------
-      // 3. MAP REAL CATEGORIES
+      // 2. MAP REAL CATEGORIES
       // ---------------------------------------------------------
       for (final catJson in categoriesData) {
         final catId = catJson['id'] as String;
@@ -107,19 +91,17 @@ class SupabaseMenuRepository implements MenuRepository {
               .toList();
         }
 
-        // Add category if not empty (or if it's the system category which should always appear)
-        if (catProducts.isNotEmpty || isSystemCategory) {
-          menu.add(MenuCategory(
-            id: catId,
-            tenantId: tenantId,
-            name: catJson['name'],
-            description: desc?.replaceAll('[SYSTEM]', '').trim(), // Hide internal tag
-            iconUrl: catJson['image_url'],
-            parentId: catJson['parent_id'] as String?,
-            sortOrder: catJson['sort_order'] ?? 0,
-            products: catProducts,
-          ));
-        }
+        // Always add the category, even if it has no products yet
+        menu.add(MenuCategory(
+          id: catId,
+          tenantId: tenantId,
+          name: catJson['name'],
+          description: desc?.replaceAll('[SYSTEM]', '').trim(), // Hide internal tag
+          iconUrl: catJson['image_url'],
+          parentId: catJson['parent_id'] as String?,
+          sortOrder: catJson['sort_order'] ?? 0,
+          products: catProducts,
+        ));
       }
 
       return menu;
