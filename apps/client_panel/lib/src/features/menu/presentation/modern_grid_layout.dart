@@ -36,8 +36,23 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
   bool _isGlobalSearching = false;
   String _globalSearchQuery = "";
 
-  List<MenuCategory> get _mainCategories =>
-      widget.categories.where((c) => c.parentId == null).toList();
+  List<MenuCategory> get _mainCategories {
+    final rootCats = widget.categories.where((c) => c.parentId == null).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    // Inject "Tüm Ürünler" card manually if there are products
+    if (_allProducts.isNotEmpty) {
+      rootCats.insert(0, MenuCategory(
+        id: 'all_products',
+        tenantId: widget.tenant.id,
+        name: 'Tüm Ürünler',
+        iconUrl: widget.tenant.bannerUrl, // Fallback banner
+        sortOrder: -999,
+        products: _allProducts,
+      ));
+    }
+    return rootCats;
+  }
 
   List<MenuProduct> get _allProducts {
     final uniqueMap = <String, MenuProduct>{};
@@ -46,11 +61,19 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
         uniqueMap[p.id] = p;
       }
     }
-    return uniqueMap.values.toList();
+    final list = uniqueMap.values.toList();
+    list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return list;
   }
 
-  List<MenuCategory> _getSubCategories(String mainCategoryId) =>
-      widget.categories.where((c) => c.parentId == mainCategoryId).toList();
+  List<MenuCategory> _getSubCategories(String mainCategoryId) {
+    if (mainCategoryId == 'all_products') return [];
+    
+    return widget.categories
+        .where((c) => c.parentId == mainCategoryId)
+        .toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
 
   /// Collect all products under a main category tree (direct + all subcategories).
   List<MenuProduct> _getAllProductsForMain(String mainCategoryId) {
@@ -63,6 +86,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
     for (final sub in subs) {
       allProducts.addAll(sub.products);
     }
+    allProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return allProducts;
   }
 
@@ -297,26 +321,44 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
   // SCREEN B — Subcategories & Products
   // ═══════════════════════════════════════════════════════════════
   Widget _buildScreenB(BuildContext context) {
-    final mainCat = widget.categories
-        .where((c) => c.id == _selectedMainCategoryId)
-        .firstOrNull;
-    final subCategories = _getSubCategories(_selectedMainCategoryId!);
+    final isAllProductsSelected = _selectedMainCategoryId == 'all_products';
+
+    final mainCat = isAllProductsSelected
+        ? _mainCategories.firstWhere((c) => c.id == 'all_products')
+        : widget.categories.where((c) => c.id == _selectedMainCategoryId).firstOrNull;
+
+    // Use main categories (excluding 'all_products') if 'all_products' is selected. 
+    // Otherwise, get specific subcategories
+    final filterCategories = isAllProductsSelected
+        ? _mainCategories.where((c) => c.id != 'all_products').toList()
+        : _getSubCategories(_selectedMainCategoryId!);
 
     // Determine which products to show
     List<MenuProduct> selectedProducts;
-    if (subCategories.isEmpty) {
-      // No subcategories → show products directly linked to main category
-      selectedProducts = mainCat?.products ?? [];
-    } else if (_selectedSubCategoryId == null) {
-      // "Tümü" selected → show ALL products under this category tree
-      selectedProducts = _getAllProductsForMain(_selectedMainCategoryId!);
+    if (isAllProductsSelected) {
+      if (_selectedSubCategoryId == null) {
+        selectedProducts = _allProducts;
+      } else {
+        selectedProducts = _getAllProductsForMain(_selectedSubCategoryId!);
+      }
     } else {
-      // Specific subcategory selected
-      selectedProducts = widget.categories
-          .where((c) => c.id == _selectedSubCategoryId)
-          .expand((c) => c.products)
-          .toList();
+      if (filterCategories.isEmpty) {
+        // No subcategories → show products directly linked to main category
+        selectedProducts = mainCat?.products ?? [];
+      } else if (_selectedSubCategoryId == null) {
+        // "Tümü" selected → show ALL products under this category tree
+        selectedProducts = _getAllProductsForMain(_selectedMainCategoryId!);
+      } else {
+        // Specific subcategory selected
+        selectedProducts = widget.categories
+            .where((c) => c.id == _selectedSubCategoryId)
+            .expand((c) => c.products)
+            .toList();
+      }
     }
+    
+    // Sort products
+    selectedProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     // Real-time filtering by search query
     if (_searchQuery.isNotEmpty) {
@@ -375,7 +417,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
           SliverPersistentHeader(
             pinned: true,
             delegate: _SubCategoryChipsDelegate(
-              subCategories: subCategories,
+              subCategories: filterCategories, // Use filterCategories here
               selectedId: _selectedSubCategoryId,
               showAllTab: true,
               onSelected: (id) {

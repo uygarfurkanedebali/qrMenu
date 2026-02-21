@@ -38,6 +38,7 @@ class MenuProduct {
   final String? imageUrl;
   final bool isAvailable;
   final bool isPopular;
+  final int sortOrder;
   final List<String> tags;
 
   const MenuProduct({
@@ -50,6 +51,7 @@ class MenuProduct {
     this.imageUrl,
     this.isAvailable = true,
     this.isPopular = false,
+    this.sortOrder = 0,
     this.tags = const [],
   });
 

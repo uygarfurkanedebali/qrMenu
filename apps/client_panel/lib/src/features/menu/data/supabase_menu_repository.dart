@@ -59,6 +59,7 @@ class SupabaseMenuRepository implements MenuRepository {
         imageUrl: json['image_url'],
         isAvailable: json['is_available'] ?? true,
         isPopular: json['is_popular'] ?? false,
+        sortOrder: json['sort_order'] ?? 0,
       )).toList();
 
       final List<MenuCategory> menu = [];
