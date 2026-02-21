@@ -139,40 +139,45 @@ def client_menu_files(slug, path):
 
 
 # ========================================
-# FLUTTER WEB GLOBAL ASSETS
-# ========================================
-
-@app.route('/assets/<path:path>')
-def serve_global_assets(path):
-    # Assets are always served from the Client Panel build
-    return serve_flutter_app(CLIENT_PANEL_BUILD, f'assets/{path}')
-
-
-# ========================================
-# ROOT (LANDING PAGE)
+# ROOT & GLOBAL PAGES (LANDING PAGE APP)
 # ========================================
 
 @app.route('/')
 def root():
-    return serve_flutter_app(CLIENT_PANEL_BUILD, base_href='/')
+    return serve_flutter_app(LANDING_PAGE_BUILD, base_href='/')
+
+@app.route('/login')
+@app.route('/login/')
+def global_login():
+    return serve_flutter_app(LANDING_PAGE_BUILD, path='index.html', base_href='/')
+
+@app.route('/apply')
+@app.route('/apply/')
+def global_apply():
+    return serve_flutter_app(LANDING_PAGE_BUILD, path='index.html', base_href='/')
+
+@app.route('/assets/<path:path>')
+def serve_global_assets(path):
+    # Eğer root domainden asset isteniyorsa landing page'den ver
+    return serve_flutter_app(LANDING_PAGE_BUILD, f'assets/{path}', base_href='/')
 
 # ========================================
 # CLIENT DEFAULT (/{slug}) & LANDING PAGE ASSETS
 # ========================================
 
 # Let's define:
-# 1. Root / -> Landing Page (Served by Client Panel build)
-# 2. Files for Landing Page (flutter_bootstrap.js, etc.) -> served if exist in CLIENT_PANEL_BUILD
+# 1. Root / -> Landing Page (Served by Landing Page build)
+# 2. Files for Landing Page (flutter_bootstrap.js, etc.) -> served if exist in LANDING_PAGE_BUILD
 # 3. Everything else -> Client Panel (Tenant)
 
 @app.route('/<slug>')
 @app.route('/<slug>/')
 def client_default_or_landing_asset(slug):
-    # Check if this slug is actually a file in client panel (root assets)
+    # Check if this slug is actually a file in landing page (root assets like flutter_bootstrap.js, main.dart.js)
     path = slug
-    file_path = os.path.join(CLIENT_PANEL_BUILD, path)
+    file_path = os.path.join(LANDING_PAGE_BUILD, path)
     if os.path.exists(file_path):
-         return serve_flutter_app(CLIENT_PANEL_BUILD, path, base_href='/')
+         return serve_flutter_app(LANDING_PAGE_BUILD, path, base_href='/')
     
     if slug in RESERVED_PATHS:
         return Response("Not found", status=404)

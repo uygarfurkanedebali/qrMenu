@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_core/shared_core.dart';
-import 'package:shop_admin/src/routing/app_router.dart'; // Import from shop_admin
+import 'src/routing/app_router.dart'; // Local Landing Page Router
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +28,7 @@ class LandingApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Connect to the Router Provider from Shop Admin
+    // Connect to the generic Router Provider from Landing Router
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

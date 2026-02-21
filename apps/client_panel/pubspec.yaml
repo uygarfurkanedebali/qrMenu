@@ -59,6 +59,7 @@ dependencies:
 
   # URL Launcher (phone, WhatsApp, Instagram links)
   url_launcher: ^6.3.1
+  flutter_svg: ^2.2.3
 
 dev_dependencies:
   flutter_test:

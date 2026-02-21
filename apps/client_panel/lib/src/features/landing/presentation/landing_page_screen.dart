@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// SaaS Landing Page
 ///
@@ -34,52 +34,24 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
     super.dispose();
   }
 
-  Future<void> _launchShopAdmin() async {
-    final uri = Uri.parse('/shopadmin/login');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      // Fallback if launchUrl fails
-      // ignore: use_build_context_synchronously
-      context.go('/shopadmin/login');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Beneath the parallax
+      backgroundColor: Colors.grey.shade50, // Beneath the parallax
       extendBodyBehindAppBar: true,
       appBar: _buildGlobalNavbar(context),
       body: Stack(
         children: [
           // ─── Layer 1: Parallax Background ───
           Positioned(
-            top: -(_scrollOffset * 0.2),
-            bottom: -100 + (_scrollOffset * 0.2), // Buffer to prevent clipping at bottom
+            top: -(_scrollOffset * 0.3),
+            bottom: -150 + (_scrollOffset * 0.3), // Buffer to prevent clipping at bottom
             left: 0,
             right: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/background/bg.jpg'),
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                ),
-              ),
-                child: Container(
-                  // Dark gradient overlay for text readability
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withAlpha(153), // 0.6
-                        Colors.black.withAlpha(179), // 0.7
-                      ],
-                    ),
-                  ),
-                ),
+            child: SvgPicture.asset(
+              'assets/background/pattern.svg',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
 
@@ -109,22 +81,25 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: Colors.white.withAlpha(13), // 0.05
+            color: Colors.white.withAlpha(51), // 0.2
             padding: const EdgeInsets.symmetric(horizontal: 24),
             alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.white.withAlpha(77))), // 0.3
+            ),
             child: SafeArea(
               bottom: false,
               child: Row(
                 children: [
                   // Logo Area
-                  const Icon(Icons.rocket_launch, color: Colors.white, size: 28),
+                  const Icon(Icons.rocket_launch, color: Colors.blueAccent, size: 28),
                   const SizedBox(width: 12),
                   const Text(
                     'QR Infinity',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Colors.black87,
                       fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -135,13 +110,13 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: TextButton(
-                        onPressed: _launchShopAdmin,
+                        onPressed: () => context.go('/login'),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withAlpha(13), // 0.05
+                          foregroundColor: Colors.black87,
+                          backgroundColor: Colors.white.withAlpha(102), // 0.4
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                         ),
                         child: const Text('Giriş Yap'),
                       ),
@@ -153,19 +128,19 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: ElevatedButton(
-                        onPressed: _launchShopAdmin,
+                        onPressed: () => context.go('/apply'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withAlpha(51), // 0.2
+                          backgroundColor: Colors.blueAccent.withAlpha(204), // 0.8
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
-                            side: BorderSide(color: Colors.white.withAlpha(77)), // 0.3
+                            side: BorderSide(color: Colors.white.withAlpha(128)), // 0.5
                           ),
                           textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
-                        child: const Text('Hemen Başla'),
+                        child: const Text('Ücretsiz Dene'),
                       ),
                     ),
                   ),
@@ -189,13 +164,20 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(26), // 0.1
+              color: Colors.white.withAlpha(204), // 0.8
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
+              border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(13), // 0.05
+                  blurRadius: 30,
+                  spreadRadius: -5,
+                )
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -205,7 +187,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   'Menünüzü Saniyeler İçinde\nDijitale Taşıyın',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 48,
                     height: 1.1,
                     fontWeight: FontWeight.w900,
@@ -213,14 +195,14 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Uygulama indirme derdi yok, matbaa maliyeti yok.\nTemassız, hızlı ve her an güncellenebilir.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Colors.grey.shade800,
                     fontSize: 18,
                     height: 1.5,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -229,15 +211,15 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: ElevatedButton(
-                      onPressed: _launchShopAdmin,
+                      onPressed: () => context.go('/apply'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withAlpha(51), // 0.2
+                        backgroundColor: Colors.blueAccent.withAlpha(230), // 0.9
                         foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
-                          side: BorderSide(color: Colors.white.withAlpha(77)), // 0.3
+                          side: BorderSide(color: Colors.white.withAlpha(128)), // 0.5
                         ),
                         textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                       ),
@@ -261,11 +243,18 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(13), // 0.05
+            color: Colors.white.withAlpha(179), // 0.7
             border: Border(
-              top: BorderSide(color: Colors.white.withAlpha(51)),
-              bottom: BorderSide(color: Colors.white.withAlpha(51)),
+              top: BorderSide(color: Colors.white.withAlpha(255)),
+              bottom: BorderSide(color: Colors.white.withAlpha(255)),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(13), // 0.05
+                blurRadius: 30,
+                spreadRadius: -5,
+              )
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
           child: Column(
@@ -274,13 +263,13 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                 'Nasıl Çalışır?',
                 style: TextStyle(
                   fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black87,
                   letterSpacing: -1,
                 ),
               ),
               const SizedBox(height: 60),
-              Wrap(
+              const Wrap(
                 spacing: 32,
                 runSpacing: 32,
                 alignment: WrapAlignment.center,
@@ -308,22 +297,29 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(48),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(38), // 0.15
+                  color: Colors.white.withAlpha(204), // 0.8
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
+                  border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(13), // 0.05
+                      blurRadius: 30,
+                      spreadRadius: -5,
+                    )
+                  ],
                 ),
-                child: Column(
+                child: const Column(
                   children: [
-                    const Text(
+                    Text(
                       'Neden QR Infinity?',
                       style: TextStyle(
                         fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black87,
                         letterSpacing: -1,
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    SizedBox(height: 48),
                     Row(
                       children: [
                         Expanded(
@@ -366,29 +362,29 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
         child: Container(
           width: double.infinity,
-          color: Colors.black.withAlpha(77), // 0.3
+          color: Colors.white.withAlpha(204), // 0.8
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-          child: Column(
+          child: const Column(
             children: [
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.rocket_launch, color: Colors.white54, size: 24),
+                  Icon(Icons.rocket_launch, color: Colors.blueAccent, size: 24),
                   SizedBox(width: 8),
                   Text(
                     'QR Infinity',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Colors.black87,
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              const Text(
+              SizedBox(height: 24),
+              Text(
                 '© 2026 QR Infinity. Tüm hakları saklıdır.',
-                style: TextStyle(color: Colors.white54, fontSize: 14),
+                style: TextStyle(color: Colors.black54, fontSize: 14),
               ),
             ],
           ),
@@ -415,9 +411,16 @@ class _FeatureCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(38), // 0.15
+        color: Colors.white.withAlpha(204), // 0.8
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
+        border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8), // 0.03
+            blurRadius: 15,
+            spreadRadius: -2,
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,18 +428,18 @@ class _FeatureCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(26), // 0.1
+              color: Colors.blueAccent.withAlpha(26), // 0.1
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, size: 32, color: Colors.white),
+            child: Icon(icon, size: 32, color: Colors.blueAccent),
           ),
           const SizedBox(height: 24),
           Text(
             title,
             style: const TextStyle(
               fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 12),
@@ -445,7 +448,7 @@ class _FeatureCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               height: 1.5,
-              color: Colors.white70,
+              color: Colors.grey.shade800,
             ),
           ),
         ],
@@ -472,11 +475,11 @@ class _BenefitItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(26), // 0.1
+            color: Colors.blueAccent.withAlpha(26), // 0.1
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
+            border: Border.all(color: Colors.blueAccent.withAlpha(77)), // 0.3
           ),
-          child: Icon(icon, size: 32, color: Colors.white),
+          child: Icon(icon, size: 32, color: Colors.blueAccent),
         ),
         const SizedBox(height: 16),
         Text(
@@ -484,8 +487,8 @@ class _BenefitItem extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 8),
@@ -495,7 +498,7 @@ class _BenefitItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             height: 1.4,
-            color: Colors.white70,
+            color: Colors.grey.shade700,
           ),
         ),
       ],

@@ -11,7 +11,6 @@ import '../features/tenant/application/tenant_provider.dart';
 import '../features/menu/presentation/menu_screen.dart';
 import '../features/menu/presentation/loading_screen.dart';
 import '../features/menu/presentation/not_found_screen.dart';
-import '../features/landing/presentation/landing_page_screen.dart';
 
 /// Provider for the GoRouter instance
 final routerProvider = Provider<GoRouter>((ref) {
@@ -29,7 +28,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (slug != null && slug.trim().isNotEmpty && slug != '/') {
             return TenantShell(slug: slug);
           }
-          return const LandingPageScreen();
+          return const NotFoundScreen(errorMessage: 'Invalid tenant slug');
         },
       ),
     ],
