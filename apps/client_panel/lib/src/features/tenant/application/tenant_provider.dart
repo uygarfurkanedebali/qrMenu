@@ -54,11 +54,13 @@ class TenantResolver {
     // Pattern: /shop-name or /shop-name/menu or /shop-name/shopadmin
     final pathSegments = uri.pathSegments;
     if (pathSegments.isNotEmpty) {
-      final firstSegment = pathSegments.first;
+      final firstSegment = pathSegments.first.trim();
       // Ignore reserved paths
       if (firstSegment != 'systemadmin' && 
           firstSegment != 'menu' && 
+          firstSegment != 'login' && 
           firstSegment != 'shopadmin' &&
+          firstSegment != '/' &&
           firstSegment.isNotEmpty) {
         return firstSegment;
       }

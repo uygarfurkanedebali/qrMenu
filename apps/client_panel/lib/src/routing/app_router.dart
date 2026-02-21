@@ -26,7 +26,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // the python deployment sets the base_href to /slug/
           // TenantResolver pulls it from the browser URL transparently
           final slug = TenantResolver.getCurrentSlug();
-          if (slug != null && slug.isNotEmpty) {
+          if (slug != null && slug.trim().isNotEmpty && slug != '/') {
             return TenantShell(slug: slug);
           }
           return const LandingPageScreen();

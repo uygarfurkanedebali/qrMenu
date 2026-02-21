@@ -144,29 +144,25 @@ def client_menu_files(slug, path):
 
 @app.route('/')
 def root():
-    return serve_flutter_app(LANDING_PAGE_BUILD, base_href='/')
+    return serve_flutter_app(CLIENT_PANEL_BUILD, base_href='/')
 
 # ========================================
 # CLIENT DEFAULT (/{slug}) & LANDING PAGE ASSETS
 # ========================================
 
-# The problem: /foo can be a tenant "foo" or a landing page route "foo".
-# But standard pattern is /slug for tenant.
-# Dockerfile assets are usually at root for landing page.
-
 # Let's define:
-# 1. Root / -> Landing Page
-# 2. Files for Landing Page (flutter_bootstrap.js, etc.) -> served if exist in LANDING_PAGE_BUILD
+# 1. Root / -> Landing Page (Served by Client Panel build)
+# 2. Files for Landing Page (flutter_bootstrap.js, etc.) -> served if exist in CLIENT_PANEL_BUILD
 # 3. Everything else -> Client Panel (Tenant)
 
 @app.route('/<slug>')
 @app.route('/<slug>/')
 def client_default_or_landing_asset(slug):
-    # Check if this slug is actually a file in landing page
+    # Check if this slug is actually a file in client panel (root assets)
     path = slug
-    file_path = os.path.join(LANDING_PAGE_BUILD, path)
+    file_path = os.path.join(CLIENT_PANEL_BUILD, path)
     if os.path.exists(file_path):
-         return serve_flutter_app(LANDING_PAGE_BUILD, path, base_href='/')
+         return serve_flutter_app(CLIENT_PANEL_BUILD, path, base_href='/')
     
     if slug in RESERVED_PATHS:
         return Response("Not found", status=404)
