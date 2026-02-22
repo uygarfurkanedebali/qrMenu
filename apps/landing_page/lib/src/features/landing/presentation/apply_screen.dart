@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:html' as html;
+// import 'dart:html' as html;
 import 'package:http/http.dart' as http;
 
 class ApplyScreen extends StatefulWidget {
@@ -92,7 +92,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
             .maybeSingle();
 
         if (res != null) {
-          html.window.location.assign('/${res['slug']}/shopadmin');
+          // html.window.location.assign('/${res['slug']}/shopadmin');
+          // TODO: handle cross-app redirect safely
         } else {
           // If tenant insert failed, jump to system login to see if they can create it there
           context.go('/login');
@@ -119,7 +120,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: '${html.window.location.origin}/login', 
+        redirectTo: '${Uri.base.origin}/login', 
         // Redirecting to login handles the tenant linking and redirection logic there
       );
     } catch (e) {
@@ -158,7 +159,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
       }
 
       // 2. Fetch User Agent
-      final userAgent = html.window.navigator.userAgent;
+      // final userAgent = html.window.navigator.userAgent;
+      final userAgent = 'unknown (WASM build)';
 
       // 3. Insert Lead
       await Supabase.instance.client.from('contact_leads').insert({

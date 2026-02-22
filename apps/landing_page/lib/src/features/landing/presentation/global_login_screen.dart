@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:html' as html;
+// import 'dart:html' as html;
 
 class GlobalLoginScreen extends StatefulWidget {
   const GlobalLoginScreen({super.key});
@@ -68,7 +68,7 @@ class _GlobalLoginScreenState extends State<GlobalLoginScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: html.window.location.origin, // Returns back to landing page root, where auth state will be checked
+        redirectTo: Uri.base.origin, // Returns back to landing page root, where auth state will be checked
       );
       // OAuth redirect handles the rest. 
     } catch (e) {
@@ -86,7 +86,8 @@ class _GlobalLoginScreenState extends State<GlobalLoginScreen> {
     final role = appMetadata['role'] ?? userMetadata?['role'];
     
     if (role == 'admin' || role == 'system_admin') {
-      html.window.location.href = '/root';
+      // html.window.location.href = '/root';
+      // TODO: Perform cross-app routing safely
       return;
     }
 
@@ -100,7 +101,8 @@ class _GlobalLoginScreenState extends State<GlobalLoginScreen> {
 
       if (res != null && res['slug'] != null) {
         final slug = res['slug'];
-        html.window.location.href = '/$slug/shopadmin';
+        // html.window.location.href = '/$slug/shopadmin';
+        // TODO: Perform cross-app routing safely
       } else {
         // No tenant found, send them to apply screen
         context.go('/apply');

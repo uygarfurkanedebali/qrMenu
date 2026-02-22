@@ -358,7 +358,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           width: double.infinity,
           color: Colors.white.withAlpha(204), // 0.8
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-          child: const Column(
+          child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -369,8 +369,8 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 24),
-              Text(
+              const SizedBox(height: 24),
+              const Text(
                 '© 2026 QVitrin. Tüm hakları saklıdır.',
                 style: TextStyle(color: Colors.black54, fontSize: 14),
               ),
