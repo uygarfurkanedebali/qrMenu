@@ -158,9 +158,9 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           child: Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(77), // 0.3
+              color: Colors.white.withAlpha(13), // 0.05
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
+              border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withAlpha(13), // 0.05
@@ -233,10 +233,10 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(77), // 0.3
+            color: Colors.white.withAlpha(13), // 0.05
             border: Border(
-              top: BorderSide(color: Colors.white.withAlpha(255)),
-              bottom: BorderSide(color: Colors.white.withAlpha(255)),
+              top: BorderSide(color: Colors.white.withAlpha(51)), // 0.2
+              bottom: BorderSide(color: Colors.white.withAlpha(51)), // 0.2
             ),
             boxShadow: [
               BoxShadow(
@@ -287,9 +287,9 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(48),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(77), // 0.3
+                  color: Colors.white.withAlpha(13), // 0.05
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
+                  border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withAlpha(13), // 0.05
@@ -352,7 +352,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
         child: Container(
           width: double.infinity,
-          color: Colors.white.withAlpha(77), // 0.3
+          color: Colors.white.withAlpha(13), // 0.05
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
           child: Column(
             children: [
@@ -395,9 +395,9 @@ class _FeatureCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(77), // 0.3
+        color: Colors.white.withAlpha(13), // 0.05
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
+        border: Border.all(color: Colors.white.withAlpha(51)), // 0.2
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(8), // 0.03
