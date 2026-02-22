@@ -239,8 +239,8 @@ class _AppearanceSettingsScreenState
                   child: _LayoutCard(
                     title: 'Paper Style',
                     icon: Icons.history_edu,
-                    isSelected: _layoutMode == 'paper_menu',
-                    onTap: () => setState(() => _layoutMode = 'paper_menu'),
+                    isSelected: _layoutMode == 'paper_list',
+                    onTap: () => setState(() => _layoutMode = 'paper_list'),
                   ),
                 ),
               ],

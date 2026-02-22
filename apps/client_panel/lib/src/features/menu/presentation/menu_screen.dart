@@ -123,12 +123,11 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
 
     // ─── Layout Mode Detection (ROBUST) ───
     final dc = widget.tenant.designConfig;
-    final layoutMode = dc['layout_mode'] as String?
-        ?? dc['layout'] as String?
-        ?? 'grid';
-    final isPaperMode = layoutMode == 'paper_list'
-        || layoutMode == 'paper'
-        || layoutMode == 'minimal_list';
+    final layoutMode =
+        dc['layout_mode'] as String? ?? dc['layout'] as String? ?? 'grid';
+    final isPaperMode = layoutMode == 'paper_list' ||
+        layoutMode == 'paper' ||
+        layoutMode == 'minimal_list';
 
     // ─── Design Colors ───
     final headingColor = _parseDesignColor(
@@ -144,7 +143,8 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
       backgroundColor: widget.theme.colorScheme.surface,
       body: menuAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error loading menu: $error')),
+        error: (error, stack) =>
+            Center(child: Text('Error loading menu: $error')),
         data: (allCategories) {
           if (isPaperMode) {
             return PaperMenuLayout(
@@ -153,131 +153,150 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
             );
           }
 
-          // Modern Grid Layout Mode
-          final isModernGrid = layoutMode == 'modern_grid'
-              || layoutMode == 'modern'
-              || layoutMode == 'grid_modern';
-          if (isModernGrid) {
-            return ModernGridLayout(
-              tenant: widget.tenant,
-              categories: allCategories,
-              theme: widget.theme,
-            );
-          }
+          // Legacy Layout Mode (formerly the default, now behind an explicit flag to keep private widgets used)
+          final isLegacy = layoutMode == 'legacy' || layoutMode == 'classic';
+          if (isLegacy) {
+            // FILTERING LOGIC
+            final isFiltered =
+                selectedCategoryId != null && selectedCategoryId != 'all';
 
-          // FILTERING LOGIC
-          final isFiltered = selectedCategoryId != null && selectedCategoryId != 'all';
+            final displayedCategories = isFiltered
+                ? allCategories
+                    .where((c) => c.id == selectedCategoryId)
+                    .toList()
+                : allCategories;
 
-          final displayedCategories = isFiltered
-              ? allCategories.where((c) => c.id == selectedCategoryId).toList()
-              : allCategories;
+            // Identify selected category object for banner swap
+            final selectedCategory =
+                isFiltered && displayedCategories.isNotEmpty
+                    ? displayedCategories.first
+                    : null;
 
-          // Identify selected category object for banner swap
-          final selectedCategory = isFiltered && displayedCategories.isNotEmpty
-              ? displayedCategories.first
-              : null;
+            return CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // Hero Header with Dynamic Banner & Back Button logic
+                _buildHeroHeader(context, ref, selectedCategory),
 
-          return CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              // Hero Header with Dynamic Banner & Back Button logic
-              _buildHeroHeader(context, ref, selectedCategory),
-
-              // Social Action Bar + Wi-Fi
-              SliverToBoxAdapter(child: _ActionBar(tenant: widget.tenant, theme: widget.theme)),
-
-              // ─── HORIZONTAL CATEGORY CHIPS (Replaces old Grid) ───
-              if (!isFiltered && allCategories.isNotEmpty)
+                // Social Action Bar + Wi-Fi
                 SliverToBoxAdapter(
-                  child: Container(
-                    height: 56,
-                    color: widget.theme.colorScheme.surface,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: allCategories.length + 1, // +1 for "All"
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          final isSelected = selectedCategoryId == null || selectedCategoryId == 'all';
+                    child:
+                        _ActionBar(tenant: widget.tenant, theme: widget.theme)),
+
+                // ─── HORIZONTAL CATEGORY CHIPS (Replaces old Grid) ───
+                if (!isFiltered && allCategories.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Container(
+                      height: 56,
+                      color: widget.theme.colorScheme.surface,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        itemCount: allCategories.length + 1, // +1 for "All"
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            final isSelected = selectedCategoryId == null ||
+                                selectedCategoryId == 'all';
+                            return ChoiceChip(
+                              label: Text(
+                                'Tümü',
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              selected: isSelected,
+                              onSelected: (_) => _selectCategory(null),
+                              selectedColor: widget.theme.colorScheme.primary,
+                              backgroundColor: Colors.white,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? Colors.transparent
+                                    : Colors.grey.shade300,
+                              ),
+                              showCheckmark: false,
+                            );
+                          }
+
+                          final category = allCategories[index - 1];
+                          final isSelected = selectedCategoryId == category.id;
                           return ChoiceChip(
                             label: Text(
-                              'Tümü',
+                              category.name,
                               style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black87,
+                                color:
+                                    isSelected ? Colors.white : Colors.black87,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             selected: isSelected,
-                            onSelected: (_) => _selectCategory(null),
+                            onSelected: (_) => _selectCategory(category.id),
                             selectedColor: widget.theme.colorScheme.primary,
                             backgroundColor: Colors.white,
                             side: BorderSide(
-                              color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                              color: isSelected
+                                  ? Colors.transparent
+                                  : Colors.grey.shade300,
                             ),
                             showCheckmark: false,
                           );
-                        }
-
-                        final category = allCategories[index - 1];
-                        final isSelected = selectedCategoryId == category.id;
-                        return ChoiceChip(
-                          label: Text(
-                            category.name,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.black87,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          selected: isSelected,
-                          onSelected: (_) => _selectCategory(category.id),
-                          selectedColor: widget.theme.colorScheme.primary,
-                          backgroundColor: Colors.white,
-                          side: BorderSide(
-                            color: isSelected ? Colors.transparent : Colors.grey.shade300,
-                          ),
-                          showCheckmark: false,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-              // Back to all button when filtered
-              if (isFiltered)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: TextButton.icon(
-                      onPressed: () => _selectCategory(null),
-                      icon: const Icon(Icons.arrow_back, size: 18),
-                      label: const Text('Tüm Kategoriler'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: widget.theme.colorScheme.primary,
-                        alignment: Alignment.centerLeft,
+                        },
                       ),
                     ),
                   ),
-                ),
 
-              // Menu items (Filtered List) — APPLIES DESIGN COLORS
-              ..._buildMenuSlivers(context, ref, displayedCategories, headingColor, bodyColor),
+                // Back to all button when filtered
+                if (isFiltered)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: TextButton.icon(
+                        onPressed: () => _selectCategory(null),
+                        icon: const Icon(Icons.arrow_back, size: 18),
+                        label: const Text('Tüm Kategoriler'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: widget.theme.colorScheme.primary,
+                          alignment: Alignment.centerLeft,
+                        ),
+                      ),
+                    ),
+                  ),
 
-              // Footer
-              SliverToBoxAdapter(child: _Footer(tenant: widget.tenant, theme: widget.theme)),
-            ],
+                // Menu items (Filtered List) — APPLIES DESIGN COLORS
+                ..._buildMenuSlivers(
+                    context, ref, displayedCategories, headingColor, bodyColor),
+
+                // Footer
+                SliverToBoxAdapter(
+                    child: _Footer(tenant: widget.tenant, theme: widget.theme)),
+              ],
+            );
+          }
+
+          // Modern Grid Layout Mode (Ultimate Fallback)
+          return ModernGridLayout(
+            tenant: widget.tenant,
+            categories: allCategories,
+            theme: widget.theme,
           );
         },
       ),
-
     );
   }
 
-  SliverAppBar _buildHeroHeader(BuildContext context, WidgetRef ref, MenuCategory? selectedCategory) {
+  SliverAppBar _buildHeroHeader(
+      BuildContext context, WidgetRef ref, MenuCategory? selectedCategory) {
     final bool isCategorySelected = selectedCategory != null;
 
     String? activeBannerUrl;
-    if (isCategorySelected && selectedCategory.iconUrl != null && selectedCategory.iconUrl!.isNotEmpty) {
+    if (isCategorySelected &&
+        selectedCategory.iconUrl != null &&
+        selectedCategory.iconUrl!.isNotEmpty) {
       activeBannerUrl = selectedCategory.iconUrl;
     } else {
       activeBannerUrl = widget.tenant.bannerUrl;
@@ -368,7 +387,8 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -376,7 +396,8 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.qr_code_2, size: 14, color: Colors.white.withOpacity(0.9)),
+                            Icon(Icons.qr_code_2,
+                                size: 14, color: Colors.white.withOpacity(0.9)),
                             const SizedBox(width: 4),
                             Text(
                               'Dijital Menü',
@@ -404,7 +425,8 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
                       onTap: () => _selectCategory(null),
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
-                        child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                        child: Icon(Icons.arrow_back,
+                            color: Colors.white, size: 24),
                       ),
                     ),
                   ),
@@ -509,8 +531,10 @@ class _ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhone = tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty;
-    final hasInsta = tenant.instagramHandle != null && tenant.instagramHandle!.isNotEmpty;
+    final hasPhone =
+        tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty;
+    final hasInsta =
+        tenant.instagramHandle != null && tenant.instagramHandle!.isNotEmpty;
     final hasWifi = tenant.wifiName != null && tenant.wifiName!.isNotEmpty;
     final hasAnySocial = hasPhone || hasInsta;
 
@@ -541,7 +565,8 @@ class _ActionBar extends StatelessWidget {
               label: 'WhatsApp',
               color: const Color(0xFF25D366),
               onTap: () {
-                final phone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
+                final phone =
+                    tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9]'), '');
                 _launchUrl('https://wa.me/$phone');
               },
             ),
@@ -552,7 +577,8 @@ class _ActionBar extends StatelessWidget {
               icon: Icons.camera_alt,
               label: 'Instagram',
               color: const Color(0xFFE1306C),
-              onTap: () => _launchUrl('https://instagram.com/${tenant.instagramHandle}'),
+              onTap: () =>
+                  _launchUrl('https://instagram.com/${tenant.instagramHandle}'),
             ),
           ],
           const Spacer(),
@@ -581,7 +607,11 @@ class _SocialIcon extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _SocialIcon({required this.icon, required this.label, required this.color, required this.onTap});
+  const _SocialIcon(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -598,7 +628,9 @@ class _SocialIcon extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: color),
               const SizedBox(width: 4),
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600, color: color)),
             ],
           ),
         ),
@@ -612,7 +644,10 @@ class _WifiPill extends StatelessWidget {
   final String wifiPassword;
   final ThemeData theme;
 
-  const _WifiPill({required this.wifiName, required this.wifiPassword, required this.theme});
+  const _WifiPill(
+      {required this.wifiName,
+      required this.wifiPassword,
+      required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -654,7 +689,9 @@ class _WifiPill extends StatelessWidget {
               ),
               if (wifiPassword.isNotEmpty) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.content_copy, size: 12, color: theme.colorScheme.primary.withOpacity(0.6)),
+                Icon(Icons.content_copy,
+                    size: 12,
+                    color: theme.colorScheme.primary.withOpacity(0.6)),
               ],
             ],
           ),
@@ -701,8 +738,10 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasInsta = tenant.instagramHandle != null && tenant.instagramHandle!.isNotEmpty;
-    final hasPhone = tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty;
+    final hasInsta =
+        tenant.instagramHandle != null && tenant.instagramHandle!.isNotEmpty;
+    final hasPhone =
+        tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -726,12 +765,14 @@ class _Footer extends StatelessWidget {
                 if (hasPhone)
                   Text(
                     '📞 ${tenant.phoneNumber}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 if (hasInsta)
                   Text(
                     '📷 @${tenant.instagramHandle}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
               ],
             ),
@@ -739,7 +780,9 @@ class _Footer extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.qr_code_2, size: 16, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
+              Icon(Icons.qr_code_2,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
                 'Powered by QVitrin',
