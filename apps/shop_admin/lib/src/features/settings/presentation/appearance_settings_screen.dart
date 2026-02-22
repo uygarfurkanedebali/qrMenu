@@ -26,6 +26,7 @@ class _AppearanceSettingsScreenState
   Color _backgroundColor = const Color(0xFFFFFFFF);
   bool _transparentCards = true;
   Color _textColor = const Color(0xFF000000);
+  Color _accentColor = const Color(0xFF000000);
 
   String _colorToHex(Color c) {
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
@@ -56,6 +57,9 @@ class _AppearanceSettingsScreenState
     _transparentCards = dc['transparent_cards'] as bool? ?? true;
     _textColor =
         _parseHex(dc['text_color'] as String?, const Color(0xFF000000));
+    _accentColor = _parseHex(
+        dc['global_accent_color'] as String? ?? dc['accent_color'] as String?,
+        const Color(0xFF000000));
   }
 
   Future<void> _save() async {
@@ -75,6 +79,8 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['global_bg_color'] = _colorToHex(_backgroundColor);
       currentDesignConfig['transparent_cards'] = _transparentCards;
       currentDesignConfig['text_color'] = _colorToHex(_textColor);
+      currentDesignConfig['global_accent_color'] = _colorToHex(_accentColor);
+      currentDesignConfig['accent_color'] = _colorToHex(_accentColor);
 
       await saveSettings(
         ref: ref,
@@ -244,6 +250,58 @@ class _AppearanceSettingsScreenState
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'GENEL TEMA AYARLARI',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  ListTile(
+                    title: const Text(
+                      'Aktif Kategori / Vurgu Rengi',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87),
+                    ),
+                    trailing: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: _accentColor,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                    ),
+                    onTap: () => _openColorPicker(
+                        'Vurgu Rengi', _accentColor, (c) => _accentColor = c),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 32),
             if (_layoutMode == 'modern_grid') ...[

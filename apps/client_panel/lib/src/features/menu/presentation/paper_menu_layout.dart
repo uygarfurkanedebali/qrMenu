@@ -283,9 +283,26 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     // --- 2. Aktif Kategori Takibi (Sadece Arama Yoksa) ---
     if (_isTabClicked || _searchQuery.isNotEmpty) return;
 
-    final spyItem = positions
-        .where((p) => p.itemLeadingEdge < 0.3)
-        .reduce((max, p) => p.itemLeadingEdge > max.itemLeadingEdge ? p : max);
+    final spyItem = positions.cast<ItemPosition?>().firstWhere(
+      (p) => p!.itemLeadingEdge <= 0.15 && p.itemTrailingEdge > 0.15,
+      orElse: () => null,
+    );
+
+    if (spyItem == null) return;
+
+    // Eğer sayfanın en başına çıkılmışsa, ilk kategoriyi seçili göster
+    if (spyItem.index < 2 && _filteredCategories.isNotEmpty) {
+      final firstCatId = _filteredCategories.first.id;
+      if (_selectedCategoryId != firstCatId) {
+        if (mounted) {
+          setState(() {
+            _selectedCategoryId = firstCatId;
+          });
+          _scrollToContents(firstCatId, onlyTab: true);
+        }
+      }
+      return;
+    }
 
     final currentId = _indexToCategoryId[spyItem.index];
 
@@ -626,7 +643,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 ? BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: _appearance.categoryTitleColor,
+                        color: _appearance.globalAccentColor,
                         width: 2.5,
                       ),
                     ),
@@ -638,7 +655,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: isSelected
-                    ? _appearance.categoryActiveTextColor
+                    ? _appearance.globalAccentColor
                     : _appearance.categoryInactiveTextColor,
                 letterSpacing: 1.0,
               ),
