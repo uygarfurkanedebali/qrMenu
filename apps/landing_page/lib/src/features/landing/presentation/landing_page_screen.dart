@@ -38,7 +38,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           // ─── HATA YAKALAYICI TEST KATMANI ───
           Positioned.fill(
             child: Image.asset(
-              'assets/background/qvitrinpattern.jpg',
+              'assets/background/qvitrinpattern.png',
               repeat: ImageRepeat.repeat,
               errorBuilder: (context, error, stackTrace) {
                 // HATA EKRANA BASILIYOR
