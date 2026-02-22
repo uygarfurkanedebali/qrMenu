@@ -34,6 +34,7 @@ class _AppearanceSettingsScreenState
   Color _productPriceColor = const Color(0xDD000000);
   Color _productDescColor = const Color(0x8A000000);
   Color _pmDottedLineColor = const Color(0x42000000);
+  Color _categoryDividerColor = const Color(0x73000000);
   String _categoryDividerType = 'star';
 
   String _colorToHex(Color c) {
@@ -75,6 +76,7 @@ class _AppearanceSettingsScreenState
     _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
     _productDescColor = _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000));
     _pmDottedLineColor = _parseHex(dc['pm_dotted_line_color'] as String?, const Color(0x42000000));
+    _categoryDividerColor = _parseHex(dc['category_divider_color'] as String?, const Color(0x73000000));
     _categoryDividerType = dc['category_divider_type'] as String? ?? 'star';
   }
 
@@ -104,6 +106,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
       currentDesignConfig['product_desc_color'] = _colorToHex(_productDescColor);
       currentDesignConfig['pm_dotted_line_color'] = _colorToHex(_pmDottedLineColor);
+      currentDesignConfig['category_divider_color'] = _colorToHex(_categoryDividerColor);
       currentDesignConfig['category_divider_type'] = _categoryDividerType;
 
       await saveSettings(
@@ -476,6 +479,8 @@ class _AppearanceSettingsScreenState
                     _buildColorTile('Arka Plan Rengi', _backgroundColor, (c) => _backgroundColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Kategori Başlık Rengi', _categoryTitleColor, (c) => _categoryTitleColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Kategori Ayırıcı Rengi', _categoryDividerColor, (c) => _categoryDividerColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Ürün İsmi Rengi', _productTitleColor, (c) => _productTitleColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),

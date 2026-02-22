@@ -17,6 +17,7 @@ class PaperMenuAppearance {
   final Color categoryInactiveTextColor;
   final bool showCategoryDivider;
   final String categoryDividerType; // 'star' veya 'line'
+  final Color categoryDividerColor;
 
   final Color productTitleColor;
   final Color productDescColor;
@@ -51,6 +52,10 @@ class PaperMenuAppearance {
       ), // Colors.black45
       showCategoryDivider = dc['show_category_divider'] as bool? ?? true,
       categoryDividerType = dc['category_divider_type'] as String? ?? 'star',
+      categoryDividerColor = _parseHex(
+        dc['category_divider_color'],
+        const Color(0x73000000),
+      ),
       productTitleColor = _parseHex(
         dc['product_title_color'] ?? dc['product_text_color'],
         const Color(0xDD000000),
@@ -720,7 +725,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 width: 160,
                 height: 3.0,
                 decoration: BoxDecoration(
-                  color: _appearance.categoryInactiveTextColor.withOpacity(0.4),
+                  color: _appearance.categoryDividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               )
@@ -728,7 +733,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
               Icon(
                 Icons.star_rate_rounded,
                 size: 14,
-                color: _appearance.categoryInactiveTextColor.withOpacity(0.5),
+                color: _appearance.categoryDividerColor,
               ),
             const SizedBox(height: 8),
           ],
