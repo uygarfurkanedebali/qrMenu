@@ -8,7 +8,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:shared_core/shared_core.dart';
 import '../domain/menu_models.dart';
-import '../../cart/presentation/cart_bottom_sheet.dart';
 
 class ModernGridLayout extends StatefulWidget {
   final Tenant tenant;
@@ -39,8 +38,6 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
     _searchFocusNode.addListener(() {
       setState(() {});
     });
-    // Menü açıldığında "Tüm Ürünler" veya ilk kategori seçili gelsin
-    _selectedMainCategoryId = 'all_products';
   }
 
   @override
@@ -105,60 +102,33 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
     return list;
   }
 
+  void _openCategory(String mainCategoryId) {
+    setState(() {
+      _selectedMainCategoryId = mainCategoryId;
+      _selectedSubCategoryId = null; // null means "Tümü"
+      _searchQuery = "";
+    });
+  }
+
+  void _goBack() {
+    setState(() {
+      _selectedMainCategoryId = null;
+      _selectedSubCategoryId = null;
+      _searchQuery = "";
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final mainCats = _mainCategories;
-
-    final activeMainCatId =
-        _selectedMainCategoryId ??
-        (mainCats.isNotEmpty ? mainCats.first.id : null);
-    final activeMainCat = widget.categories
-        .where((c) => c.id == activeMainCatId)
-        .firstOrNull;
-
-    final isAllProductsSelected = activeMainCatId == 'all_products';
-    final filterCategories = isAllProductsSelected
-        ? <MenuCategory>[]
-        : (activeMainCatId != null
-              ? _getSubCategories(activeMainCatId)
-              : <MenuCategory>[]);
-
-    List<MenuProduct> selectedProducts;
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      selectedProducts = _allProducts.where((p) {
-        return p.name.toLowerCase().contains(q) ||
-            (p.description?.toLowerCase().contains(q) ?? false);
-      }).toList();
-    } else {
-      if (isAllProductsSelected) {
-        selectedProducts = _allProducts;
-      } else if (activeMainCatId != null) {
-        if (filterCategories.isEmpty) {
-          selectedProducts = activeMainCat?.products ?? [];
-        } else if (_selectedSubCategoryId == null) {
-          selectedProducts = _getAllProductsForMain(activeMainCatId);
-        } else {
-          selectedProducts = widget.categories
-              .where((c) => c.id == _selectedSubCategoryId)
-              .expand((c) => c.products)
-              .toList();
-        }
-      } else {
-        selectedProducts = [];
-      }
-      selectedProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    }
-
-    final hasSearchFocus = _searchFocusNode.hasFocus;
+    final bool isRootScreen = _selectedMainCategoryId == null;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
-          // 1. Banner
+          // 1. Dükkan Banner'ı
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: isRootScreen ? 200 : 180,
             pinned: true,
             stretch: true,
             backgroundColor: Colors.white,
@@ -168,22 +138,59 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
               centerTitle: true,
               titlePadding: const EdgeInsets.only(bottom: 16),
               title: Text(
-                widget.tenant.name,
+                isRootScreen
+                    ? widget.tenant.name
+                    : (widget.categories
+                              .where((c) => c.id == _selectedMainCategoryId)
+                              .firstOrNull
+                              ?.name ??
+                          (_selectedMainCategoryId == 'all_products'
+                              ? 'Tüm Ürünler'
+                              : '')),
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 22,
+                  fontSize: isRootScreen ? 22 : 20,
                   fontFamily: widget.tenant.fontFamily,
                   shadows: [
                     Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 8),
                   ],
                 ),
               ),
-              background: _buildBannerBackground(widget.tenant.bannerUrl),
+              background: _buildBannerBackground(
+                isRootScreen
+                    ? widget.tenant.bannerUrl
+                    : (widget.categories
+                              .where((c) => c.id == _selectedMainCategoryId)
+                              .firstOrNull
+                              ?.iconUrl ??
+                          widget.tenant.bannerUrl),
+              ),
             ),
+            leading: isRootScreen
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Material(
+                      color: Colors.black.withOpacity(0.3),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _goBack,
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
 
-          // 2. YENİ: Statik Arama Çubuğu
+          // 2. Statik Arama Çubuğu
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
@@ -193,12 +200,12 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: hasSearchFocus
+                    color: _searchFocusNode.hasFocus
                         ? widget.theme.primaryColor
                         : Colors.transparent,
                     width: 1.5,
                   ),
-                  boxShadow: hasSearchFocus
+                  boxShadow: _searchFocusNode.hasFocus
                       ? [
                           BoxShadow(
                             color: widget.theme.primaryColor.withOpacity(0.15),
@@ -230,7 +237,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                     ),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: hasSearchFocus
+                      color: _searchFocusNode.hasFocus
                           ? widget.theme.primaryColor
                           : Colors.grey.shade500,
                     ),
@@ -257,227 +264,195 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             ),
           ),
 
-          // 3. Kategoriler (Ana Kategoriler) - Arama varsa gizle
-          if (_searchQuery.isEmpty && mainCats.isNotEmpty)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: mainCats.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final cat = mainCats[index];
-                    final isSelected = cat.id == activeMainCatId;
-                    return ChoiceChip(
-                      label: Text(
-                        cat.name,
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.grey.shade800,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                      selected: isSelected,
-                      onSelected: (_) {
-                        setState(() {
-                          _selectedMainCategoryId = cat.id;
-                          _selectedSubCategoryId = null; // reset sub selection
-                        });
+          // ARAMA YAPILDIYSA VEYA KATEGORİ SEÇİLDİYSE EKRAN B (Ürünler)
+          if (_searchQuery.isNotEmpty || !isRootScreen) ...[
+            if (!isRootScreen && _searchQuery.isEmpty)
+              Builder(
+                builder: (context) {
+                  final isAllProductsSelected =
+                      _selectedMainCategoryId == 'all_products';
+                  final filterCategories = isAllProductsSelected
+                      ? _mainCategories
+                            .where((c) => c.id != 'all_products')
+                            .toList()
+                      : _getSubCategories(_selectedMainCategoryId!);
+
+                  if (filterCategories.isEmpty)
+                    return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+                  // 4. Alt Kategoriler (Chips) - Sadece kategori seçiliyse ve aranmıyorsa görünür
+                  return SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _SubCategoryChipsDelegate(
+                      subCategories: filterCategories,
+                      selectedId: _selectedSubCategoryId,
+                      showAllTab: true,
+                      onSelected: (id) {
+                        setState(() => _selectedSubCategoryId = id);
                       },
-                      selectedColor: Colors.black,
-                      backgroundColor: Colors.grey.shade100,
-                      side: BorderSide(
-                        color: isSelected
-                            ? Colors.transparent
-                            : Colors.grey.shade300,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      showCheckmark: false,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    );
-                  },
-                ),
+                      onAllSelected: () {
+                        setState(() => _selectedSubCategoryId = null);
+                      },
+                    ),
+                  );
+                },
               ),
-            ),
 
-          if (_searchQuery.isEmpty)
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            // Arama veya Seçilen Kategoriye Ait Ürünlerin Hesaplanması
+            Builder(
+              builder: (context) {
+                List<MenuProduct> displayProducts;
 
-          // 4. Alt Kategoriler (Chips)
-          if (_searchQuery.isEmpty && filterCategories.isNotEmpty)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filterCategories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      final isAllSelected = _selectedSubCategoryId == null;
-                      return ChoiceChip(
-                        label: Text(
-                          'Tümü',
-                          style: TextStyle(
-                            color: isAllSelected
-                                ? Colors.black87
-                                : Colors.grey.shade600,
-                            fontWeight: isAllSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            fontSize: 13,
+                if (_searchQuery.isNotEmpty) {
+                  final q = _searchQuery.toLowerCase();
+                  displayProducts = _allProducts.where((p) {
+                    return p.name.toLowerCase().contains(q) ||
+                        (p.description?.toLowerCase().contains(q) ?? false);
+                  }).toList();
+                } else {
+                  final isAllProductsSelected =
+                      _selectedMainCategoryId == 'all_products';
+                  final filterCategories = isAllProductsSelected
+                      ? _mainCategories
+                            .where((c) => c.id != 'all_products')
+                            .toList()
+                      : _getSubCategories(_selectedMainCategoryId!);
+                  final mainCat = widget.categories
+                      .where((c) => c.id == _selectedMainCategoryId)
+                      .firstOrNull;
+
+                  if (isAllProductsSelected) {
+                    if (_selectedSubCategoryId == null) {
+                      displayProducts = _allProducts;
+                    } else {
+                      displayProducts = _getAllProductsForMain(
+                        _selectedSubCategoryId!,
+                      );
+                    }
+                  } else {
+                    if (filterCategories.isEmpty) {
+                      displayProducts = mainCat?.products ?? [];
+                    } else if (_selectedSubCategoryId == null) {
+                      displayProducts = _getAllProductsForMain(
+                        _selectedMainCategoryId!,
+                      );
+                    } else {
+                      displayProducts = widget.categories
+                          .where((c) => c.id == _selectedSubCategoryId)
+                          .expand((c) => c.products)
+                          .toList();
+                    }
+                  }
+                  displayProducts.sort(
+                    (a, b) => a.sortOrder.compareTo(b.sortOrder),
+                  );
+                }
+
+                if (displayProducts.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 56,
+                            color: Colors.grey.shade300,
                           ),
-                        ),
-                        selected: isAllSelected,
-                        onSelected: (_) {
-                          setState(() => _selectedSubCategoryId = null);
-                        },
-                        selectedColor: Colors.grey.shade200,
-                        backgroundColor: Colors.transparent,
-                        side: BorderSide(
-                          color: isAllSelected
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade200,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchQuery.isNotEmpty
+                                ? 'Ürün bulunamadı'
+                                : 'Bu kategoride ürün yok',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                        child: Text(
+                          _searchQuery.isNotEmpty
+                              ? 'Arama Sonuçları (${displayProducts.length} ürün)'
+                              : '${displayProducts.length} ürün',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       );
                     }
-
-                    final sub = filterCategories[index - 1];
-                    final isSelected = sub.id == _selectedSubCategoryId;
-                    return ChoiceChip(
-                      label: Text(
-                        sub.name,
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.black87
-                              : Colors.grey.shade600,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          fontSize: 13,
-                        ),
-                      ),
-                      selected: isSelected,
-                      onSelected: (_) {
-                        setState(() => _selectedSubCategoryId = sub.id);
-                      },
-                      selectedColor: Colors.grey.shade200,
-                      backgroundColor: Colors.transparent,
-                      side: BorderSide(
-                        color: isSelected
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade200,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      showCheckmark: false,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
+                    return _ModernProductTile(
+                      product: displayProducts[index - 1],
+                      currencySymbol: widget.tenant.currencySymbol,
                     );
-                  },
-                ),
-              ),
+                  }, childCount: displayProducts.length + 1),
+                );
+              },
             ),
-
-          if (_searchQuery.isEmpty && filterCategories.isNotEmpty)
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
-          // Divider
-          if (_searchQuery.isEmpty)
-            SliverToBoxAdapter(
-              child: Divider(height: 1, color: Colors.grey.shade200),
-            ),
-
-          // 5. Ürünler Grid'i (Liste olarak)
-          if (selectedProducts.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.search_off,
-                      size: 56,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? 'Ürün bulunamadı'
-                          : 'Bu kategoride ürün yok',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ]
+          // EKRAN A (Root)
           else ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _searchQuery.isNotEmpty
-                            ? 'Arama Sonuçları'
-                            : (activeMainCat?.name ?? 'Ürünler'),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade900,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${selectedProducts.length} ürün',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Text(
+                  'Kategoriler',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade900,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
             ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _ModernProductTile(
-                  product: selectedProducts[index],
-                  currencySymbol: widget.tenant.currencySymbol,
+
+            // 3. Ana Kategoriler Grid'i (2'li kolon)
+            if (_mainCategories.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    'Kategori bulunamadı',
+                    style: TextStyle(color: Colors.black45),
+                  ),
                 ),
-                childCount: selectedProducts.length,
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 0,
+                ),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.95,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _MainCategoryCard(
+                      category: _mainCategories[index],
+                      onTap: () => _openCategory(_mainCategories[index].id),
+                    ),
+                    childCount: _mainCategories.length,
+                  ),
+                ),
               ),
-            ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
         ],
@@ -534,6 +509,248 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
       ),
     );
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN CATEGORY CARD — Used in Screen A grid
+// ═══════════════════════════════════════════════════════════════
+
+class _MainCategoryCard extends StatelessWidget {
+  final MenuCategory category;
+  final VoidCallback onTap;
+
+  const _MainCategoryCard({required this.category, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = category.iconUrl != null && category.iconUrl!.isNotEmpty;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background
+            if (hasImage)
+              Image.network(
+                category.iconUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _fallbackGradient(),
+              )
+            else
+              _fallbackGradient(),
+
+            // Gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.3, 1.0],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                ),
+              ),
+            ),
+
+            // Category name
+            Positioned(
+              bottom: 16,
+              left: 14,
+              right: 14,
+              child: Text(
+                category.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+            // Arrow indicator
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white.withOpacity(0.9),
+                  size: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fallbackGradient() => Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Colors.grey.shade700, Colors.blueGrey.shade800],
+      ),
+    ),
+    child: Center(
+      child: Icon(
+        Icons.restaurant_menu,
+        size: 40,
+        color: Colors.white.withOpacity(0.15),
+      ),
+    ),
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUBCATEGORY CHIPS — Pinned persistent header delegate
+// ═══════════════════════════════════════════════════════════════
+
+class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
+  final List<MenuCategory> subCategories;
+  final String? selectedId;
+  final ValueChanged<String> onSelected;
+  final bool showAllTab;
+  final VoidCallback? onAllSelected;
+
+  _SubCategoryChipsDelegate({
+    required this.subCategories,
+    required this.selectedId,
+    required this.onSelected,
+    this.showAllTab = false,
+    this.onAllSelected,
+  });
+
+  @override
+  double get minExtent => 60;
+
+  @override
+  double get maxExtent => 60;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final showAll = showAllTab && subCategories.isNotEmpty;
+    final totalCount = (showAll ? 1 : 0) + subCategories.length;
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              itemCount: totalCount,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                if (showAll && index == 0) {
+                  final isAllSelected = selectedId == null;
+                  return ChoiceChip(
+                    label: Text(
+                      'Tümü',
+                      style: TextStyle(
+                        color: isAllSelected
+                            ? Colors.white
+                            : Colors.grey.shade800,
+                        fontWeight: isAllSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                    selected: isAllSelected,
+                    onSelected: (_) => onAllSelected?.call(),
+                    selectedColor: Colors.black,
+                    backgroundColor: Colors.grey.shade100,
+                    side: BorderSide(
+                      color: isAllSelected
+                          ? Colors.transparent
+                          : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                  );
+                }
+
+                final subIndex = showAll ? index - 1 : index;
+                final sub = subCategories[subIndex];
+                final isSelected = sub.id == selectedId;
+
+                return ChoiceChip(
+                  label: Text(
+                    sub.name,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.grey.shade800,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                  selected: isSelected,
+                  onSelected: (_) => onSelected(sub.id),
+                  selectedColor: Colors.black,
+                  backgroundColor: Colors.grey.shade100,
+                  side: BorderSide(
+                    color: isSelected
+                        ? Colors.transparent
+                        : Colors.grey.shade300,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                );
+              },
+            ),
+          ),
+          Divider(height: 1, color: Colors.grey.shade200),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SubCategoryChipsDelegate oldDelegate) =>
+      selectedId != oldDelegate.selectedId ||
+      subCategories != oldDelegate.subCategories ||
+      showAllTab != oldDelegate.showAllTab;
 }
 
 // ═══════════════════════════════════════════════════════════════
