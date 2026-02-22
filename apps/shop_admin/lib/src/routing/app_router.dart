@@ -1,5 +1,5 @@
 /// Shop Admin Router — RACE CONDITION FIX
-/// 
+///
 /// Uses refreshListenable to watch auth state changes
 /// Checks both provider state AND Supabase session directly
 library;
@@ -16,7 +16,8 @@ import '../features/products/presentation/products_list_screen.dart';
 import '../features/products/presentation/product_edit_screen.dart';
 import '../features/menu_manager/presentation/menu_explorer_screen.dart';
 import '../features/products/presentation/quick_product_manager_screen.dart';
-import '../features/settings/presentation/settings_screen.dart'; // Exporting ShopSettingsScreen class
+import '../features/settings/presentation/settings_screen.dart';
+import '../features/settings/presentation/appearance_settings_screen.dart';
 import '../features/qr_studio/presentation/qr_studio_screen.dart';
 import '../features/auth/application/auth_provider.dart';
 
@@ -33,29 +34,33 @@ class AuthNotifier extends ChangeNotifier {
     // Listen to Supabase auth state changes
     SupabaseService.client.auth.onAuthStateChange.listen((event) {
       print('🔔 [AUTH NOTIFIER] Auth state changed: ${event.event}');
-      
+
       // 🛡️ LOGIN SHIELD: Ignore ghost signedOut during active login
-      if (ShopAuthService.isPerformingLogin && event.event == AuthChangeEvent.signedOut) {
+      if (ShopAuthService.isPerformingLogin &&
+          event.event == AuthChangeEvent.signedOut) {
         print('🛡️ [AUTH SHIELD] BLOCKED ghost signedOut event!');
         print('   Login in progress - ignoring premature logout signal');
-        
+
         // 💉 STRATEGY A REVISED: RESURRECTION IN LISTENER
         // Ghost logout happened. We have the session in ShopAuthService.
         // We must tell Supabase client to wake up.
         final validSession = ShopAuthService.currentSession;
         if (validSession != null && validSession.refreshToken != null) {
-           print('👻 [AUTH FIX] Listener detected ghost logout! Bypassing API to resurrect client...');
-           // We execute this asynchronously
-           SupabaseService.client.auth.setSession(validSession.refreshToken!).then((_) {
-               print('✅ [AUTH FIX] Client memory resurrected successfully!');
-           }).catchError((err) {
-               print('❌ [AUTH FIX] Local memory injection failed: $err');
-           });
+          print(
+              '👻 [AUTH FIX] Listener detected ghost logout! Bypassing API to resurrect client...');
+          // We execute this asynchronously
+          SupabaseService.client.auth
+              .setSession(validSession.refreshToken!)
+              .then((_) {
+            print('✅ [AUTH FIX] Client memory resurrected successfully!');
+          }).catchError((err) {
+            print('❌ [AUTH FIX] Local memory injection failed: $err');
+          });
         }
-        
+
         return; // DO NOT notifyListeners - prevents router kick
       }
-      
+
       print('🔔 [AUTH NOTIFIER] Notifying listeners (router will refresh)');
       notifyListeners(); // Trigger router refresh
     });
@@ -67,14 +72,15 @@ final authNotifierProvider = Provider<AuthNotifier>((ref) => AuthNotifier());
 // GoRouter with refresh listenable
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
-  
+
   return GoRouter(
-    initialLocation: '/', // Root is now handled by dynamic base_href from Python server
+    initialLocation:
+        '/', // Root is now handled by dynamic base_href from Python server
     refreshListenable: authNotifier,
     redirect: (context, state) {
       final session = ShopAuthService.currentSession;
       final roleVerified = ref.read(roleVerifiedProvider);
-      
+
       final isLoggedIn = session != null;
       final isOnLoginPage = state.matchedLocation == '/login';
 
@@ -105,28 +111,57 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Dashboard Shell with nested routes
       ShellRoute(
         builder: (context, state, child) {
-          return AdminLayout(child: child); 
+          return AdminLayout(child: child);
         },
         routes: [
           // Elegant Root Dashboard Route
           GoRoute(
             path: '/',
-            pageBuilder: (context, state) => const NoTransitionPage(child: DashboardScreen()),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: DashboardScreen()),
             routes: [
               GoRoute(
                 path: 'products',
-                pageBuilder: (context, state) => const NoTransitionPage(child: ProductsListScreen()),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: ProductsListScreen()),
                 routes: [
-                  GoRoute(path: 'new', builder: (context, state) => const ProductEditScreen()),
-                  GoRoute(path: ':id', builder: (context, state) => ProductEditScreen(productId: state.pathParameters['id'])),
+                  GoRoute(
+                      path: 'new',
+                      builder: (context, state) => const ProductEditScreen()),
+                  GoRoute(
+                      path: ':id',
+                      builder: (context, state) => ProductEditScreen(
+                          productId: state.pathParameters['id'])),
                 ],
               ),
-              GoRoute(path: 'orders', pageBuilder: (context, state) => const NoTransitionPage(child: _PlaceholderParams(title: 'Order Management'))),
-              GoRoute(path: 'categories', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
-              GoRoute(path: 'menu-manager', pageBuilder: (context, state) => const NoTransitionPage(child: MenuExplorerScreen())),
-              GoRoute(path: 'quick-products', pageBuilder: (context, state) => const NoTransitionPage(child: QuickProductManagerScreen())),
-              GoRoute(path: 'settings', pageBuilder: (context, state) => const NoTransitionPage(child: ShopSettingsScreen())),
-              GoRoute(path: 'qr-studio', pageBuilder: (context, state) => const NoTransitionPage(child: QrStudioScreen())),
+              GoRoute(
+                  path: 'orders',
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                      child: _PlaceholderParams(title: 'Order Management'))),
+              GoRoute(
+                  path: 'categories',
+                  pageBuilder: (context, state) =>
+                      const NoTransitionPage(child: MenuExplorerScreen())),
+              GoRoute(
+                  path: 'menu-manager',
+                  pageBuilder: (context, state) =>
+                      const NoTransitionPage(child: MenuExplorerScreen())),
+              GoRoute(
+                  path: 'quick-products',
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                      child: QuickProductManagerScreen())),
+              GoRoute(
+                  path: 'settings',
+                  pageBuilder: (context, state) =>
+                      const NoTransitionPage(child: ShopSettingsScreen())),
+              GoRoute(
+                  path: 'theme',
+                  pageBuilder: (context, state) => const NoTransitionPage(
+                      child: AppearanceSettingsScreen())),
+              GoRoute(
+                  path: 'qr-studio',
+                  pageBuilder: (context, state) =>
+                      const NoTransitionPage(child: QrStudioScreen())),
             ],
           ),
         ],

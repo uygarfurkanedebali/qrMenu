@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../dashboard/presentation/dashboard_screen.dart';
 import '../settings/presentation/settings_screen.dart';
+import '../settings/presentation/appearance_settings_screen.dart';
 import '../qr_studio/presentation/qr_studio_screen.dart';
 import '../menu_manager/presentation/menu_explorer_screen.dart';
 import '../products/presentation/quick_product_manager_screen.dart';
@@ -35,7 +36,8 @@ class AdminMenuDrawer extends StatelessWidget {
                     children: [
                       Text(
                         "Shop Admin",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(
                         "Yönetici Paneli",
@@ -64,7 +66,8 @@ class AdminMenuDrawer extends StatelessWidget {
                     Navigator.pop(context); // Önce menüyü kapat
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const DashboardScreen()),
                     );
                   },
                 ),
@@ -75,7 +78,8 @@ class AdminMenuDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MenuExplorerScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const MenuExplorerScreen()),
                     );
                   },
                 ),
@@ -86,7 +90,8 @@ class AdminMenuDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const QuickProductManagerScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const QuickProductManagerScreen()),
                     );
                   },
                 ),
@@ -102,8 +107,23 @@ class AdminMenuDrawer extends StatelessWidget {
                   title: "QR Stüdyosu",
                   icon: Icons.qr_code_2,
                   onTap: () {
-                     Navigator.pop(context);
-                     Navigator.push(context, MaterialPageRoute(builder: (_) => const QrStudioScreen()));
+                    Navigator.pop(context);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const QrStudioScreen()));
+                  },
+                ),
+                _DrawerItem(
+                  title: "Görünüm ve Tema",
+                  icon: Icons.palette_outlined,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AppearanceSettingsScreen()),
+                    );
                   },
                 ),
                 _DrawerItem(
@@ -113,7 +133,8 @@ class AdminMenuDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const ShopSettingsScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const ShopSettingsScreen()),
                     );
                   },
                 ),
@@ -159,7 +180,7 @@ class _DrawerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itemColor = color ?? Colors.black87;
-    
+
     return ListTile(
       leading: Icon(icon, color: itemColor),
       title: Text(
@@ -178,7 +199,8 @@ class _DrawerItem extends StatelessWidget {
               ),
               child: Text(
                 badge!,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
               ),
             )
           : null,
