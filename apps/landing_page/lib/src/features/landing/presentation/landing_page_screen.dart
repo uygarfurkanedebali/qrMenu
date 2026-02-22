@@ -45,7 +45,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           // ─── Layer 1: Parallax Background ───
           Positioned.fill(
             child: Image.asset(
-              'assets/background/qvitrinpattern.png',
+              'assets/background/qvitrinpattern.jpg',
               repeat: ImageRepeat.repeat,
               fit: BoxFit.none,
               alignment: Alignment.center,
