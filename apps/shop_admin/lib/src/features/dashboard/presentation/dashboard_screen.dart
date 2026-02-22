@@ -14,6 +14,7 @@ import '../../products/presentation/products_list_screen.dart';
 import '../../categories/presentation/categories_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../qr_studio/presentation/qr_studio_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -25,7 +26,7 @@ class DashboardScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     if (tenant == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: QVitrinLoader(size: 60));
     }
 
     // Stats
@@ -36,18 +37,9 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hoşgeldin,',
-              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
-            ),
-            Text(
-              tenant.name,
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ],
+        title: SvgPicture.asset(
+          'assets/logo/qvitrinfull.svg',
+          height: 36,
         ),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,

@@ -19,7 +19,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     if (tenant == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: QVitrinLoader(size: 60));
     }
 
     final int productCount = productsAsync.valueOrNull?.length ?? 0;

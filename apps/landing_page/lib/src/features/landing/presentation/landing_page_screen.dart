@@ -48,10 +48,11 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
             bottom: -150 + (_scrollOffset * 0.3), // Buffer to prevent clipping at bottom
             left: 0,
             right: 0,
-            child: SvgPicture.asset(
-              'assets/background/pattern.svg',
+            child: Image.asset(
+              'assets/background/qvitrinpattern.png',
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
+              repeat: ImageRepeat.repeat,
             ),
           ),
 
@@ -92,16 +93,9 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               child: Row(
                 children: [
                   // Logo Area
-                  const Icon(Icons.rocket_launch, color: Colors.blueAccent, size: 28),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'QR Infinity',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
+                  SvgPicture.asset(
+                    'assets/logo/qvitrinfull.svg',
+                    height: 36,
                   ),
                   const Spacer(),
                   // Actions
@@ -369,21 +363,15 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.rocket_launch, color: Colors.blueAccent, size: 24),
-                  SizedBox(width: 8),
-                  Text(
-                    'QR Infinity',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  SvgPicture.asset(
+                    'assets/logo/qvitrinfull.svg',
+                    height: 48,
                   ),
                 ],
               ),
               SizedBox(height: 24),
               Text(
-                '© 2026 QR Infinity. Tüm hakları saklıdır.',
+                '© 2026 QVitrin. Tüm hakları saklıdır.',
                 style: TextStyle(color: Colors.black54, fontSize: 14),
               ),
             ],

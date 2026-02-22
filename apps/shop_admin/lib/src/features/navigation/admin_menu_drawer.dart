@@ -6,6 +6,7 @@ import '../settings/presentation/appearance_settings_screen.dart';
 import '../qr_studio/presentation/qr_studio_screen.dart';
 import '../menu_manager/presentation/menu_explorer_screen.dart';
 import '../products/presentation/quick_product_manager_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AdminMenuDrawer extends StatelessWidget {
   const AdminMenuDrawer({super.key});
@@ -30,16 +31,16 @@ class AdminMenuDrawer extends StatelessWidget {
                   child: Icon(Icons.store, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Shop Admin",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                      SvgPicture.asset(
+                        'assets/logo/qvitrinfull.svg',
+                        height: 40,
                       ),
-                      Text(
+                      const SizedBox(height: 4),
+                      const Text(
                         "Yönetici Paneli",
                         style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),

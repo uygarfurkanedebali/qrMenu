@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:shared_core/shared_core.dart';
 
 /// Screen shown while loading tenant data
 class LoadingScreen extends StatelessWidget {
@@ -18,20 +19,7 @@ class LoadingScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Animated logo/loading indicator
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepOrange),
-                ),
-              ),
-            ),
+            const QVitrinLoader(size: 80),
             const SizedBox(height: 24),
             Text(
               'Loading menu...',

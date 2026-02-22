@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:go_router/go_router.dart';
 import '../../../routing/app_router.dart';
 import '../application/auth_provider.dart';
@@ -278,8 +279,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           child: _isLoading
                               ? const SizedBox(
-                                  height: 20, width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  height: 24, width: 24,
+                                  child: QVitrinLoader(size: 24, color: Colors.white),
                                 )
                               : const Text(
                                   'GİRİŞ YAP',

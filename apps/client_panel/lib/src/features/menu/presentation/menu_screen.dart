@@ -142,7 +142,7 @@ class _MenuContentState extends ConsumerState<_MenuContent> {
     return Scaffold(
       backgroundColor: widget.theme.colorScheme.surface,
       body: menuAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const QVitrinLoader(size: 60),
         error: (error, stack) =>
             Center(child: Text('Error loading menu: $error')),
         data: (allCategories) {

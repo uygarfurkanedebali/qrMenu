@@ -23,3 +23,4 @@ export 'src/utils/custom_smooth_scroll_behavior.dart';
 
 // Widgets
 export 'src/widgets/hex_color_picker.dart';
+export 'src/widgets/qvitrin_loader.dart';
