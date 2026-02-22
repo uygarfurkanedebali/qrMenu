@@ -62,8 +62,6 @@ class _AppearanceSettingsScreenState
   // 4. Layout-Specific Settings
   // -> Modern Grid
   Color _mgCardBorderColor = const Color(0xFFEEEEEE); // Grey.shade200
-  Color _mgShadowColor =
-      const Color(0x08000000); // Black with 3% opacity approx
   // -> Paper Menu
   double _pmNoiseOpacity = 0.05;
   Color _pmDottedLineColor = const Color(0x42000000); // Black26
@@ -132,8 +130,6 @@ class _AppearanceSettingsScreenState
     // 4. Layout Specific
     _mgCardBorderColor = _parseHex(
         dc['mg_card_border_color'] as String?, const Color(0xFFEEEEEE));
-    _mgShadowColor =
-        _parseHex(dc['mg_shadow_color'] as String?, const Color(0x08000000));
 
     _pmNoiseOpacity = (dc['pm_noise_opacity'] as num?)?.toDouble() ?? 0.05;
     _pmDottedLineColor = _parseHex(
@@ -190,7 +186,6 @@ class _AppearanceSettingsScreenState
         'product_card_bg': _colorToHex(_productCardBg),
         // Layout specific
         'mg_card_border_color': _colorToHex(_mgCardBorderColor),
-        'mg_shadow_color': _colorToHex(_mgShadowColor),
         'pm_noise_opacity': _pmNoiseOpacity,
         'pm_dotted_line_color': _colorToHex(_pmDottedLineColor),
         'pm_show_dotted_line': _pmShowDottedLine,
@@ -571,12 +566,6 @@ class _AppearanceSettingsScreenState
                     color: _mgCardBorderColor,
                     onTap: () => _pickColor('Sınır Çizgisi Rengi',
                         _mgCardBorderColor, (c) => _mgCardBorderColor = c),
-                  ),
-                  _ColorTile(
-                    label: 'Gölge Rengi (Örn: Siyah %5 opacity)',
-                    color: _mgShadowColor,
-                    onTap: () => _pickColor('Gölge Rengi', _mgShadowColor,
-                        (c) => _mgShadowColor = c),
                     isLast: true,
                   ),
                 ],

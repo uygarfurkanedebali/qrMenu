@@ -25,52 +25,51 @@ class ModernGridAppearance {
   final Color productCardBg;
 
   final Color mgCardBorderColor;
-  final Color mgShadowColor;
 
   ModernGridAppearance(Map<String, dynamic> dc)
-    : globalBgColor = _parseHex(
-        dc['global_bg_color'] ?? dc['background_color'],
-        const Color(0xFFFFFFFF),
-      ),
-      globalSurfaceColor = _parseHex(
-        dc['global_surface_color'] ?? dc['secondary_color'],
-        const Color(0xFFF5F5F5),
-      ),
-      globalAccentColor = _parseHex(
-        dc['global_accent_color'] ?? dc['accent_color'],
-        const Color(0xFF000000),
-      ),
-      categoryTitleColor = _parseHex(
-        dc['category_title_color'] ?? dc['title_text_color'],
-        const Color(0xFF000000),
-      ),
-      categoryActiveTextColor = _parseHex(
-        dc['category_active_text_color'],
-        const Color(0xFFFFFFFF),
-      ),
-      categoryInactiveTextColor = _parseHex(
-        dc['category_inactive_text_color'],
-        const Color(0xFF424242),
-      ),
-      showCategoryDivider = dc['show_category_divider'] as bool? ?? true,
-      productTitleColor = _parseHex(
-        dc['product_title_color'] ?? dc['product_text_color'],
-        const Color(0xFF212121),
-      ),
-      productDescColor = _parseHex(
-        dc['product_desc_color'],
-        const Color(0xFF9E9E9E),
-      ),
-      productPriceColor = _parseHex(
-        dc['product_price_color'],
-        const Color(0xFF424242),
-      ),
-      productCardBg = _parseHex(dc['product_card_bg'], const Color(0xFFFFFFFF)),
-      mgCardBorderColor = _parseHex(
-        dc['mg_card_border_color'],
-        const Color(0xFFEEEEEE),
-      ),
-      mgShadowColor = _parseHex(dc['mg_shadow_color'], const Color(0x08000000));
+      : globalBgColor = _parseHex(
+          dc['global_bg_color'] ?? dc['background_color'],
+          const Color(0xFFFFFFFF),
+        ),
+        globalSurfaceColor = _parseHex(
+          dc['global_surface_color'] ?? dc['secondary_color'],
+          const Color(0xFFF5F5F5),
+        ),
+        globalAccentColor = _parseHex(
+          dc['global_accent_color'] ?? dc['accent_color'],
+          const Color(0xFF000000),
+        ),
+        categoryTitleColor = _parseHex(
+          dc['category_title_color'] ?? dc['title_text_color'],
+          const Color(0xFF000000),
+        ),
+        categoryActiveTextColor = _parseHex(
+          dc['category_active_text_color'],
+          const Color(0xFFFFFFFF),
+        ),
+        categoryInactiveTextColor = _parseHex(
+          dc['category_inactive_text_color'],
+          const Color(0xFF424242),
+        ),
+        showCategoryDivider = dc['show_category_divider'] as bool? ?? true,
+        productTitleColor = _parseHex(
+          dc['product_title_color'] ?? dc['product_text_color'],
+          const Color(0xFF212121),
+        ),
+        productDescColor = _parseHex(
+          dc['product_desc_color'],
+          const Color(0xFF9E9E9E),
+        ),
+        productPriceColor = _parseHex(
+          dc['product_price_color'],
+          const Color(0xFF424242),
+        ),
+        productCardBg =
+            _parseHex(dc['product_card_bg'], const Color(0xFFFFFFFF)),
+        mgCardBorderColor = _parseHex(
+          dc['mg_card_border_color'],
+          const Color(0xFFEEEEEE),
+        );
 
   static Color _parseHex(dynamic hexStr, Color fallback) {
     if (hexStr is! String || hexStr.isEmpty) return fallback;
@@ -173,9 +172,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
 
   List<MenuProduct> _getAllProductsForMain(String mainCategoryId) {
     if (mainCategoryId == 'all_products') return _allProducts;
-    final mainCat = widget.categories
-        .where((c) => c.id == mainCategoryId)
-        .firstOrNull;
+    final mainCat =
+        widget.categories.where((c) => c.id == mainCategoryId).firstOrNull;
     final subs = _getSubCategories(mainCategoryId);
     final allProducts = <MenuProduct>[];
     if (mainCat != null) allProducts.addAll(mainCat.products);
@@ -228,12 +226,12 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                 isRootScreen
                     ? widget.tenant.name
                     : (widget.categories
-                              .where((c) => c.id == _selectedMainCategoryId)
-                              .firstOrNull
-                              ?.name ??
-                          (_selectedMainCategoryId == 'all_products'
-                              ? 'Tüm Ürünler'
-                              : '')),
+                            .where((c) => c.id == _selectedMainCategoryId)
+                            .firstOrNull
+                            ?.name ??
+                        (_selectedMainCategoryId == 'all_products'
+                            ? 'Tüm Ürünler'
+                            : '')),
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -246,10 +244,10 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                 isRootScreen
                     ? widget.tenant.bannerUrl
                     : (widget.categories
-                              .where((c) => c.id == _selectedMainCategoryId)
-                              .firstOrNull
-                              ?.iconUrl ??
-                          widget.tenant.bannerUrl),
+                            .where((c) => c.id == _selectedMainCategoryId)
+                            .firstOrNull
+                            ?.iconUrl ??
+                        widget.tenant.bannerUrl),
               ),
             ),
             leading: isRootScreen
@@ -362,8 +360,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                       _selectedMainCategoryId == 'all_products';
                   final filterCategories = isAllProductsSelected
                       ? _mainCategories
-                            .where((c) => c.id != 'all_products')
-                            .toList()
+                          .where((c) => c.id != 'all_products')
+                          .toList()
                       : _getSubCategories(_selectedMainCategoryId!);
 
                   if (filterCategories.isEmpty) {
@@ -405,8 +403,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                       _selectedMainCategoryId == 'all_products';
                   final filterCategories = isAllProductsSelected
                       ? _mainCategories
-                            .where((c) => c.id != 'all_products')
-                            .toList()
+                          .where((c) => c.id != 'all_products')
+                          .toList()
                       : _getSubCategories(_selectedMainCategoryId!);
                   final mainCat = widget.categories
                       .where((c) => c.id == _selectedMainCategoryId)
@@ -647,13 +645,6 @@ class _MainCategoryCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: appearance.mgShadowColor,
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -795,9 +786,8 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                         color: isAllSelected
                             ? appearance.categoryActiveTextColor
                             : appearance.categoryInactiveTextColor,
-                        fontWeight: isAllSelected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                        fontWeight:
+                            isAllSelected ? FontWeight.w600 : FontWeight.w500,
                         fontSize: 14,
                       ),
                     ),
@@ -832,9 +822,8 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                       color: isSelected
                           ? appearance.categoryActiveTextColor
                           : appearance.categoryInactiveTextColor,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                       fontSize: 14,
                     ),
                   ),
@@ -902,13 +891,6 @@ class _ModernProductTile extends StatelessWidget {
         color: appearance.productCardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: appearance.mgCardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: appearance.mgShadowColor,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
