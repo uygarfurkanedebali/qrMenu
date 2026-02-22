@@ -15,16 +15,10 @@ class LandingPageScreen extends StatefulWidget {
 
 class _LandingPageScreenState extends State<LandingPageScreen> {
   final ScrollController _scrollController = ScrollController();
-  double _scrollOffset = 0.0;
-
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(() {
-      setState(() {
-        _scrollOffset = _scrollController.offset;
-      });
-    });
+    // Removed unused scroll listener
   }
 
   @override
@@ -39,31 +33,25 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       backgroundColor: Colors.transparent, // Beneath the parallax
       extendBodyBehindAppBar: true,
       appBar: _buildGlobalNavbar(context),
-      body: Stack(
-        children: [
-          // ─── Layer 1: Parallax Background (NETWORK TEST) ───
-          Positioned.fill(
-            child: Image.network(
-              'https://www.transparenttextures.com/patterns/diagonal-stripes.png',
-              repeat: ImageRepeat.repeat,
-              color: Colors.blueAccent.withAlpha(128), // 0.5 opacity for test
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/background/qvitrinpattern.jpg'),
+            repeat: ImageRepeat.repeat,
           ),
-
-          // ─── Layer 2: Foreground Content ───
-          Positioned.fill(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                children: [
-                  _buildHeroSection(context),
-                  _buildFeaturesSection(context),
-                  _buildFooter(context),
-                ],
-              ),
-            ),
+        ),
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            children: [
+              _buildHeroSection(context),
+              _buildFeaturesSection(context),
+              _buildFooter(context),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
