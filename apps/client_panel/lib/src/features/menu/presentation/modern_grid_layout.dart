@@ -29,27 +29,42 @@ class ModernGridLayout extends StatefulWidget {
 class _ModernGridLayoutState extends State<ModernGridLayout> {
   String? _selectedMainCategoryId;
   String? _selectedSubCategoryId;
-  bool _isSearchExpanded = false;
   String _searchQuery = "";
-  
-  // Screen A Global Search State
-  bool _isGlobalSearching = false;
-  String _globalSearchQuery = "";
+  late final FocusNode _searchFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode = FocusNode();
+    _searchFocusNode.addListener(() {
+      setState(() {});
+    });
+    // Menü açıldığında "Tüm Ürünler" veya ilk kategori seçili gelsin
+    _selectedMainCategoryId = 'all_products';
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
 
   List<MenuCategory> get _mainCategories {
     final rootCats = widget.categories.where((c) => c.parentId == null).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-    // Inject "Tüm Ürünler" card manually if there are products
     if (_allProducts.isNotEmpty) {
-      rootCats.insert(0, MenuCategory(
-        id: 'all_products',
-        tenantId: widget.tenant.id,
-        name: 'Tüm Ürünler',
-        iconUrl: widget.tenant.bannerUrl, // Fallback banner
-        sortOrder: -999,
-        products: _allProducts,
-      ));
+      rootCats.insert(
+        0,
+        MenuCategory(
+          id: 'all_products',
+          tenantId: widget.tenant.id,
+          name: 'Tüm Ürünler',
+          iconUrl: widget.tenant.bannerUrl,
+          sortOrder: -999,
+          products: _allProducts,
+        ),
+      );
     }
     return rootCats;
   }
@@ -68,62 +83,80 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
 
   List<MenuCategory> _getSubCategories(String mainCategoryId) {
     if (mainCategoryId == 'all_products') return [];
-    
-    return widget.categories
-        .where((c) => c.parentId == mainCategoryId)
-        .toList()
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return widget.categories.where((c) => c.parentId == mainCategoryId).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  /// Collect all products under a main category tree (direct + all subcategories).
   List<MenuProduct> _getAllProductsForMain(String mainCategoryId) {
-    final mainCat = widget.categories.where((c) => c.id == mainCategoryId).firstOrNull;
+    if (mainCategoryId == 'all_products') return _allProducts;
+    final mainCat = widget.categories
+        .where((c) => c.id == mainCategoryId)
+        .firstOrNull;
     final subs = _getSubCategories(mainCategoryId);
     final allProducts = <MenuProduct>[];
-    // Products directly on main category
     if (mainCat != null) allProducts.addAll(mainCat.products);
-    // Products on each subcategory
     for (final sub in subs) {
       allProducts.addAll(sub.products);
     }
-    allProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return allProducts;
-  }
-
-  void _openCategory(String mainCategoryId) {
-    setState(() {
-      _selectedMainCategoryId = mainCategoryId;
-      // null means "Tümü" (all) — will show all products under this category tree
-      _selectedSubCategoryId = null;
-    });
-  }
-
-  void _goBack() {
-    setState(() {
-      _selectedMainCategoryId = null;
-      _selectedSubCategoryId = null;
-    });
+    final uniqueMap = <String, MenuProduct>{};
+    for (var p in allProducts) uniqueMap[p.id] = p;
+    final list = uniqueMap.values.toList();
+    list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedMainCategoryId != null) {
-      return _buildScreenB(context);
-    }
-    return _buildScreenA(context);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // SCREEN A — Main Categories Grid
-  // ═══════════════════════════════════════════════════════════════
-  Widget _buildScreenA(BuildContext context) {
     final mainCats = _mainCategories;
+
+    final activeMainCatId =
+        _selectedMainCategoryId ??
+        (mainCats.isNotEmpty ? mainCats.first.id : null);
+    final activeMainCat = widget.categories
+        .where((c) => c.id == activeMainCatId)
+        .firstOrNull;
+
+    final isAllProductsSelected = activeMainCatId == 'all_products';
+    final filterCategories = isAllProductsSelected
+        ? <MenuCategory>[]
+        : (activeMainCatId != null
+              ? _getSubCategories(activeMainCatId)
+              : <MenuCategory>[]);
+
+    List<MenuProduct> selectedProducts;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      selectedProducts = _allProducts.where((p) {
+        return p.name.toLowerCase().contains(q) ||
+            (p.description?.toLowerCase().contains(q) ?? false);
+      }).toList();
+    } else {
+      if (isAllProductsSelected) {
+        selectedProducts = _allProducts;
+      } else if (activeMainCatId != null) {
+        if (filterCategories.isEmpty) {
+          selectedProducts = activeMainCat?.products ?? [];
+        } else if (_selectedSubCategoryId == null) {
+          selectedProducts = _getAllProductsForMain(activeMainCatId);
+        } else {
+          selectedProducts = widget.categories
+              .where((c) => c.id == _selectedSubCategoryId)
+              .expand((c) => c.products)
+              .toList();
+        }
+      } else {
+        selectedProducts = [];
+      }
+      selectedProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    }
+
+    final hasSearchFocus = _searchFocusNode.hasFocus;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
-          // Hero Header
+          // 1. Banner
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
@@ -141,331 +174,301 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   fontWeight: FontWeight.bold,
                   fontSize: 22,
                   fontFamily: widget.tenant.fontFamily,
-                  shadows: [Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 8)],
+                  shadows: [
+                    Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 8),
+                  ],
                 ),
               ),
               background: _buildBannerBackground(widget.tenant.bannerUrl),
             ),
           ),
 
-          // Section Title & Global Search
+          // 2. YENİ: Statik Arama Çubuğu
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _globalSearchQuery.isEmpty ? 'Kategoriler' : 'Arama Sonuçları',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.grey.shade900,
-                        letterSpacing: -0.5,
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: hasSearchFocus
+                        ? widget.theme.primaryColor
+                        : Colors.transparent,
+                    width: 1.5,
+                  ),
+                  boxShadow: hasSearchFocus
+                      ? [
+                          BoxShadow(
+                            color: widget.theme.primaryColor.withOpacity(0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: TextField(
+                  focusNode: _searchFocusNode,
+                  onChanged: (val) {
+                    setState(() => _searchQuery = val);
+                  },
+                  controller: TextEditingController.fromValue(
+                    TextEditingValue(
+                      text: _searchQuery,
+                      selection: TextSelection.collapsed(
+                        offset: _searchQuery.length,
                       ),
                     ),
                   ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    width: _isGlobalSearching ? 200 : 44,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
+                  style: const TextStyle(fontSize: 15, color: Colors.black87),
+                  decoration: InputDecoration(
+                    hintText: "Ürün veya içerik ara...",
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 14,
                     ),
-                    child: Row(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            if (!_isGlobalSearching) {
-                              setState(() => _isGlobalSearching = true);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            width: 44,
-                            height: 40,
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.search, color: Colors.black87, size: 20),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: hasSearchFocus
+                          ? widget.theme.primaryColor
+                          : Colors.grey.shade500,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.clear,
+                              color: Colors.black54,
+                            ),
+                            onPressed: () {
+                              setState(() => _searchQuery = "");
+                              _searchFocusNode.unfocus();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // 3. Kategoriler (Ana Kategoriler) - Arama varsa gizle
+          if (_searchQuery.isEmpty && mainCats.isNotEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: mainCats.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final cat = mainCats[index];
+                    final isSelected = cat.id == activeMainCatId;
+                    return ChoiceChip(
+                      label: Text(
+                        cat.name,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.grey.shade800,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedMainCategoryId = cat.id;
+                          _selectedSubCategoryId = null; // reset sub selection
+                        });
+                      },
+                      selectedColor: Colors.black,
+                      backgroundColor: Colors.grey.shade100,
+                      side: BorderSide(
+                        color: isSelected
+                            ? Colors.transparent
+                            : Colors.grey.shade300,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+          if (_searchQuery.isEmpty)
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+          // 4. Alt Kategoriler (Chips)
+          if (_searchQuery.isEmpty && filterCategories.isNotEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filterCategories.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      final isAllSelected = _selectedSubCategoryId == null;
+                      return ChoiceChip(
+                        label: Text(
+                          'Tümü',
+                          style: TextStyle(
+                            color: isAllSelected
+                                ? Colors.black87
+                                : Colors.grey.shade600,
+                            fontWeight: isAllSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            fontSize: 13,
                           ),
                         ),
-                        if (_isGlobalSearching)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: TextField(
-                                autofocus: true,
-                                onChanged: (val) {
-                                  setState(() => _globalSearchQuery = val);
-                                },
-                                style: const TextStyle(fontSize: 14, color: Colors.black87),
-                                decoration: const InputDecoration(
-                                  hintText: "Ürün ara...",
-                                  hintStyle: TextStyle(color: Colors.black38, fontSize: 13),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (_isGlobalSearching)
-                          InkWell(
-                            onTap: () {
-                              setState(() {
-                                _globalSearchQuery = "";
-                                _isGlobalSearching = false;
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: const Padding(
-                              padding: EdgeInsets.only(right: 12.0),
-                              child: Icon(Icons.close, color: Colors.black54, size: 18),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                        selected: isAllSelected,
+                        onSelected: (_) {
+                          setState(() => _selectedSubCategoryId = null);
+                        },
+                        selectedColor: Colors.grey.shade200,
+                        backgroundColor: Colors.transparent,
+                        side: BorderSide(
+                          color: isAllSelected
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade200,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                      );
+                    }
 
-          // Dynamic Content: Grid vs Search Results
-          if (_globalSearchQuery.isNotEmpty) ...[
-            Builder(
-              builder: (context) {
-                final q = _globalSearchQuery.toLowerCase();
-                final results = _allProducts.where((p) {
-                  return p.name.toLowerCase().contains(q) ||
-                         (p.description?.toLowerCase().contains(q) ?? false);
-                }).toList();
-
-                if (results.isEmpty) {
-                  return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off, size: 56, color: Colors.grey.shade300),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Ürün bulunamadı',
-                            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
-                          ),
-                        ],
+                    final sub = filterCategories[index - 1];
+                    final isSelected = sub.id == _selectedSubCategoryId;
+                    return ChoiceChip(
+                      label: Text(
+                        sub.name,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.black87
+                              : Colors.grey.shade600,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _ModernProductTile(
-                      product: results[index],
-                      currencySymbol: widget.tenant.currencySymbol,
-                    ),
-                    childCount: results.length,
-                  ),
-                );
-              },
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ] else ...[
-            // 2-Column Grid
-            if (mainCats.isEmpty)
-              const SliverFillRemaining(
-                child: Center(child: Text('Kategori bulunamadı', style: TextStyle(color: Colors.black45))),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.95,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _MainCategoryCard(
-                      category: mainCats[index],
-                      onTap: () => _openCategory(mainCats[index].id),
-                    ),
-                    childCount: mainCats.length,
-                  ),
-                ),
-              ),
-          ],
-
-          // Footer
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Text(
-                  'Powered by QVitrin',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.w500),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        setState(() => _selectedSubCategoryId = sub.id);
+                      },
+                      selectedColor: Colors.grey.shade200,
+                      backgroundColor: Colors.transparent,
+                      side: BorderSide(
+                        color: isSelected
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade200,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // ═══════════════════════════════════════════════════════════════
-  // SCREEN B — Subcategories & Products
-  // ═══════════════════════════════════════════════════════════════
-  Widget _buildScreenB(BuildContext context) {
-    final isAllProductsSelected = _selectedMainCategoryId == 'all_products';
+          if (_searchQuery.isEmpty && filterCategories.isNotEmpty)
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-    final mainCat = isAllProductsSelected
-        ? _mainCategories.firstWhere((c) => c.id == 'all_products')
-        : widget.categories.where((c) => c.id == _selectedMainCategoryId).firstOrNull;
-
-    // Use main categories (excluding 'all_products') if 'all_products' is selected. 
-    // Otherwise, get specific subcategories
-    final filterCategories = isAllProductsSelected
-        ? _mainCategories.where((c) => c.id != 'all_products').toList()
-        : _getSubCategories(_selectedMainCategoryId!);
-
-    // Determine which products to show
-    List<MenuProduct> selectedProducts;
-    if (isAllProductsSelected) {
-      if (_selectedSubCategoryId == null) {
-        selectedProducts = _allProducts;
-      } else {
-        selectedProducts = _getAllProductsForMain(_selectedSubCategoryId!);
-      }
-    } else {
-      if (filterCategories.isEmpty) {
-        // No subcategories → show products directly linked to main category
-        selectedProducts = mainCat?.products ?? [];
-      } else if (_selectedSubCategoryId == null) {
-        // "Tümü" selected → show ALL products under this category tree
-        selectedProducts = _getAllProductsForMain(_selectedMainCategoryId!);
-      } else {
-        // Specific subcategory selected
-        selectedProducts = widget.categories
-            .where((c) => c.id == _selectedSubCategoryId)
-            .expand((c) => c.products)
-            .toList();
-      }
-    }
-    
-    // Sort products
-    selectedProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-    // Real-time filtering by search query
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      selectedProducts = selectedProducts.where((p) {
-        return p.name.toLowerCase().contains(q) ||
-               (p.description?.toLowerCase().contains(q) ?? false);
-      }).toList();
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          // Header with back button
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            stretch: true,
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            automaticallyImplyLeading: false,
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
-              titlePadding: const EdgeInsets.only(bottom: 16),
-              title: Text(
-                mainCat?.name ?? '',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  fontFamily: widget.tenant.fontFamily,
-                  shadows: [Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 8)],
-                ),
-              ),
-              background: _buildBannerBackground(mainCat?.iconUrl ?? widget.tenant.bannerUrl),
+          // Divider
+          if (_searchQuery.isEmpty)
+            SliverToBoxAdapter(
+              child: Divider(height: 1, color: Colors.grey.shade200),
             ),
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Material(
-                color: Colors.black.withOpacity(0.3),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: _goBack,
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-            ),
-          ),
 
-          // Subcategory Chips & Search Bar
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SubCategoryChipsDelegate(
-              subCategories: filterCategories, // Use filterCategories here
-              selectedId: _selectedSubCategoryId,
-              showAllTab: true,
-              onSelected: (id) {
-                setState(() => _selectedSubCategoryId = id);
-              },
-              onAllSelected: () {
-                setState(() => _selectedSubCategoryId = null);
-              },
-              isSearchExpanded: _isSearchExpanded,
-              searchQuery: _searchQuery,
-              onSearchToggle: () {
-                setState(() => _isSearchExpanded = !_isSearchExpanded);
-              },
-              onSearchChanged: (val) {
-                setState(() => _searchQuery = val);
-              },
-            ),
-          ),
-
-          // Products
+          // 5. Ürünler Grid'i (Liste olarak)
           if (selectedProducts.isEmpty)
             SliverFillRemaining(
+              hasScrollBody: false,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.restaurant_menu, size: 56, color: Colors.grey.shade300),
+                    Icon(
+                      Icons.search_off,
+                      size: 56,
+                      color: Colors.grey.shade300,
+                    ),
                     const SizedBox(height: 12),
                     Text(
-                      'Bu kategoride ürün yok',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                      _searchQuery.isNotEmpty
+                          ? 'Ürün bulunamadı'
+                          : 'Bu kategoride ürün yok',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
               ),
             )
           else ...[
-            // Product count header
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-                child: Text(
-                  '${selectedProducts.length} ürün',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _searchQuery.isNotEmpty
+                            ? 'Arama Sonuçları'
+                            : (activeMainCat?.name ?? 'Ürünler'),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${selectedProducts.length} ürün',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            // Product list
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => _ModernProductTile(
@@ -479,11 +482,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
           ],
         ],
       ),
-
     );
   }
-
-  // ─── Shared Helpers ──────────────────────────────────────────
 
   Widget _buildBannerBackground(String? imageUrl) {
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
@@ -511,10 +511,13 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
                 color: Colors.grey.shade800,
-                child: const Icon(Icons.broken_image, color: Colors.white24, size: 48),
+                child: const Icon(
+                  Icons.broken_image,
+                  color: Colors.white24,
+                  size: 48,
+                ),
               ),
             ),
-          // Dark overlay for text readability
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -534,303 +537,6 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MAIN CATEGORY CARD — Used in Screen A grid
-// ═══════════════════════════════════════════════════════════════
-
-class _MainCategoryCard extends StatelessWidget {
-  final MenuCategory category;
-  final VoidCallback onTap;
-
-  const _MainCategoryCard({required this.category, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImage = category.iconUrl != null && category.iconUrl!.isNotEmpty;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background
-            if (hasImage)
-              Image.network(
-                category.iconUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _fallbackGradient(),
-              )
-            else
-              _fallbackGradient(),
-
-            // Gradient overlay
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.3, 1.0],
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
-                ),
-              ),
-            ),
-
-            // Category name
-            Positioned(
-              bottom: 16,
-              left: 14,
-              right: 14,
-              child: Text(
-                category.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                  height: 1.2,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-            // Arrow indicator
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white.withOpacity(0.9),
-                  size: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _fallbackGradient() => Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.grey.shade700,
-          Colors.blueGrey.shade800,
-        ],
-      ),
-    ),
-    child: Center(
-      child: Icon(
-        Icons.restaurant_menu,
-        size: 40,
-        color: Colors.white.withOpacity(0.15),
-      ),
-    ),
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SUBCATEGORY CHIPS — Pinned persistent header delegate
-// ═══════════════════════════════════════════════════════════════
-
-class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
-  final List<MenuCategory> subCategories;
-  final String? selectedId;
-  final ValueChanged<String> onSelected;
-  final bool showAllTab;
-  final VoidCallback? onAllSelected;
-  final bool isSearchExpanded;
-  final String searchQuery;
-  final VoidCallback onSearchToggle;
-  final ValueChanged<String> onSearchChanged;
-
-  _SubCategoryChipsDelegate({
-    required this.subCategories,
-    required this.selectedId,
-    required this.onSelected,
-    this.showAllTab = false,
-    this.onAllSelected,
-    required this.isSearchExpanded,
-    required this.searchQuery,
-    required this.onSearchToggle,
-    required this.onSearchChanged,
-  });
-
-  @override
-  double get minExtent => 60;
-
-  @override
-  double get maxExtent => 60;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final showAll = showAllTab && subCategories.isNotEmpty;
-    final totalCount = (showAll ? 1 : 0) + subCategories.length;
-
-    return Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    itemCount: totalCount,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (showAll && index == 0) {
-                        final isAllSelected = selectedId == null;
-                        return ChoiceChip(
-                          label: Text(
-                            'Tümü',
-                            style: TextStyle(
-                              color: isAllSelected ? Colors.white : Colors.grey.shade800,
-                              fontWeight: isAllSelected ? FontWeight.w600 : FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                          ),
-                          selected: isAllSelected,
-                          onSelected: (_) => onAllSelected?.call(),
-                          selectedColor: Colors.black,
-                          backgroundColor: Colors.grey.shade100,
-                          side: BorderSide(
-                            color: isAllSelected ? Colors.transparent : Colors.grey.shade300,
-                          ),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          showCheckmark: false,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        );
-                      }
-
-                      final subIndex = showAll ? index - 1 : index;
-                      final sub = subCategories[subIndex];
-                      final isSelected = sub.id == selectedId;
-
-                      return ChoiceChip(
-                        label: Text(
-                          sub.name,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.grey.shade800,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (_) => onSelected(sub.id),
-                        selectedColor: Colors.black,
-                        backgroundColor: Colors.grey.shade100,
-                        side: BorderSide(
-                          color: isSelected ? Colors.transparent : Colors.grey.shade300,
-                        ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      );
-                    },
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  width: isSearchExpanded ? 180 : 44,
-                  height: 36,
-                  margin: const EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          if (!isSearchExpanded) onSearchToggle();
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 44,
-                          height: 36,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.search, color: Colors.black87, size: 20),
-                        ),
-                      ),
-                      if (isSearchExpanded)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: TextField(
-                              autofocus: true,
-                              onChanged: onSearchChanged,
-                              style: const TextStyle(fontSize: 14, color: Colors.black87),
-                              decoration: const InputDecoration(
-                                hintText: "Ürün ara...",
-                                hintStyle: TextStyle(color: Colors.black38, fontSize: 13),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (isSearchExpanded)
-                        InkWell(
-                          onTap: () {
-                            onSearchChanged("");
-                            onSearchToggle();
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 12.0),
-                            child: Icon(Icons.close, color: Colors.black54, size: 18),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: Colors.grey.shade200),
-        ],
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_SubCategoryChipsDelegate oldDelegate) =>
-      selectedId != oldDelegate.selectedId ||
-      subCategories != oldDelegate.subCategories ||
-      showAllTab != oldDelegate.showAllTab ||
-      isSearchExpanded != oldDelegate.isSearchExpanded ||
-      searchQuery != oldDelegate.searchQuery;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // MODERN PRODUCT TILE — Clean list tile for product display
 // ═══════════════════════════════════════════════════════════════
 
@@ -838,7 +544,10 @@ class _ModernProductTile extends StatelessWidget {
   final MenuProduct product;
   final String currencySymbol;
 
-  const _ModernProductTile({required this.product, required this.currencySymbol});
+  const _ModernProductTile({
+    required this.product,
+    required this.currencySymbol,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -897,7 +606,8 @@ class _ModernProductTile extends StatelessWidget {
                     color: Colors.grey.shade900,
                   ),
                 ),
-                if (product.description != null && product.description!.isNotEmpty)
+                if (product.description != null &&
+                    product.description!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
