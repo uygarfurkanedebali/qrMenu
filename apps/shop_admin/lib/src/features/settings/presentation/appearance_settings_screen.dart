@@ -36,6 +36,7 @@ class _AppearanceSettingsScreenState
   Color _pmDottedLineColor = const Color(0x42000000);
   Color _categoryDividerColor = const Color(0x73000000);
   String _categoryDividerType = 'star';
+  double _categoryDividerLength = 160.0;
 
   String _colorToHex(Color c) {
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
@@ -78,6 +79,7 @@ class _AppearanceSettingsScreenState
     _pmDottedLineColor = _parseHex(dc['pm_dotted_line_color'] as String?, const Color(0x42000000));
     _categoryDividerColor = _parseHex(dc['category_divider_color'] as String?, const Color(0x73000000));
     _categoryDividerType = dc['category_divider_type'] as String? ?? 'star';
+    _categoryDividerLength = (dc['category_divider_length'] as num?)?.toDouble() ?? 160.0;
   }
 
   Future<void> _save() async {
@@ -108,6 +110,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['pm_dotted_line_color'] = _colorToHex(_pmDottedLineColor);
       currentDesignConfig['category_divider_color'] = _colorToHex(_categoryDividerColor);
       currentDesignConfig['category_divider_type'] = _categoryDividerType;
+      currentDesignConfig['category_divider_length'] = _categoryDividerLength;
 
       await saveSettings(
         ref: ref,
@@ -519,6 +522,51 @@ class _AppearanceSettingsScreenState
                               selectedBackgroundColor: Colors.blue.shade50,
                               selectedForegroundColor: Colors.blue,
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Kategori Ayırıcı Çizgi Uzunluğu (px)',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Slider(
+                                  value: _categoryDividerLength,
+                                  min: 50,
+                                  max: 300,
+                                  divisions: 250,
+                                  activeColor: Colors.black,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _categoryDividerLength = val;
+                                    });
+                                  },
+                                ),
+                              ),
+                              SizedBox(
+                                width: 40,
+                                child: Text(
+                                  '${_categoryDividerLength.toInt()}px',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

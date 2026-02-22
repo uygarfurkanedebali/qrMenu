@@ -18,6 +18,7 @@ class PaperMenuAppearance {
   final bool showCategoryDivider;
   final String categoryDividerType; // 'star' veya 'line'
   final Color categoryDividerColor;
+  final double categoryDividerLength;
 
   final Color productTitleColor;
   final Color productDescColor;
@@ -56,6 +57,7 @@ class PaperMenuAppearance {
         dc['category_divider_color'],
         const Color(0x73000000),
       ),
+      categoryDividerLength = (dc['category_divider_length'] as num?)?.toDouble() ?? 160.0,
       productTitleColor = _parseHex(
         dc['product_title_color'] ?? dc['product_text_color'],
         const Color(0xDD000000),
@@ -719,24 +721,17 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       alignment: Alignment.center,
       child: Column(
         children: [
-          if (_appearance.showCategoryDivider) ...[
-            if (_appearance.categoryDividerType == 'line')
-              Container(
-                width: 160,
-                height: 3.0,
-                decoration: BoxDecoration(
-                  color: _appearance.categoryDividerColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              )
-            else
-              Icon(
-                Icons.star_rate_rounded,
-                size: 14,
-                color: _appearance.categoryDividerColor,
-              ),
+          // 1. YILDIZ SEÇİLİYSE ÜSTTE GÖSTER
+          if (_appearance.showCategoryDivider && _appearance.categoryDividerType != 'line') ...[
+            Icon(
+              Icons.star_rate_rounded,
+              size: 14,
+              color: _appearance.categoryDividerColor,
+            ),
             const SizedBox(height: 8),
           ],
+
+          // 2. KATEGORİ BAŞLIĞI
           Text(
             category.name.toUpperCase(),
             style: GoogleFonts.lora(
@@ -747,6 +742,19 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
             ),
             textAlign: TextAlign.center,
           ),
+
+          // 3. ÇİZGİ SEÇİLİYSE ALTTA GÖSTER
+          if (_appearance.showCategoryDivider && _appearance.categoryDividerType == 'line') ...[
+            const SizedBox(height: 12), // Başlık ile alt çizgi arası boşluk
+            Container(
+              width: _appearance.categoryDividerLength, // DİNAMİK UZUNLUK BURAYA BAĞLANDI
+              height: 3.0,
+              decoration: BoxDecoration(
+                color: _appearance.categoryDividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
         ],
       ),
     );
