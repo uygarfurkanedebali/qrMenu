@@ -39,29 +39,39 @@ class ClientPanelApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     
-    return MaterialApp.router(
-      title: 'QR-Infinity Menu',
-      debugShowCheckedModeBanner: false,
-      
-      // Localizations (Required for Material widgets)
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('tr'),
-      ],
-      
-      // Default theme (overridden by tenant theme in MenuScreen)
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-        useMaterial3: true,
-      ),
-      
-      // GoRouter configuration
-      routerConfig: router,
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDesktopInputNotifier,
+      builder: (context, isDesktop, child) {
+        return MaterialApp.router(
+          title: 'QR-Infinity Menu',
+          debugShowCheckedModeBanner: false,
+          
+          // Global Smooth Scrolling + Physics override for mouse wheels
+          scrollBehavior: const CustomSmoothScrollBehavior().copyWith(
+            physics: isDesktop ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+          ),
+          
+          // Localizations (Required for Material widgets)
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'),
+            Locale('tr'),
+          ],
+          
+          // Default theme (overridden by tenant theme in MenuScreen)
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
+            useMaterial3: true,
+          ),
+          
+          // GoRouter configuration
+          routerConfig: router,
+        );
+      },
     );
   }
 }

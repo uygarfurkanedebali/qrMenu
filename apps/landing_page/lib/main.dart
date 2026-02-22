@@ -31,14 +31,22 @@ class LandingApp extends ConsumerWidget {
     // Connect to the generic Router Provider from Landing Router
     final router = ref.watch(routerProvider);
 
-    return MaterialApp.router(
-      title: 'QR Menu Platform',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      routerConfig: router,
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDesktopInputNotifier,
+      builder: (context, isDesktop, child) {
+        return MaterialApp.router(
+          title: 'QR Menu Platform',
+          debugShowCheckedModeBanner: false,
+          scrollBehavior: const CustomSmoothScrollBehavior().copyWith(
+            physics: isDesktop ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+          ),
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+          routerConfig: router,
+        );
+      },
     );
   }
 }

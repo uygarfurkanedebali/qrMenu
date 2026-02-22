@@ -18,5 +18,8 @@ export 'src/services/services.dart';
 // Repositories
 export 'src/repositories/repositories.dart';
 
+// Utils
+export 'src/utils/custom_smooth_scroll_behavior.dart';
+
 // Widgets
 export 'src/widgets/hex_color_picker.dart';

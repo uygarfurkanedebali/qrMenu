@@ -129,11 +129,19 @@ class ShopAdminApp extends ConsumerWidget {
       useMaterial3: true,
     );
 
-    return MaterialApp.router(
-      title: 'Shop Admin Panel',
-      debugShowCheckedModeBanner: false,
-      theme: darkTheme,
-      routerConfig: router,
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDesktopInputNotifier,
+      builder: (context, isDesktop, child) {
+        return MaterialApp.router(
+          title: 'Shop Admin Panel',
+          debugShowCheckedModeBanner: false,
+          scrollBehavior: const CustomSmoothScrollBehavior().copyWith(
+            physics: isDesktop ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+          ),
+          theme: darkTheme,
+          routerConfig: router,
+        );
+      },
     );
   }
 }
