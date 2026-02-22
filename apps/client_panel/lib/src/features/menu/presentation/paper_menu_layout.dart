@@ -717,9 +717,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
           if (_appearance.showCategoryDivider) ...[
             if (_appearance.categoryDividerType == 'line')
               Container(
-                width: 50,
-                height: 1.5,
-                color: _appearance.categoryInactiveTextColor.withOpacity(0.5),
+                width: 160,
+                height: 3.0,
+                decoration: BoxDecoration(
+                  color: _appearance.categoryInactiveTextColor.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               )
             else
               Icon(

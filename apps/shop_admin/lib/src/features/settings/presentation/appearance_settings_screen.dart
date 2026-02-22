@@ -30,8 +30,10 @@ class _AppearanceSettingsScreenState
 
   // Paper Style Özel Renkleri ve Ayırıcısı
   Color _categoryTitleColor = const Color(0xFF000000);
+  Color _productTitleColor = const Color(0xDD000000);
   Color _productPriceColor = const Color(0xDD000000);
   Color _productDescColor = const Color(0x8A000000);
+  Color _pmDottedLineColor = const Color(0x42000000);
   String _categoryDividerType = 'star';
 
   String _colorToHex(Color c) {
@@ -69,8 +71,10 @@ class _AppearanceSettingsScreenState
         
     // Paper Style Okumaları
     _categoryTitleColor = _parseHex(dc['category_title_color'] as String?, const Color(0xFF000000));
+    _productTitleColor = _parseHex(dc['product_title_color'] as String? ?? dc['product_text_color'] as String?, const Color(0xDD000000));
     _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
     _productDescColor = _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000));
+    _pmDottedLineColor = _parseHex(dc['pm_dotted_line_color'] as String?, const Color(0x42000000));
     _categoryDividerType = dc['category_divider_type'] as String? ?? 'star';
   }
 
@@ -96,8 +100,10 @@ class _AppearanceSettingsScreenState
 
       // Paper Style Kayıtları
       currentDesignConfig['category_title_color'] = _colorToHex(_categoryTitleColor);
+      currentDesignConfig['product_title_color'] = _colorToHex(_productTitleColor);
       currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
       currentDesignConfig['product_desc_color'] = _colorToHex(_productDescColor);
+      currentDesignConfig['pm_dotted_line_color'] = _colorToHex(_pmDottedLineColor);
       currentDesignConfig['category_divider_type'] = _categoryDividerType;
 
       await saveSettings(
@@ -471,9 +477,13 @@ class _AppearanceSettingsScreenState
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Kategori Başlık Rengi', _categoryTitleColor, (c) => _categoryTitleColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Ürün İsmi Rengi', _productTitleColor, (c) => _productTitleColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Ürün Fiyat Rengi', _productPriceColor, (c) => _productPriceColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Ürün Açıklama Rengi', _productDescColor, (c) => _productDescColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Noktalı Çizgi Rengi (Ürün Arası)', _pmDottedLineColor, (c) => _pmDottedLineColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
