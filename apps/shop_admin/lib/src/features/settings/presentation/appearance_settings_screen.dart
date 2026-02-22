@@ -19,6 +19,9 @@ class _AppearanceSettingsScreenState
   bool _initialized = false;
   bool _isSaving = false;
 
+  // Layout Options
+  String _layoutMode = 'modern_grid';
+
   // Modern Grid Arka Plan Rengi
   Color _backgroundColor = const Color(0xFFFFFFFF);
   bool _transparentCards = true;
@@ -45,6 +48,8 @@ class _AppearanceSettingsScreenState
     // Supabase'deki Tenant modelinde "settings" objesi mevcut olmadigi icin (Sadece designConfig mevcut),
     // modern_grid layout tarafinda da beklenen background_color alanini designConfig icine mapliyoruz.
     final dc = tenant.designConfig as Map<String, dynamic>? ?? {};
+    _layoutMode = dc['layout_mode'] as String? ?? 'modern_grid';
+
     _backgroundColor = _parseHex(
         dc['background_color'] as String? ?? dc['global_bg_color'] as String?,
         const Color(0xFFFFFFFF));
@@ -65,6 +70,7 @@ class _AppearanceSettingsScreenState
 
       // Kullanicinin istedigi gibi rengi HEX formatina cevirip json'a kaydediyoruz.
       // Not: Model formatina uyumluluk acisindan "designConfig" kullanilmistir.
+      currentDesignConfig['layout_mode'] = _layoutMode;
       currentDesignConfig['background_color'] = _colorToHex(_backgroundColor);
       currentDesignConfig['global_bg_color'] = _colorToHex(_backgroundColor);
       currentDesignConfig['transparent_cards'] = _transparentCards;
@@ -111,7 +117,10 @@ class _AppearanceSettingsScreenState
         return AlertDialog(
           title: Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.black87),
           ),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           content: SingleChildScrollView(
@@ -138,7 +147,7 @@ class _AppearanceSettingsScreenState
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Seç'),
+              child: const Text('Seç', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -160,16 +169,16 @@ class _AppearanceSettingsScreenState
     _populateState(tenant);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
           'Görünüm ve Tema Ayarları',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -206,7 +215,7 @@ class _AppearanceSettingsScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'MODERN GRID AYARLARI',
+              'MENÜ GÖRÜNÜMÜ (LAYOUT)',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -215,82 +224,192 @@ class _AppearanceSettingsScreenState
               ),
             ),
             const SizedBox(height: 12),
-            Card(
-              color: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey.shade200),
+            Row(
+              children: [
+                Expanded(
+                  child: _LayoutCard(
+                    title: 'Modern Grid',
+                    icon: Icons.grid_view,
+                    isSelected: _layoutMode == 'modern_grid',
+                    onTap: () => setState(() => _layoutMode = 'modern_grid'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _LayoutCard(
+                    title: 'Paper Style',
+                    icon: Icons.history_edu,
+                    isSelected: _layoutMode == 'paper_menu',
+                    onTap: () => setState(() => _layoutMode = 'paper_menu'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            if (_layoutMode == 'modern_grid') ...[
+              const Text(
+                'MODERN GRID AYARLARI',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                  letterSpacing: 1.0,
+                ),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  ListTile(
-                    title: const Text(
-                      'Sayfa Arka Plan Rengi',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                    ),
-                    trailing: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: _backgroundColor,
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: Colors.grey.shade300, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ],
-                      ),
-                    ),
-                    onTap: () => _openColorPicker('Arka Plan Rengi',
-                        _backgroundColor, (c) => _backgroundColor = c),
-                  ),
-                  Divider(height: 1, color: Colors.grey.shade100, indent: 16),
-                  SwitchListTile(
-                    title: const Text('Kartları Arka Planla Bütünleştir',
+              const SizedBox(height: 12),
+              Card(
+                color: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.grey.shade200),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: const Text(
+                        'Sayfa Arka Plan Rengi',
                         style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w500)),
-                    subtitle: const Text(
-                        'Kutu görünümlerini (gölgeleri, kenarlıkları) kaldırıp şeffaf yapar',
-                        style: TextStyle(fontSize: 13, color: Colors.black54)),
-                    value: _transparentCards,
-                    activeColor: Colors.black,
-                    onChanged: (val) => setState(() => _transparentCards = val),
-                  ),
-                  Divider(height: 1, color: Colors.grey.shade100, indent: 16),
-                  ListTile(
-                    title: const Text(
-                      'Ana Metin Rengi',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                    ),
-                    trailing: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: _textColor,
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: Colors.grey.shade300, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ],
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87),
                       ),
+                      trailing: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: _backgroundColor,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.grey.shade300, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                      ),
+                      onTap: () => _openColorPicker('Arka Plan Rengi',
+                          _backgroundColor, (c) => _backgroundColor = c),
                     ),
-                    onTap: () => _openColorPicker(
-                        'Ana Metin Rengi', _textColor, (c) => _textColor = c),
-                  ),
-                ],
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    SwitchListTile(
+                      title: const Text('Kartları Arka Planla Bütünleştir',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87)),
+                      subtitle: const Text(
+                          'Kutu görünümlerini (gölgeleri, kenarlıkları) kaldırıp şeffaf yapar',
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.black54)),
+                      value: _transparentCards,
+                      activeColor: Colors.black,
+                      onChanged: (val) =>
+                          setState(() => _transparentCards = val),
+                    ),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    ListTile(
+                      title: const Text(
+                        'Ana Metin Rengi',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87),
+                      ),
+                      trailing: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: _textColor,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.grey.shade300, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                      ),
+                      onTap: () => _openColorPicker(
+                          'Ana Metin Rengi', _textColor, (c) => _textColor = c),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 60),
+              const Center(
+                child: Text(
+                  'Paper Style ayarları çok yakında eklenecek.',
+                  style: TextStyle(color: Colors.black54, fontSize: 16),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LayoutCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _LayoutCard({
+    required this.title,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 32,
+              color: isSelected ? Colors.blue : Colors.black54,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.blue : Colors.black87,
               ),
             ),
           ],
