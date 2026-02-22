@@ -28,6 +28,12 @@ class _AppearanceSettingsScreenState
   Color _textColor = const Color(0xFF000000);
   Color _accentColor = const Color(0xFF000000);
 
+  // Paper Style Özel Renkleri ve Ayırıcısı
+  Color _categoryTitleColor = const Color(0xFF000000);
+  Color _productPriceColor = const Color(0xDD000000);
+  Color _productDescColor = const Color(0x8A000000);
+  String _categoryDividerType = 'star';
+
   String _colorToHex(Color c) {
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
   }
@@ -60,6 +66,12 @@ class _AppearanceSettingsScreenState
     _accentColor = _parseHex(
         dc['global_accent_color'] as String? ?? dc['accent_color'] as String?,
         const Color(0xFF000000));
+        
+    // Paper Style Okumaları
+    _categoryTitleColor = _parseHex(dc['category_title_color'] as String?, const Color(0xFF000000));
+    _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
+    _productDescColor = _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000));
+    _categoryDividerType = dc['category_divider_type'] as String? ?? 'star';
   }
 
   Future<void> _save() async {
@@ -81,6 +93,12 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['text_color'] = _colorToHex(_textColor);
       currentDesignConfig['global_accent_color'] = _colorToHex(_accentColor);
       currentDesignConfig['accent_color'] = _colorToHex(_accentColor);
+
+      // Paper Style Kayıtları
+      currentDesignConfig['category_title_color'] = _colorToHex(_categoryTitleColor);
+      currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
+      currentDesignConfig['product_desc_color'] = _colorToHex(_productDescColor);
+      currentDesignConfig['category_divider_type'] = _categoryDividerType;
 
       await saveSettings(
         ref: ref,
@@ -158,6 +176,33 @@ class _AppearanceSettingsScreenState
           ],
         );
       },
+    );
+  }
+
+  Widget _buildColorTile(String title, Color color, ValueChanged<Color> onChanged) {
+    return ListTile(
+      title: Text(
+        title,
+        style: const TextStyle(
+            fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
+      ),
+      trailing: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade300, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ],
+        ),
+      ),
+      onTap: () => _openColorPicker(title, color, onChanged),
     );
   }
 
@@ -402,11 +447,68 @@ class _AppearanceSettingsScreenState
                 ),
               ),
             ] else ...[
-              const SizedBox(height: 60),
-              const Center(
-                child: Text(
-                  'Paper Style ayarları çok yakında eklenecek.',
-                  style: TextStyle(color: Colors.black54, fontSize: 16),
+              const Text(
+                'PAPER STYLE AYARLARI',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                color: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.grey.shade200),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    _buildColorTile('Arka Plan Rengi', _backgroundColor, (c) => _backgroundColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Kategori Başlık Rengi', _categoryTitleColor, (c) => _categoryTitleColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Ürün Fiyat Rengi', _productPriceColor, (c) => _productPriceColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Ürün Açıklama Rengi', _productDescColor, (c) => _productDescColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Kategori Ayırıcı Tipi',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87),
+                            ),
+                          ),
+                          SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(value: 'star', label: Text('Yıldız'), icon: Icon(Icons.star)),
+                              ButtonSegment(value: 'line', label: Text('Çizgi'), icon: Icon(Icons.horizontal_rule)),
+                            ],
+                            selected: {_categoryDividerType},
+                            onSelectionChanged: (Set<String> newSelection) {
+                              setState(() {
+                                _categoryDividerType = newSelection.first;
+                              });
+                            },
+                            style: SegmentedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              selectedBackgroundColor: Colors.blue.shade50,
+                              selectedForegroundColor: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
