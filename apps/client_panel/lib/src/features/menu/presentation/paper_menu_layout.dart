@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_core/shared_core.dart';
@@ -100,8 +101,10 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ItemPositionsListener.create();
 
   // Kategori Tab Kontrolcüleri
-  final ItemScrollController _overlayTabController = ItemScrollController();
-  final ItemScrollController _inlineTabController = ItemScrollController();
+  final ScrollController _overlayTabController = ScrollController();
+  final ScrollController _inlineTabController = ScrollController();
+  final Map<String, GlobalKey> _overlayTabKeys = {};
+  final Map<String, GlobalKey> _inlineTabKeys = {};
 
   // Arama Kontrolcüleri
   final TextEditingController _searchController = TextEditingController();
@@ -154,6 +157,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     _categoryStartIndex.clear();
     _indexToCategoryId.clear();
     _filteredCategories = [];
+    _overlayTabKeys.clear();
+    _inlineTabKeys.clear();
 
     // 1. TENANT HEADER (Item 0)
     _flatList.add('TENANT_HEADER');
@@ -174,6 +179,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
         }
 
         _filteredCategories.add(cat);
+        _overlayTabKeys[cat.id] = GlobalKey();
+        _inlineTabKeys[cat.id] = GlobalKey();
 
         // Kategori Başlığı
         _flatList.add(cat);
@@ -283,26 +290,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     // --- 2. Aktif Kategori Takibi (Sadece Arama Yoksa) ---
     if (_isTabClicked || _searchQuery.isNotEmpty) return;
 
-    final spyItem = positions.cast<ItemPosition?>().firstWhere(
-      (p) => p!.itemLeadingEdge <= 0.15 && p.itemTrailingEdge > 0.15,
-      orElse: () => null,
-    );
-
-    if (spyItem == null) return;
-
-    // Eğer sayfanın en başına çıkılmışsa, ilk kategoriyi seçili göster
-    if (spyItem.index < 2 && _filteredCategories.isNotEmpty) {
-      final firstCatId = _filteredCategories.first.id;
-      if (_selectedCategoryId != firstCatId) {
-        if (mounted) {
-          setState(() {
-            _selectedCategoryId = firstCatId;
-          });
-          _scrollToContents(firstCatId, onlyTab: true);
-        }
-      }
-      return;
-    }
+    final spyItem = positions
+        .where((p) => p.itemLeadingEdge < 0.3)
+        .reduce((max, p) => p.itemLeadingEdge > max.itemLeadingEdge ? p : max);
 
     final currentId = _indexToCategoryId[spyItem.index];
 
@@ -320,21 +310,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     int tabIndex = _filteredCategories.indexWhere((c) => c.id == categoryId);
 
     if (tabIndex != -1) {
-      if (_overlayTabController.isAttached) {
-        _overlayTabController.scrollTo(
-          index: tabIndex,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          alignment: 0.45,
-        );
+      if (_overlayTabController.hasClients) {
+        _scrollToTabCenter(categoryId, _overlayTabController, _overlayTabKeys);
       }
-      if (_inlineTabController.isAttached) {
-        _inlineTabController.scrollTo(
-          index: tabIndex,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          alignment: 0.45,
-        );
+      if (_inlineTabController.hasClients) {
+        _scrollToTabCenter(categoryId, _inlineTabController, _inlineTabKeys);
       }
     }
 
@@ -346,6 +326,28 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
         alignment: 0.08,
       );
     }
+  }
+
+  void _scrollToTabCenter(String categoryId, ScrollController controller, Map<String, GlobalKey> keys) {
+    final key = keys[categoryId];
+    if (key == null || key.currentContext == null) return;
+
+    final renderBox = key.currentContext!.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final viewport = RenderAbstractViewport.of(renderBox);
+    final offsetToReveal = viewport.getOffsetToReveal(renderBox, 0.5);
+
+    final clampedOffset = offsetToReveal.offset.clamp(
+      0.0,
+      controller.position.maxScrollExtent,
+    );
+
+    controller.animateTo(
+      clampedOffset,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _onCategoryTap(String categoryId) async {
@@ -577,7 +579,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   // --- GÜNCELLENMİŞ STICKY HEADER ---
   // Hem Kategori Listesini hem de Arama Barını yönetir
   Widget _buildStickyHeaderContent({
-    required ItemScrollController controller,
+    required ScrollController controller,
     required bool isOverlay,
   }) {
     final boxDecoration = isOverlay
@@ -605,7 +607,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
           Expanded(
             child: _isSearchActive
                 ? _buildSearchBar()
-                : _buildCategoryList(controller),
+                : _buildCategoryList(controller: controller, isOverlay: isOverlay),
           ),
 
           // SAĞ TARAF: ARAMA BUTONU
@@ -624,10 +626,15 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     );
   }
 
-  Widget _buildCategoryList(ItemScrollController controller) {
-    return ScrollablePositionedList.builder(
+  Widget _buildCategoryList({
+    required ScrollController controller,
+    required bool isOverlay,
+  }) {
+    final Map<String, GlobalKey> keyMap = isOverlay ? _overlayTabKeys : _inlineTabKeys;
+
+    return ListView.builder(
+      controller: controller,
       itemCount: _filteredCategories.length,
-      itemScrollController: controller,
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       itemBuilder: (context, index) {
@@ -637,13 +644,14 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
         return GestureDetector(
           onTap: () => _onCategoryTap(cat.id),
           child: Container(
+            key: keyMap[cat.id],
             padding: const EdgeInsets.symmetric(horizontal: 16),
             alignment: Alignment.center,
             decoration: isSelected
                 ? BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: _appearance.globalAccentColor,
+                        color: _appearance.categoryTitleColor,
                         width: 2.5,
                       ),
                     ),
@@ -655,7 +663,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: isSelected
-                    ? _appearance.globalAccentColor
+                    ? _appearance.categoryActiveTextColor
                     : _appearance.categoryInactiveTextColor,
                 letterSpacing: 1.0,
               ),
