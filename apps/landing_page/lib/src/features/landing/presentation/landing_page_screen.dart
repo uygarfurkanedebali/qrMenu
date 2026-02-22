@@ -33,25 +33,47 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       backgroundColor: Colors.transparent, // Beneath the parallax
       extendBodyBehindAppBar: true,
       appBar: _buildGlobalNavbar(context),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/background/qvitrinpattern.jpg'),
-            repeat: ImageRepeat.repeat,
+      body: Stack(
+        children: [
+          // ─── HATA YAKALAYICI TEST KATMANI ───
+          Positioned.fill(
+            child: Image.asset(
+              'assets/background/qvitrinpattern.jpg',
+              repeat: ImageRepeat.repeat,
+              errorBuilder: (context, error, stackTrace) {
+                // HATA EKRANA BASILIYOR
+                return Container(
+                  color: Colors.white,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'RESİM YÜKLENEMEDİ!\n\nHata Detayı:\n$error',
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            children: [
-              _buildHeroSection(context),
-              _buildFeaturesSection(context),
-              _buildFooter(context),
-            ],
+          
+          // ─── İÇERİK KATMANI ───
+          Positioned.fill(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                children: [
+                  _buildHeroSection(context),
+                  _buildFeaturesSection(context),
+                  _buildFooter(context),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
