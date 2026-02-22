@@ -26,6 +26,9 @@ class ModernGridAppearance {
 
   final Color mgCardBorderColor;
 
+  final bool transparentCards;
+  final Color textColor;
+
   ModernGridAppearance(Map<String, dynamic> dc)
       : globalBgColor = _parseHex(
           dc['global_bg_color'] ?? dc['background_color'],
@@ -69,7 +72,9 @@ class ModernGridAppearance {
         mgCardBorderColor = _parseHex(
           dc['mg_card_border_color'],
           const Color(0xFFEEEEEE),
-        );
+        ),
+        transparentCards = dc['transparent_cards'] as bool? ?? true,
+        textColor = _parseHex(dc['text_color'], const Color(0xFF000000));
 
   static Color _parseHex(dynamic hexStr, Color fallback) {
     if (hexStr is! String || hexStr.isEmpty) return fallback;
@@ -233,7 +238,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                             ? 'Tüm Ürünler'
                             : '')),
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _appearance
+                      .textColor, // Kullanici istegine gore Ana Metin Rengi burayi ezdi
                   fontWeight: FontWeight.bold,
                   fontSize: isRootScreen ? 22 : 20,
                   fontFamily: widget.tenant.fontFamily,
@@ -644,7 +650,13 @@ class _MainCategoryCard extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
+          color:
+              appearance.transparentCards ? Colors.transparent : Colors.white,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: appearance.transparentCards
+                  ? Colors.transparent
+                  : appearance.mgCardBorderColor),
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -678,15 +690,15 @@ class _MainCategoryCard extends StatelessWidget {
               right: 14,
               child: Text(
                 category.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                  height: 1.2,
-                ),
+                textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: appearance.textColor,
+                  height: 1.2,
+                ),
               ),
             ),
 
@@ -785,7 +797,7 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                       style: TextStyle(
                         color: isAllSelected
                             ? appearance.categoryActiveTextColor
-                            : appearance.categoryInactiveTextColor,
+                            : appearance.textColor,
                         fontWeight:
                             isAllSelected ? FontWeight.w600 : FontWeight.w500,
                         fontSize: 14,
@@ -821,7 +833,7 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                     style: TextStyle(
                       color: isSelected
                           ? appearance.categoryActiveTextColor
-                          : appearance.categoryInactiveTextColor,
+                          : appearance.textColor,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w500,
                       fontSize: 14,
@@ -888,9 +900,14 @@ class _ModernProductTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: appearance.productCardBg,
+        color: appearance.transparentCards
+            ? Colors.transparent
+            : appearance.productCardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: appearance.mgCardBorderColor),
+        border: Border.all(
+            color: appearance.transparentCards
+                ? Colors.transparent
+                : appearance.mgCardBorderColor),
       ),
       child: Row(
         children: [

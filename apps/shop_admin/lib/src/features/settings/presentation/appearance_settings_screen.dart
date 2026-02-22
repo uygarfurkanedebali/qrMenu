@@ -21,6 +21,8 @@ class _AppearanceSettingsScreenState
 
   // Modern Grid Arka Plan Rengi
   Color _backgroundColor = const Color(0xFFFFFFFF);
+  bool _transparentCards = true;
+  Color _textColor = const Color(0xFF000000);
 
   String _colorToHex(Color c) {
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
@@ -46,6 +48,9 @@ class _AppearanceSettingsScreenState
     _backgroundColor = _parseHex(
         dc['background_color'] as String? ?? dc['global_bg_color'] as String?,
         const Color(0xFFFFFFFF));
+    _transparentCards = dc['transparent_cards'] as bool? ?? true;
+    _textColor =
+        _parseHex(dc['text_color'] as String?, const Color(0xFF000000));
   }
 
   Future<void> _save() async {
@@ -62,6 +67,8 @@ class _AppearanceSettingsScreenState
       // Not: Model formatina uyumluluk acisindan "designConfig" kullanilmistir.
       currentDesignConfig['background_color'] = _colorToHex(_backgroundColor);
       currentDesignConfig['global_bg_color'] = _colorToHex(_backgroundColor);
+      currentDesignConfig['transparent_cards'] = _transparentCards;
+      currentDesignConfig['text_color'] = _colorToHex(_textColor);
 
       await saveSettings(
         ref: ref,
@@ -95,21 +102,22 @@ class _AppearanceSettingsScreenState
     }
   }
 
-  void _openColorPicker() {
-    Color tempColor = _backgroundColor;
+  void _openColorPicker(
+      String title, Color current, ValueChanged<Color> onSelected) {
+    Color tempColor = current;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Arka Plan Rengi Seç',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           content: SingleChildScrollView(
             child: AdvancedColorPicker(
-              initialColor: _backgroundColor,
-              title: 'Sayfa Arka Plan Rengi',
+              initialColor: current,
+              title: title,
               onColorChanged: (c) => tempColor = c,
             ),
           ),
@@ -120,10 +128,9 @@ class _AppearanceSettingsScreenState
             ),
             FilledButton(
               onPressed: () {
-                setState(() {
-                  _backgroundColor = tempColor;
-                });
+                onSelected(tempColor);
                 Navigator.of(context).pop();
+                setState(() {});
               },
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.black,
@@ -216,28 +223,74 @@ class _AppearanceSettingsScreenState
                 side: BorderSide(color: Colors.grey.shade200),
               ),
               clipBehavior: Clip.antiAlias,
-              child: ListTile(
-                title: const Text(
-                  'Sayfa Arka Plan Rengi',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                ),
-                trailing: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: _backgroundColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
+              child: Column(
+                children: [
+                  ListTile(
+                    title: const Text(
+                      'Sayfa Arka Plan Rengi',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                    trailing: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: _backgroundColor,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                    ),
+                    onTap: () => _openColorPicker('Arka Plan Rengi',
+                        _backgroundColor, (c) => _backgroundColor = c),
                   ),
-                ),
-                onTap: _openColorPicker,
+                  Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                  SwitchListTile(
+                    title: const Text('Kartları Arka Planla Bütünleştir',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w500)),
+                    subtitle: const Text(
+                        'Kutu görünümlerini (gölgeleri, kenarlıkları) kaldırıp şeffaf yapar',
+                        style: TextStyle(fontSize: 13, color: Colors.black54)),
+                    value: _transparentCards,
+                    activeColor: Colors.black,
+                    onChanged: (val) => setState(() => _transparentCards = val),
+                  ),
+                  Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                  ListTile(
+                    title: const Text(
+                      'Ana Metin Rengi',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                    trailing: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: _textColor,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                    ),
+                    onTap: () => _openColorPicker(
+                        'Ana Metin Rengi', _textColor, (c) => _textColor = c),
+                  ),
+                ],
               ),
             ),
           ],
