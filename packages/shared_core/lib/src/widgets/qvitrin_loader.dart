@@ -65,13 +65,6 @@ class _QVitrinLoaderState extends State<QVitrinLoader>
 
   Widget _buildLogo() {
     try {
-      if (widget.color != null) {
-        return SvgPicture.asset(
-          'assets/logo/qvitrinmin.svg',
-          width: widget.size,
-          colorFilter: ColorFilter.mode(widget.color!, BlendMode.srcIn),
-        );
-      }
       return SvgPicture.asset(
         'assets/logo/qvitrinmin.svg',
         width: widget.size,

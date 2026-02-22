@@ -37,22 +37,18 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50, // Beneath the parallax
+      backgroundColor: Colors.transparent, // Beneath the parallax
       extendBodyBehindAppBar: true,
       appBar: _buildGlobalNavbar(context),
       body: Stack(
         children: [
           // ─── Layer 1: Parallax Background ───
-          Positioned(
-            top: -(_scrollOffset * 0.3),
-            bottom: -150 + (_scrollOffset * 0.3), // Buffer to prevent clipping at bottom
-            left: 0,
-            right: 0,
+          Positioned.fill(
             child: Image.asset(
               'assets/background/qvitrinpattern.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
               repeat: ImageRepeat.repeat,
+              fit: BoxFit.none,
+              alignment: Alignment.center,
             ),
           ),
 
@@ -162,7 +158,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           child: Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(204), // 0.8
+              color: Colors.white.withAlpha(77), // 0.3
               borderRadius: BorderRadius.circular(32),
               border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
               boxShadow: [
@@ -237,7 +233,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(179), // 0.7
+            color: Colors.white.withAlpha(77), // 0.3
             border: Border(
               top: BorderSide(color: Colors.white.withAlpha(255)),
               bottom: BorderSide(color: Colors.white.withAlpha(255)),
@@ -291,7 +287,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(48),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(204), // 0.8
+                  color: Colors.white.withAlpha(77), // 0.3
                   borderRadius: BorderRadius.circular(32),
                   border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
                   boxShadow: [
@@ -356,7 +352,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
         filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
         child: Container(
           width: double.infinity,
-          color: Colors.white.withAlpha(204), // 0.8
+          color: Colors.white.withAlpha(77), // 0.3
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
           child: Column(
             children: [
@@ -399,7 +395,7 @@ class _FeatureCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(204), // 0.8
+        color: Colors.white.withAlpha(77), // 0.3
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withAlpha(255)), // 1.0
         boxShadow: [
