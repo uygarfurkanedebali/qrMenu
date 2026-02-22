@@ -41,13 +41,12 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       appBar: _buildGlobalNavbar(context),
       body: Stack(
         children: [
-          // ─── Layer 1: Parallax Background ───
+          // ─── Layer 1: Parallax Background (NETWORK TEST) ───
           Positioned.fill(
-            child: Image.asset(
-              'assets/background/qvitrinpattern.jpg',
+            child: Image.network(
+              'https://www.transparenttextures.com/patterns/diagonal-stripes.png',
               repeat: ImageRepeat.repeat,
-              fit: BoxFit.none,
-              alignment: Alignment.center,
+              color: Colors.blueAccent.withAlpha(128), // 0.5 opacity for test
             ),
           ),
 

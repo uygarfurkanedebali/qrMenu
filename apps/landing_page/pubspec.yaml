@@ -29,4 +29,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo/
-    - assets/background/
+    - assets/background/qvitrinpattern.jpg
