@@ -651,7 +651,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 ? BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: _appearance.categoryTitleColor,
+                        color: _appearance.globalAccentColor,
                         width: 2.5,
                       ),
                     ),
@@ -663,7 +663,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: isSelected
-                    ? _appearance.categoryActiveTextColor
+                    ? _appearance.globalAccentColor
                     : _appearance.categoryInactiveTextColor,
                 letterSpacing: 1.0,
               ),
