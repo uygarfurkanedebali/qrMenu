@@ -6,7 +6,6 @@ import '../settings/presentation/appearance_settings_screen.dart';
 import '../qr_studio/presentation/qr_studio_screen.dart';
 import '../menu_manager/presentation/menu_explorer_screen.dart';
 import '../products/presentation/quick_product_manager_screen.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AdminMenuDrawer extends StatelessWidget {
   const AdminMenuDrawer({super.key});
@@ -35,9 +34,10 @@ class AdminMenuDrawer extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SvgPicture.asset(
-                        'assets/logo/qvitrinfull.svg',
+                      Image.asset(
+                        'assets/logo/qvitrinfull.png',
                         height: 40,
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 4),
                       const Text(

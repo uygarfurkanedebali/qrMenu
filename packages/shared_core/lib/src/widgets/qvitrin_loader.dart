@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 /// Global QVitrin Loader
 /// 
@@ -65,9 +64,11 @@ class _QVitrinLoaderState extends State<QVitrinLoader>
 
   Widget _buildLogo() {
     try {
-      return SvgPicture.asset(
-        'assets/logo/qvitrinmin.svg',
+      return Image.asset(
+        'assets/logo/qvitrinmin.png',
         width: widget.size,
+        height: widget.size,
+        fit: BoxFit.contain,
       );
     } catch (e) {
       // Fallback to circular progress indicator if SVG fails or is missing during dev

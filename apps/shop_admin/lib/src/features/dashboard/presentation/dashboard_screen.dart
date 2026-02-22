@@ -14,7 +14,6 @@ import '../../products/presentation/products_list_screen.dart';
 import '../../categories/presentation/categories_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../qr_studio/presentation/qr_studio_screen.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -37,9 +36,10 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: SvgPicture.asset(
-          'assets/logo/qvitrinfull.svg',
+        title: Image.asset(
+          'assets/logo/qvitrinfull.png',
           height: 36,
+          fit: BoxFit.contain,
         ),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,

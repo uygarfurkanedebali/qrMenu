@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 /// SaaS Landing Page
 ///
@@ -89,9 +88,10 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               child: Row(
                 children: [
                   // Logo Area
-                  SvgPicture.asset(
-                    'assets/logo/qvitrinfull.svg',
+                  Image.asset(
+                    'assets/logo/qvitrinfull.png',
                     height: 36,
+                    fit: BoxFit.contain,
                   ),
                   const Spacer(),
                   // Actions
@@ -359,9 +359,10 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/logo/qvitrinfull.svg',
+                  Image.asset(
+                    'assets/logo/qvitrinfull.png',
                     height: 48,
+                    fit: BoxFit.contain,
                   ),
                 ],
               ),
