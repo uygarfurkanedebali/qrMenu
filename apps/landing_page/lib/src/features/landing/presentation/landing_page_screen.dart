@@ -33,32 +33,46 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       backgroundColor: Colors.transparent, // Beneath the parallax
       extendBodyBehindAppBar: true,
       appBar: _buildGlobalNavbar(context),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            // ResizeImage ile görseli bellekte zorla küçültüyoruz
-            image: ResizeImage(
-              AssetImage('assets/background/qvitrinpattern.png'),
-              width: 512, // WebGL limiti için güvenli küçük boyut
-              height: 512,
-              policy: ResizeImagePolicy.fit,
+      body: Stack(
+        children: [
+          // ─── KATMAN 1: Arka Plan Deseni (En Alt) ───
+          Positioned.fill(
+            child: Image(
+              image: const ResizeImage(
+                AssetImage('assets/background/qvitrinpattern.png'),
+                width: 512, // WebGL limiti için güvenli küçük boyut
+                height: 512,
+                policy: ResizeImagePolicy.fit,
+              ),
+              repeat: ImageRepeat.repeat,
+              filterQuality: FilterQuality.medium, // Performans için
             ),
-            repeat: ImageRepeat.repeat,
-            filterQuality: FilterQuality.medium, // Performans için
           ),
-        ),
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            children: [
-              _buildHeroSection(context),
-              _buildFeaturesSection(context),
-              _buildFooter(context),
-            ],
+
+          // ─── KATMAN 2: Tam Ekran Buzlu Cam Efekti (Orta) ───
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), // Bulanıklık
+              child: Container(
+                color: Colors.white.withOpacity(0.3), // Yarı saydam beyaz katman
+              ),
+            ),
           ),
-        ),
+
+          // ─── KATMAN 3: Sayfa İçeriği (En Üst - Net) ───
+          Positioned.fill(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                children: [
+                  _buildHeroSection(context),
+                  _buildFeaturesSection(context),
+                  _buildFooter(context),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -145,12 +159,8 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       alignment: Alignment.center,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: const EdgeInsets.all(48),
+      child: Container(
+        padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
               color: Colors.white.withAlpha(13), // 0.05
               borderRadius: BorderRadius.circular(32),
@@ -214,18 +224,13 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               ],
             ),
           ),
-        ),
-      ),
     );
   }
 
   /// Features Section (Frosted glass wrapper, covers the parallax when scrolled)
   Widget _buildFeaturesSection(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          width: double.infinity,
+    return Container(
+      width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.white.withAlpha(13), // 0.05
             border: Border(
@@ -334,18 +339,13 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
   /// Footer Section
   Widget _buildFooter(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-        child: Container(
-          width: double.infinity,
+    return Container(
+      width: double.infinity,
           color: Colors.white.withAlpha(13), // 0.05
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
           child: Column(
@@ -367,8 +367,6 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
