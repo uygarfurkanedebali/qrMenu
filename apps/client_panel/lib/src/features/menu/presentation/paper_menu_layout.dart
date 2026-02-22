@@ -16,6 +16,7 @@ class PaperMenuAppearance {
   final Color categoryActiveTextColor;
   final Color categoryInactiveTextColor;
   final bool showCategoryDivider;
+  final bool showProductImages;
   final String categoryDividerType; // 'star' veya 'line'
   final Color categoryDividerColor;
   final double categoryDividerLength;
@@ -52,6 +53,7 @@ class PaperMenuAppearance {
         const Color(0x73000000),
       ), // Colors.black45
       showCategoryDivider = dc['show_category_divider'] as bool? ?? true,
+      showProductImages = dc['show_product_images'] as bool? ?? true,
       categoryDividerType = dc['category_divider_type'] as String? ?? 'star',
       categoryDividerColor = _parseHex(
         dc['category_divider_color'],
@@ -780,39 +782,70 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(child: Text(product.name, style: nameStyle)),
-              const SizedBox(width: 8),
-              if (_appearance.pmShowDottedLine)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: CustomPaint(
-                      painter: _DottedLinePainter(
-                        color: _appearance.pmDottedLineColor,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                const Expanded(child: SizedBox()),
-              const SizedBox(width: 8),
-              Text(
-                '${product.price} ${tenant.currencySymbol}',
-                style: priceStyle,
+          // 1. ÜRÜN GÖRSELİ (Eğer ayar açıksa ve görsel varsa)
+          if (_appearance.showProductImages &&
+              product.imageUrl != null &&
+              product.imageUrl!.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                product.imageUrl!,
+                width: 72,
+                height: 72,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 72,
+                  height: 72,
+                  color: Colors.grey.withOpacity(0.1),
+                  child: const Icon(Icons.image_not_supported,
+                      color: Colors.grey, size: 24),
+                ),
               ),
-            ],
-          ),
-          if (product.description != null && product.description!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, right: 30),
-              child: Text(product.description!, style: descStyle),
             ),
+            const SizedBox(width: 16), // Görsel ile metin arası boşluk
+          ],
+
+          // 2. MEVCUT METİN VE FİYAT YAPISI
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: Text(product.name, style: nameStyle)),
+                    const SizedBox(width: 8),
+                    if (_appearance.pmShowDottedLine)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: CustomPaint(
+                            painter: _DottedLinePainter(
+                              color: _appearance.pmDottedLineColor,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const Expanded(child: SizedBox()),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${product.price} ${tenant.currencySymbol}',
+                      style: priceStyle,
+                    ),
+                  ],
+                ),
+                if (product.description != null && product.description!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, right: 30),
+                    child: Text(product.description!, style: descStyle),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

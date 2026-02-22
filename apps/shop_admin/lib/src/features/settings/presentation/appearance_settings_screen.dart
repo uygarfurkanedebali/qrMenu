@@ -29,6 +29,7 @@ class _AppearanceSettingsScreenState
   Color _accentColor = const Color(0xFF000000);
 
   // Paper Style Özel Renkleri ve Ayırıcısı
+  bool _showProductImages = true;
   Color _categoryTitleColor = const Color(0xFF000000);
   Color _productTitleColor = const Color(0xDD000000);
   Color _productPriceColor = const Color(0xDD000000);
@@ -72,6 +73,7 @@ class _AppearanceSettingsScreenState
         const Color(0xFF000000));
         
     // Paper Style Okumaları
+    _showProductImages = dc['show_product_images'] as bool? ?? true;
     _categoryTitleColor = _parseHex(dc['category_title_color'] as String?, const Color(0xFF000000));
     _productTitleColor = _parseHex(dc['product_title_color'] as String? ?? dc['product_text_color'] as String?, const Color(0xDD000000));
     _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
@@ -103,6 +105,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['accent_color'] = _colorToHex(_accentColor);
 
       // Paper Style Kayıtları
+      currentDesignConfig['show_product_images'] = _showProductImages;
       currentDesignConfig['category_title_color'] = _colorToHex(_categoryTitleColor);
       currentDesignConfig['product_title_color'] = _colorToHex(_productTitleColor);
       currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
@@ -570,6 +573,22 @@ class _AppearanceSettingsScreenState
                           ),
                         ],
                       ),
+                    ),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    SwitchListTile(
+                      title: const Text('Ürün Görsellerini Göster',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87)),
+                      subtitle: const Text(
+                          'Ürün metninin solunda ürün fotoğrafı (thumbnail) gösterilir.',
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.black54)),
+                      value: _showProductImages,
+                      activeColor: Colors.black,
+                      onChanged: (val) =>
+                          setState(() => _showProductImages = val),
                     ),
                   ],
                 ),
