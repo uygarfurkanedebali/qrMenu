@@ -9,6 +9,80 @@ import 'package:flutter/material.dart';
 import 'package:shared_core/shared_core.dart';
 import '../domain/menu_models.dart';
 
+class ModernGridAppearance {
+  final Color globalBgColor;
+  final Color globalSurfaceColor;
+  final Color globalAccentColor;
+
+  final Color categoryTitleColor;
+  final Color categoryActiveTextColor;
+  final Color categoryInactiveTextColor;
+  final bool showCategoryDivider;
+
+  final Color productTitleColor;
+  final Color productDescColor;
+  final Color productPriceColor;
+  final Color productCardBg;
+
+  final Color mgCardBorderColor;
+  final Color mgShadowColor;
+
+  ModernGridAppearance(Map<String, dynamic> dc)
+    : globalBgColor = _parseHex(
+        dc['global_bg_color'] ?? dc['background_color'],
+        const Color(0xFFFFFFFF),
+      ),
+      globalSurfaceColor = _parseHex(
+        dc['global_surface_color'] ?? dc['secondary_color'],
+        const Color(0xFFF5F5F5),
+      ),
+      globalAccentColor = _parseHex(
+        dc['global_accent_color'] ?? dc['accent_color'],
+        const Color(0xFF000000),
+      ),
+      categoryTitleColor = _parseHex(
+        dc['category_title_color'] ?? dc['title_text_color'],
+        const Color(0xFF000000),
+      ),
+      categoryActiveTextColor = _parseHex(
+        dc['category_active_text_color'],
+        const Color(0xFFFFFFFF),
+      ),
+      categoryInactiveTextColor = _parseHex(
+        dc['category_inactive_text_color'],
+        const Color(0xFF424242),
+      ),
+      showCategoryDivider = dc['show_category_divider'] as bool? ?? true,
+      productTitleColor = _parseHex(
+        dc['product_title_color'] ?? dc['product_text_color'],
+        const Color(0xFF212121),
+      ),
+      productDescColor = _parseHex(
+        dc['product_desc_color'],
+        const Color(0xFF9E9E9E),
+      ),
+      productPriceColor = _parseHex(
+        dc['product_price_color'],
+        const Color(0xFF424242),
+      ),
+      productCardBg = _parseHex(dc['product_card_bg'], const Color(0xFFFFFFFF)),
+      mgCardBorderColor = _parseHex(
+        dc['mg_card_border_color'],
+        const Color(0xFFEEEEEE),
+      ),
+      mgShadowColor = _parseHex(dc['mg_shadow_color'], const Color(0x08000000));
+
+  static Color _parseHex(dynamic hexStr, Color fallback) {
+    if (hexStr is! String || hexStr.isEmpty) return fallback;
+    try {
+      final cleaned = hexStr.replaceAll('#', '').trim();
+      if (cleaned.length == 6) return Color(int.parse('FF$cleaned', radix: 16));
+      if (cleaned.length == 8) return Color(int.parse(cleaned, radix: 16));
+    } catch (_) {}
+    return fallback;
+  }
+}
+
 class ModernGridLayout extends StatefulWidget {
   final Tenant tenant;
   final List<MenuCategory> categories;
@@ -31,6 +105,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
   String _searchQuery = "";
   late final FocusNode _searchFocusNode;
 
+  late ModernGridAppearance _appearance;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +114,17 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
     _searchFocusNode.addListener(() {
       setState(() {});
     });
+    final dc = widget.tenant.designConfig as Map<String, dynamic>? ?? {};
+    _appearance = ModernGridAppearance(dc);
+  }
+
+  @override
+  void didUpdateWidget(covariant ModernGridLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.tenant.designConfig != oldWidget.tenant.designConfig) {
+      final dc = widget.tenant.designConfig as Map<String, dynamic>? ?? {};
+      _appearance = ModernGridAppearance(dc);
+    }
   }
 
   @override
@@ -123,7 +210,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
     final bool isRootScreen = _selectedMainCategoryId == null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _appearance.globalBgColor,
       body: CustomScrollView(
         slivers: [
           // 1. Dükkan Banner'ı
@@ -131,7 +218,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
             expandedHeight: isRootScreen ? 200 : 180,
             pinned: true,
             stretch: true,
-            backgroundColor: Colors.white,
+            backgroundColor: _appearance.globalBgColor,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
             flexibleSpace: FlexibleSpaceBar(
@@ -152,9 +239,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   fontWeight: FontWeight.bold,
                   fontSize: isRootScreen ? 22 : 20,
                   fontFamily: widget.tenant.fontFamily,
-                  shadows: [
-                    Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 8),
-                  ],
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
                 ),
               ),
               background: _buildBannerBackground(
@@ -197,18 +282,22 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: _appearance.globalBgColor == Colors.white
+                      ? const Color(0xFFF5F5F5)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _searchFocusNode.hasFocus
-                        ? widget.theme.primaryColor
+                        ? _appearance.globalAccentColor
                         : Colors.transparent,
                     width: 1.5,
                   ),
                   boxShadow: _searchFocusNode.hasFocus
                       ? [
                           BoxShadow(
-                            color: widget.theme.primaryColor.withOpacity(0.15),
+                            color: _appearance.globalAccentColor.withOpacity(
+                              0.15,
+                            ),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -231,15 +320,15 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   style: const TextStyle(fontSize: 15, color: Colors.black87),
                   decoration: InputDecoration(
                     hintText: "Ürün veya içerik ara...",
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
+                    hintStyle: const TextStyle(
+                      color: Colors.black54,
                       fontSize: 14,
                     ),
                     prefixIcon: Icon(
                       Icons.search,
                       color: _searchFocusNode.hasFocus
-                          ? widget.theme.primaryColor
-                          : Colors.grey.shade500,
+                          ? _appearance.globalAccentColor
+                          : Colors.black54,
                     ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -277,13 +366,15 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                             .toList()
                       : _getSubCategories(_selectedMainCategoryId!);
 
-                  if (filterCategories.isEmpty)
+                  if (filterCategories.isEmpty) {
                     return const SliverToBoxAdapter(child: SizedBox.shrink());
+                  }
 
-                  // 4. Alt Kategoriler (Chips) - Sadece kategori seçiliyse ve aranmıyorsa görünür
+                  // 4. Alt Kategoriler (Chips)
                   return SliverPersistentHeader(
                     pinned: true,
                     delegate: _SubCategoryChipsDelegate(
+                      appearance: _appearance,
                       subCategories: filterCategories,
                       selectedId: _selectedSubCategoryId,
                       showAllTab: true,
@@ -358,7 +449,8 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                           Icon(
                             Icons.search_off,
                             size: 56,
-                            color: Colors.grey.shade300,
+                            color: _appearance.categoryInactiveTextColor
+                                .withOpacity(0.3),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -366,7 +458,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                                 ? 'Ürün bulunamadı'
                                 : 'Bu kategoride ürün yok',
                             style: TextStyle(
-                              color: Colors.grey.shade500,
+                              color: _appearance.categoryInactiveTextColor,
                               fontSize: 16,
                             ),
                           ),
@@ -387,13 +479,14 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                               : '${displayProducts.length} ürün',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey.shade500,
+                            color: _appearance.categoryInactiveTextColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       );
                     }
                     return _ModernProductTile(
+                      appearance: _appearance,
                       product: displayProducts[index - 1],
                       currencySymbol: widget.tenant.currencySymbol,
                     );
@@ -413,20 +506,37 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
-                    color: Colors.grey.shade900,
+                    color: _appearance.categoryTitleColor,
                     letterSpacing: -0.5,
                   ),
                 ),
               ),
             ),
 
+            if (_appearance.showCategoryDivider)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 0,
+                  ),
+                  child: Divider(
+                    color: _appearance.mgCardBorderColor,
+                    height: 1,
+                  ),
+                ),
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
             // 3. Ana Kategoriler Grid'i (2'li kolon)
             if (_mainCategories.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 child: Center(
                   child: Text(
                     'Kategori bulunamadı',
-                    style: TextStyle(color: Colors.black45),
+                    style: TextStyle(
+                      color: _appearance.categoryInactiveTextColor,
+                    ),
                   ),
                 ),
               )
@@ -445,6 +555,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _MainCategoryCard(
+                      appearance: _appearance,
                       category: _mainCategories[index],
                       onTap: () => _openCategory(_mainCategories[index].id),
                     ),
@@ -462,18 +573,18 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
 
   Widget _buildBannerBackground(String? imageUrl) {
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    final fallbackColor = _appearance.globalAccentColor == Colors.black
+        ? Colors.blueGrey.shade800
+        : _appearance.globalAccentColor;
+
     return Container(
       decoration: BoxDecoration(
-        color: widget.theme.colorScheme.primary,
+        color: fallbackColor,
         gradient: !hasImage
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.grey.shade800,
-                  Colors.grey.shade600,
-                  Colors.blueGrey.shade400,
-                ],
+                colors: [fallbackColor.withOpacity(0.8), fallbackColor],
               )
             : null,
       ),
@@ -485,7 +596,7 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
               imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey.shade800,
+                color: fallbackColor,
                 child: const Icon(
                   Icons.broken_image,
                   color: Colors.white24,
@@ -516,10 +627,15 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
 // ═══════════════════════════════════════════════════════════════
 
 class _MainCategoryCard extends StatelessWidget {
+  final ModernGridAppearance appearance;
   final MenuCategory category;
   final VoidCallback onTap;
 
-  const _MainCategoryCard({required this.category, required this.onTap});
+  const _MainCategoryCard({
+    required this.appearance,
+    required this.category,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -533,7 +649,7 @@ class _MainCategoryCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: appearance.mgShadowColor,
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -606,22 +722,21 @@ class _MainCategoryCard extends StatelessWidget {
     );
   }
 
-  Widget _fallbackGradient() => Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Colors.grey.shade700, Colors.blueGrey.shade800],
+  Widget _fallbackGradient() {
+    final color = appearance.globalAccentColor == Colors.black
+        ? Colors.blueGrey.shade800
+        : appearance.globalAccentColor;
+    return Container(
+      decoration: BoxDecoration(color: color),
+      child: Center(
+        child: Icon(
+          Icons.restaurant_menu,
+          size: 40,
+          color: Colors.white.withOpacity(0.15),
+        ),
       ),
-    ),
-    child: Center(
-      child: Icon(
-        Icons.restaurant_menu,
-        size: 40,
-        color: Colors.white.withOpacity(0.15),
-      ),
-    ),
-  );
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -629,6 +744,7 @@ class _MainCategoryCard extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════
 
 class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
+  final ModernGridAppearance appearance;
   final List<MenuCategory> subCategories;
   final String? selectedId;
   final ValueChanged<String> onSelected;
@@ -636,6 +752,7 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback? onAllSelected;
 
   _SubCategoryChipsDelegate({
+    required this.appearance,
     required this.subCategories,
     required this.selectedId,
     required this.onSelected,
@@ -659,7 +776,7 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
     final totalCount = (showAll ? 1 : 0) + subCategories.length;
 
     return Container(
-      color: Colors.white,
+      color: appearance.globalBgColor,
       child: Column(
         children: [
           Expanded(
@@ -676,8 +793,8 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                       'Tümü',
                       style: TextStyle(
                         color: isAllSelected
-                            ? Colors.white
-                            : Colors.grey.shade800,
+                            ? appearance.categoryActiveTextColor
+                            : appearance.categoryInactiveTextColor,
                         fontWeight: isAllSelected
                             ? FontWeight.w600
                             : FontWeight.w500,
@@ -686,12 +803,12 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                     ),
                     selected: isAllSelected,
                     onSelected: (_) => onAllSelected?.call(),
-                    selectedColor: Colors.black,
-                    backgroundColor: Colors.grey.shade100,
+                    selectedColor: appearance.globalAccentColor,
+                    backgroundColor: appearance.globalSurfaceColor,
                     side: BorderSide(
                       color: isAllSelected
                           ? Colors.transparent
-                          : Colors.grey.shade300,
+                          : appearance.mgCardBorderColor,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -712,7 +829,9 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                   label: Text(
                     sub.name,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey.shade800,
+                      color: isSelected
+                          ? appearance.categoryActiveTextColor
+                          : appearance.categoryInactiveTextColor,
                       fontWeight: isSelected
                           ? FontWeight.w600
                           : FontWeight.w500,
@@ -721,12 +840,12 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                   ),
                   selected: isSelected,
                   onSelected: (_) => onSelected(sub.id),
-                  selectedColor: Colors.black,
-                  backgroundColor: Colors.grey.shade100,
+                  selectedColor: appearance.globalAccentColor,
+                  backgroundColor: appearance.globalSurfaceColor,
                   side: BorderSide(
                     color: isSelected
                         ? Colors.transparent
-                        : Colors.grey.shade300,
+                        : appearance.mgCardBorderColor,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -740,7 +859,10 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
               },
             ),
           ),
-          Divider(height: 1, color: Colors.grey.shade200),
+          if (appearance.showCategoryDivider)
+            Divider(height: 1, color: appearance.mgCardBorderColor)
+          else
+            const SizedBox(height: 1),
         ],
       ),
     );
@@ -750,7 +872,8 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_SubCategoryChipsDelegate oldDelegate) =>
       selectedId != oldDelegate.selectedId ||
       subCategories != oldDelegate.subCategories ||
-      showAllTab != oldDelegate.showAllTab;
+      showAllTab != oldDelegate.showAllTab ||
+      appearance != oldDelegate.appearance;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -758,10 +881,12 @@ class _SubCategoryChipsDelegate extends SliverPersistentHeaderDelegate {
 // ═══════════════════════════════════════════════════════════════
 
 class _ModernProductTile extends StatelessWidget {
+  final ModernGridAppearance appearance;
   final MenuProduct product;
   final String currencySymbol;
 
   const _ModernProductTile({
+    required this.appearance,
     required this.product,
     required this.currencySymbol,
   });
@@ -774,12 +899,12 @@ class _ModernProductTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: appearance.productCardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: appearance.mgCardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: appearance.mgShadowColor,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -800,7 +925,7 @@ class _ModernProductTile extends StatelessWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: appearance.globalSurfaceColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.fastfood, color: Colors.grey.shade300),
@@ -820,7 +945,7 @@ class _ModernProductTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade900,
+                    color: appearance.productTitleColor,
                   ),
                 ),
                 if (product.description != null &&
@@ -831,7 +956,7 @@ class _ModernProductTile extends StatelessWidget {
                       product.description!,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade500,
+                        color: appearance.productDescColor,
                         height: 1.3,
                       ),
                       maxLines: 2,
@@ -848,7 +973,7 @@ class _ModernProductTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: appearance.globalSurfaceColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -856,7 +981,7 @@ class _ModernProductTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: Colors.grey.shade800,
+                color: appearance.productPriceColor,
               ),
             ),
           ),

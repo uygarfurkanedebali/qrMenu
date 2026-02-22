@@ -32,32 +32,42 @@ class _AppearanceSettingsScreenState
   static const _layoutChoices = [
     {'id': 'modern_grid', 'label': 'Modern Grid', 'icon': Icons.grid_view},
     {
-      'id': 'paper_list',
-      'label': 'Kağıt List (Minimal)',
-      'icon': Icons.list_alt
+      'id': 'paper_menu',
+      'label': 'Paper Menu (Kağıt Görünüm)',
+      'icon': Icons.history_edu
     },
-    {'id': 'tinder_cards', 'label': 'Kaydırmalı Kartlar', 'icon': Icons.swipe},
   ];
 
   // Banner
   String? _bannerUrl;
   bool _isUploadingBanner = false;
 
-  // Global Colors
-  Color _backgroundColor = const Color(0xFFFFFFFF);
-  Color _secondaryColor = const Color(0xFFF9FAFB);
-  Color _accentColor = const Color(0xFFFF5722);
+  // 1. Global Settings
+  Color _globalBgColor = const Color(0xFFFFFFFF);
+  Color _globalSurfaceColor = const Color(0xFFF5F5F5); // Grey.shade100
+  Color _globalAccentColor = const Color(0xFF000000);
 
-  // Titles & Categories
-  Color _titleTextColor = const Color(0xFF000000);
-  Color _titleDividerColor = const Color(0xFFEEEEEE);
-  bool _showTitleDivider = true;
+  // 2. Categories & Titles
+  Color _categoryTitleColor = const Color(0xFF000000);
+  Color _categoryActiveTextColor = const Color(0xFFFFFFFF);
+  Color _categoryInactiveTextColor = const Color(0xFF424242); // Grey.shade800
+  bool _showCategoryDivider = true;
 
-  // Product Cards
-  Color _productTextColor = const Color(0xFF1A1A1A);
-  Color _productDescColor = const Color(0xFF666666);
-  Color _productPriceColor = const Color(0xFF000000);
-  Color _productDividerColor = const Color(0xFFEEEEEE);
+  // 3. Product Cards
+  Color _productTitleColor = const Color(0xFF212121); // Grey.shade900
+  Color _productDescColor = const Color(0xFF9E9E9E); // Grey.shade500
+  Color _productPriceColor = const Color(0xFF424242); // Grey.shade800
+  Color _productCardBg = const Color(0xFFFFFFFF);
+
+  // 4. Layout-Specific Settings
+  // -> Modern Grid
+  Color _mgCardBorderColor = const Color(0xFFEEEEEE); // Grey.shade200
+  Color _mgShadowColor =
+      const Color(0x08000000); // Black with 3% opacity approx
+  // -> Paper Menu
+  double _pmNoiseOpacity = 0.05;
+  Color _pmDottedLineColor = const Color(0x42000000); // Black26
+  bool _pmShowDottedLine = true;
 
   Color _parseHex(String? hex, Color fallback) {
     if (hex == null || hex.isEmpty) return fallback;
@@ -81,35 +91,54 @@ class _AppearanceSettingsScreenState
 
     final dc = tenant.designConfig as Map<String, dynamic>? ?? {};
 
+    // Fallbacks if existing settings exist
     _layoutMode = dc['layout_mode'] as String? ?? 'modern_grid';
-    // Backwards compatibility with the old setup:
-    // old bg_color -> our background_color
-    // old primary_color -> our accent_color
-    // old heading_color -> our title_text_color
-    _backgroundColor = _parseHex(
-        dc['background_color'] as String? ?? dc['bg_color'] as String?,
+
+    // 1. Global
+    _globalBgColor = _parseHex(
+        dc['global_bg_color'] as String? ?? dc['background_color'] as String?,
         const Color(0xFFFFFFFF));
-    _secondaryColor =
-        _parseHex(dc['secondary_color'] as String?, const Color(0xFFF9FAFB));
-    _accentColor = _parseHex(
-        dc['accent_color'] as String? ?? tenant.primaryColor,
-        const Color(0xFFFF5722));
-
-    _titleTextColor = _parseHex(
-        dc['title_text_color'] as String? ?? dc['heading_color'] as String?,
+    _globalSurfaceColor = _parseHex(
+        dc['global_surface_color'] as String? ??
+            dc['secondary_color'] as String?,
+        const Color(0xFFF5F5F5));
+    _globalAccentColor = _parseHex(
+        dc['global_accent_color'] as String? ?? dc['accent_color'] as String?,
         const Color(0xFF000000));
-    _titleDividerColor = _parseHex(
-        dc['title_divider_color'] as String?, const Color(0xFFEEEEEE));
-    _showTitleDivider = dc['show_title_divider'] as bool? ?? true;
 
-    _productTextColor =
-        _parseHex(dc['product_text_color'] as String?, const Color(0xFF1A1A1A));
+    // 2. Categories
+    _categoryTitleColor = _parseHex(
+        dc['category_title_color'] as String? ??
+            dc['title_text_color'] as String?,
+        const Color(0xFF000000));
+    _categoryActiveTextColor = _parseHex(
+        dc['category_active_text_color'] as String?, const Color(0xFFFFFFFF));
+    _categoryInactiveTextColor = _parseHex(
+        dc['category_inactive_text_color'] as String?, const Color(0xFF424242));
+    _showCategoryDivider = dc['show_category_divider'] as bool? ?? true;
+
+    // 3. Products
+    _productTitleColor = _parseHex(
+        dc['product_title_color'] as String? ??
+            dc['product_text_color'] as String?,
+        const Color(0xFF212121));
     _productDescColor =
-        _parseHex(dc['product_desc_color'] as String?, const Color(0xFF666666));
+        _parseHex(dc['product_desc_color'] as String?, const Color(0xFF757575));
     _productPriceColor = _parseHex(
-        dc['product_price_color'] as String?, const Color(0xFF000000));
-    _productDividerColor = _parseHex(
-        dc['product_divider_color'] as String?, const Color(0xFFEEEEEE));
+        dc['product_price_color'] as String?, const Color(0xFF424242));
+    _productCardBg =
+        _parseHex(dc['product_card_bg'] as String?, const Color(0xFFFFFFFF));
+
+    // 4. Layout Specific
+    _mgCardBorderColor = _parseHex(
+        dc['mg_card_border_color'] as String?, const Color(0xFFEEEEEE));
+    _mgShadowColor =
+        _parseHex(dc['mg_shadow_color'] as String?, const Color(0x08000000));
+
+    _pmNoiseOpacity = (dc['pm_noise_opacity'] as num?)?.toDouble() ?? 0.05;
+    _pmDottedLineColor = _parseHex(
+        dc['pm_dotted_line_color'] as String?, const Color(0x42000000));
+    _pmShowDottedLine = dc['pm_show_dotted_line'] as bool? ?? true;
   }
 
   Future<void> _uploadBanner() async {
@@ -145,16 +174,26 @@ class _AppearanceSettingsScreenState
     try {
       final designConfig = {
         'layout_mode': _layoutMode,
-        'background_color': _colorToHex(_backgroundColor),
-        'secondary_color': _colorToHex(_secondaryColor),
-        'accent_color': _colorToHex(_accentColor),
-        'title_text_color': _colorToHex(_titleTextColor),
-        'title_divider_color': _colorToHex(_titleDividerColor),
-        'show_title_divider': _showTitleDivider,
-        'product_text_color': _colorToHex(_productTextColor),
+        // Global
+        'global_bg_color': _colorToHex(_globalBgColor),
+        'global_surface_color': _colorToHex(_globalSurfaceColor),
+        'global_accent_color': _colorToHex(_globalAccentColor),
+        // Categories
+        'category_title_color': _colorToHex(_categoryTitleColor),
+        'category_active_text_color': _colorToHex(_categoryActiveTextColor),
+        'category_inactive_text_color': _colorToHex(_categoryInactiveTextColor),
+        'show_category_divider': _showCategoryDivider,
+        // Products
+        'product_title_color': _colorToHex(_productTitleColor),
         'product_desc_color': _colorToHex(_productDescColor),
         'product_price_color': _colorToHex(_productPriceColor),
-        'product_divider_color': _colorToHex(_productDividerColor),
+        'product_card_bg': _colorToHex(_productCardBg),
+        // Layout specific
+        'mg_card_border_color': _colorToHex(_mgCardBorderColor),
+        'mg_shadow_color': _colorToHex(_mgShadowColor),
+        'pm_noise_opacity': _pmNoiseOpacity,
+        'pm_dotted_line_color': _colorToHex(_pmDottedLineColor),
+        'pm_show_dotted_line': _pmShowDottedLine,
       };
 
       await saveSettings(
@@ -162,8 +201,7 @@ class _AppearanceSettingsScreenState
         tenantId: tenant.id,
         updates: {
           'banner_url': _bannerUrl,
-          'primary_color':
-              _colorToHex(_accentColor), // Sync main color to old column
+          'primary_color': _colorToHex(_globalAccentColor),
           'design_config': designConfig,
         },
       );
@@ -353,7 +391,7 @@ class _AppearanceSettingsScreenState
                   onTap: () =>
                       setState(() => _layoutMode = layout['id'] as String),
                   child: Container(
-                    width: 140,
+                    width: 150,
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.black : Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -410,27 +448,27 @@ class _AppearanceSettingsScreenState
               children: [
                 // Bölüm 1
                 ExpansionTile(
-                  title: const Text('Genel Renkler',
+                  title: const Text('Genel Ayarlar (Global)',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   leading: const Icon(Icons.format_paint),
                   children: [
                     _ColorTile(
                       label: 'Arka Plan Rengi',
-                      color: _backgroundColor,
-                      onTap: () => _pickColor('Arka Plan Rengi',
-                          _backgroundColor, (c) => _backgroundColor = c),
+                      color: _globalBgColor,
+                      onTap: () => _pickColor('Arka Plan Rengi', _globalBgColor,
+                          (c) => _globalBgColor = c),
+                    ),
+                    _ColorTile(
+                      label: 'İkincil Zemin',
+                      color: _globalSurfaceColor,
+                      onTap: () => _pickColor('İkincil Zemin',
+                          _globalSurfaceColor, (c) => _globalSurfaceColor = c),
                     ),
                     _ColorTile(
                       label: 'Vurgu Rengi (Accent)',
-                      color: _accentColor,
-                      onTap: () => _pickColor(
-                          'Vurgu Rengi', _accentColor, (c) => _accentColor = c),
-                    ),
-                    _ColorTile(
-                      label: 'İkincil Renk (Kartlar, Çipler)',
-                      color: _secondaryColor,
-                      onTap: () => _pickColor('İkincil Renk', _secondaryColor,
-                          (c) => _secondaryColor = c),
+                      color: _globalAccentColor,
+                      onTap: () => _pickColor('Vurgu Rengi', _globalAccentColor,
+                          (c) => _globalAccentColor = c),
                       isLast: true,
                     ),
                   ],
@@ -439,29 +477,39 @@ class _AppearanceSettingsScreenState
 
                 // Bölüm 2
                 ExpansionTile(
-                  title: const Text('Başlıklar ve Kategoriler',
+                  title: const Text('Kategoriler ve Başlıklar',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   leading: const Icon(Icons.text_fields),
                   children: [
                     _ColorTile(
-                      label: 'Menü/Kategori Başlık Rengi',
-                      color: _titleTextColor,
-                      onTap: () => _pickColor('Başlık Rengi', _titleTextColor,
-                          (c) => _titleTextColor = c),
+                      label: 'Ana Başlık Metin Rengi',
+                      color: _categoryTitleColor,
+                      onTap: () => _pickColor('Ana Başlık Rengi',
+                          _categoryTitleColor, (c) => _categoryTitleColor = c),
                     ),
                     _ColorTile(
-                      label: 'Kategori Çizgisi Rengi',
-                      color: _titleDividerColor,
-                      onTap: () => _pickColor('Çizgi Rengi', _titleDividerColor,
-                          (c) => _titleDividerColor = c),
+                      label: 'Seçili Kategori Metin Rengi',
+                      color: _categoryActiveTextColor,
+                      onTap: () => _pickColor(
+                          'Seçili Kategori Rengi',
+                          _categoryActiveTextColor,
+                          (c) => _categoryActiveTextColor = c),
+                    ),
+                    _ColorTile(
+                      label: 'Pasif Kategori Metin Rengi',
+                      color: _categoryInactiveTextColor,
+                      onTap: () => _pickColor(
+                          'Pasif Kategori Rengi',
+                          _categoryInactiveTextColor,
+                          (c) => _categoryInactiveTextColor = c),
                     ),
                     SwitchListTile(
-                      title: const Text('Başlık Çizgilerini Göster',
+                      title: const Text('Ayırıcı Çizgileri Göster',
                           style: TextStyle(fontSize: 14)),
-                      value: _showTitleDivider,
+                      value: _showCategoryDivider,
                       activeColor: Colors.black,
                       onChanged: (val) =>
-                          setState(() => _showTitleDivider = val),
+                          setState(() => _showCategoryDivider = val),
                     ),
                   ],
                 ),
@@ -471,13 +519,13 @@ class _AppearanceSettingsScreenState
                 ExpansionTile(
                   title: const Text('Ürün Kartları',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  leading: const Icon(Icons.local_offer_outlined),
+                  leading: const Icon(Icons.inventory_2_outlined),
                   children: [
                     _ColorTile(
                       label: 'Ürün Adı Rengi',
-                      color: _productTextColor,
+                      color: _productTitleColor,
                       onTap: () => _pickColor('Ürün Adı Rengi',
-                          _productTextColor, (c) => _productTextColor = c),
+                          _productTitleColor, (c) => _productTitleColor = c),
                     ),
                     _ColorTile(
                       label: 'Ürün Açıklama Rengi',
@@ -486,18 +534,16 @@ class _AppearanceSettingsScreenState
                           _productDescColor, (c) => _productDescColor = c),
                     ),
                     _ColorTile(
-                      label: 'Fiyat Rengi',
+                      label: 'Ürün Fiyat Rengi',
                       color: _productPriceColor,
                       onTap: () => _pickColor('Fiyat Rengi', _productPriceColor,
                           (c) => _productPriceColor = c),
                     ),
                     _ColorTile(
-                      label: 'Ürünler Arası Çizgi (Divider)',
-                      color: _productDividerColor,
-                      onTap: () => _pickColor(
-                          'Ürün Çizgi Rengi',
-                          _productDividerColor,
-                          (c) => _productDividerColor = c),
+                      label: 'Kart Zemin Rengi',
+                      color: _productCardBg,
+                      onTap: () => _pickColor('Kart Zemin Rengi',
+                          _productCardBg, (c) => _productCardBg = c),
                       isLast: true,
                     ),
                   ],
@@ -505,6 +551,80 @@ class _AppearanceSettingsScreenState
               ],
             ),
           ),
+          const SizedBox(height: 24),
+
+          // ─── LAYOUT SPECIFIC SETTINGS ───
+          if (_layoutMode == 'modern_grid') ...[
+            _SectionHeader(title: 'Modern Grid Ayarları'),
+            const SizedBox(height: 12),
+            Card(
+              color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.grey.shade200)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  _ColorTile(
+                    label: 'Kart Sınır Çizgisi Rengi',
+                    color: _mgCardBorderColor,
+                    onTap: () => _pickColor('Sınır Çizgisi Rengi',
+                        _mgCardBorderColor, (c) => _mgCardBorderColor = c),
+                  ),
+                  _ColorTile(
+                    label: 'Gölge Rengi (Örn: Siyah %5 opacity)',
+                    color: _mgShadowColor,
+                    onTap: () => _pickColor('Gölge Rengi', _mgShadowColor,
+                        (c) => _mgShadowColor = c),
+                    isLast: true,
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_layoutMode == 'paper_menu') ...[
+            _SectionHeader(title: 'Paper Menu Ayarları'),
+            const SizedBox(height: 12),
+            Card(
+              color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.grey.shade200)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  ListTile(
+                    title: const Text('Kağıt Dokusu Yoğunluğu',
+                        style: TextStyle(fontSize: 14)),
+                    subtitle: Slider(
+                      value: _pmNoiseOpacity,
+                      min: 0.0,
+                      max: 0.15,
+                      divisions: 15,
+                      activeColor: Colors.black,
+                      label: _pmNoiseOpacity.toStringAsFixed(2),
+                      onChanged: (val) => setState(() => _pmNoiseOpacity = val),
+                    ),
+                  ),
+                  Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                  _ColorTile(
+                    label: 'Noktalı Çizgi (Dotted) Rengi',
+                    color: _pmDottedLineColor,
+                    onTap: () => _pickColor('Noktalı Çizgi Rengi',
+                        _pmDottedLineColor, (c) => _pmDottedLineColor = c),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Noktalı Çizgiyi Göster',
+                        style: TextStyle(fontSize: 14)),
+                    value: _pmShowDottedLine,
+                    activeColor: Colors.black,
+                    onChanged: (val) => setState(() => _pmShowDottedLine = val),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 60),
         ],
       ),
