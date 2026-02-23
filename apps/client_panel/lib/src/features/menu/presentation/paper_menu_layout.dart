@@ -13,6 +13,7 @@ class PaperMenuAppearance {
   final Color globalAccentColor;
 
   final Color categoryTitleColor;
+  final Color categoryAccentColor;
   final Color categoryActiveTextColor;
   final Color categoryInactiveTextColor;
   final bool showCategoryDivider;
@@ -43,6 +44,10 @@ class PaperMenuAppearance {
       categoryTitleColor = _parseHex(
         dc['category_title_color'] ?? dc['title_text_color'],
         const Color(0xFF000000),
+      ),
+      categoryAccentColor = _parseHex(
+        dc['category_accent_color'],
+        _parseHex(dc['global_accent_color'] ?? dc['accent_color'], const Color(0xFF2196F3)),
       ),
       categoryActiveTextColor = _parseHex(
         dc['category_active_text_color'],
@@ -662,7 +667,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 ? BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: _appearance.globalAccentColor,
+                        color: _appearance.categoryAccentColor,
                         width: 2.5,
                       ),
                     ),
@@ -674,7 +679,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: isSelected
-                    ? _appearance.globalAccentColor
+                    ? _appearance.categoryAccentColor
                     : _appearance.categoryInactiveTextColor,
                 letterSpacing: 1.0,
               ),

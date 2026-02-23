@@ -31,6 +31,7 @@ class _AppearanceSettingsScreenState
   // Paper Style Özel Renkleri ve Ayırıcısı
   bool _showProductImages = true;
   Color _categoryTitleColor = const Color(0xFF000000);
+  Color _categoryAccentColor = const Color(0xFF2196F3);
   Color _productTitleColor = const Color(0xDD000000);
   Color _productPriceColor = const Color(0xDD000000);
   Color _productDescColor = const Color(0x8A000000);
@@ -75,6 +76,7 @@ class _AppearanceSettingsScreenState
     // Paper Style Okumaları
     _showProductImages = dc['show_product_images'] as bool? ?? true;
     _categoryTitleColor = _parseHex(dc['category_title_color'] as String?, const Color(0xFF000000));
+    _categoryAccentColor = _parseHex(dc['category_accent_color'] as String?, _parseHex(dc['global_accent_color'] as String? ?? dc['accent_color'] as String?, const Color(0xFF2196F3)));
     _productTitleColor = _parseHex(dc['product_title_color'] as String? ?? dc['product_text_color'] as String?, const Color(0xDD000000));
     _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
     _productDescColor = _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000));
@@ -107,6 +109,7 @@ class _AppearanceSettingsScreenState
       // Paper Style Kayıtları
       currentDesignConfig['show_product_images'] = _showProductImages;
       currentDesignConfig['category_title_color'] = _colorToHex(_categoryTitleColor);
+      currentDesignConfig['category_accent_color'] = _colorToHex(_categoryAccentColor);
       currentDesignConfig['product_title_color'] = _colorToHex(_productTitleColor);
       currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
       currentDesignConfig['product_desc_color'] = _colorToHex(_productDescColor);
@@ -485,6 +488,8 @@ class _AppearanceSettingsScreenState
                     _buildColorTile('Arka Plan Rengi', _backgroundColor, (c) => _backgroundColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Kategori Başlık Rengi', _categoryTitleColor, (c) => _categoryTitleColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Kategori Vurgu Rengi', _categoryAccentColor, (c) => _categoryAccentColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Kategori Ayırıcı Rengi', _categoryDividerColor, (c) => _categoryDividerColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),

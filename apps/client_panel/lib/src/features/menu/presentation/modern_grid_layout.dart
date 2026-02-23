@@ -940,7 +940,7 @@ class _ModernProductTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  product.name,
+                  '${product.emoji != null && product.emoji!.isNotEmpty ? '${product.emoji} ' : ''}${product.name}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -962,28 +962,48 @@ class _ModernProductTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  
+                if (product.variants != null && product.variants!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: product.variants!.map((v) => Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(v.name, style: TextStyle(fontSize: 14, color: appearance.productDescColor, fontWeight: FontWeight.w500)), 
+                            Text('${v.price.toStringAsFixed(0)} $currencySymbol', style: TextStyle(fontSize: 14, color: appearance.productPriceColor, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ),
               ],
             ),
           ),
 
-          const SizedBox(width: 12),
+          if (product.variants == null || product.variants!.isEmpty) ...[
+            const SizedBox(width: 12),
 
-          // Price
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: appearance.globalSurfaceColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${product.price.toStringAsFixed(0)} $currencySymbol',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: appearance.productPriceColor,
+            // Price
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: appearance.globalSurfaceColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${product.price.toStringAsFixed(0)} $currencySymbol',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: appearance.productPriceColor,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
