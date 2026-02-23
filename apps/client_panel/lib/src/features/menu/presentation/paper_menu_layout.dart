@@ -833,13 +833,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       const SizedBox(width: 8),
                     ],
                     
-                    // SOLA DAYALI İSİM (KESİNLİKLE TEK SATIR)
+                    // SOLA DAYALI İSİM (TÜMÜ GÖRÜNECEK, FİYATA DOĞRU UZAYACAK)
                     Flexible(
+                      flex: 4, // Alandaki hakkın %80'ini isme ayır
                       child: Text(
                         product.name, 
                         style: nameStyle,
-                        maxLines: 1, // Sadece 1 satır
-                        overflow: TextOverflow.ellipsis, // Uzarsa üç nokta koy
+                        // maxLines ve overflow kısıtlamaları kaldırıldı!
                       ),
                     ),
                     
@@ -847,21 +847,22 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                     
                     // EĞER VARYANT YOKSA DİNAMİK NOKTALAR VE FİYAT GELSİN
                     if (product.variants == null || product.variants!.isEmpty) ...[
-                      // DİNAMİK NOKTA (Kalan tüm boşluğu doldurur, fiyatı en sağa iter)
+                      // DİNAMİK NOKTA (Kısa isimde tüm boşluğu doldurur, fiyatı sağa çiviler)
                       if (_appearance.pmShowDottedLine)
                         Expanded(
+                          flex: 1, // Kalan %20'lik alanı (ve ismin kullanmadığı tüm boşluğu) noktalar alır
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Text(
-                              '.' * 200, // 200 adet nokta üretir
+                              '.' * 1000, // 200 az geliyordu, 1000 yaparak limiti kaldırdık
                               maxLines: 1,
-                              overflow: TextOverflow.clip, // Sığmayanları keser (Mükemmel esneklik)
+                              overflow: TextOverflow.clip,
                               style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
                             ),
                           ),
                         )
                       else
-                        const Spacer(),
+                        const Expanded(child: SizedBox()), // Nokta yoksa bile boşluk itmeye devam etsin
                         
                       const SizedBox(width: 8),
                       
@@ -906,10 +907,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                               // DİNAMİK NOKTA
                               if (_appearance.pmShowDottedLine)
                                 Expanded(
+                                  flex: 1,
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 4),
                                     child: Text(
-                                      '.' * 200,
+                                      '.' * 1000,
                                       maxLines: 1,
                                       overflow: TextOverflow.clip,
                                       style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
@@ -917,7 +919,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                   ),
                                 )
                               else
-                                const Spacer(),
+                                const Expanded(child: SizedBox()),
                                 
                               const SizedBox(width: 8),
                               
