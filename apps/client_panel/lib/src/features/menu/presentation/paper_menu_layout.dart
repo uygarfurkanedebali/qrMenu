@@ -23,6 +23,7 @@ class PaperMenuAppearance {
   final double categoryDividerLength;
 
   final Color productTitleColor;
+  final Color variantTextColor;
   final Color productDescColor;
   final Color productPriceColor;
   final Color
@@ -69,6 +70,10 @@ class PaperMenuAppearance {
         dc['product_title_color'] ?? dc['product_text_color'],
         const Color(0xDD000000),
       ), // Colors.black87
+      variantTextColor = _parseHex(
+        dc['variant_text_color'],
+        _parseHex(dc['product_desc_color'], const Color(0x8A000000)),
+      ), // Fallback to desc color or grey
       productDescColor = _parseHex(
         dc['product_desc_color'],
         const Color(0x8A000000),
@@ -832,7 +837,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                     ],
                     
                     // ÜRÜN İSMİ
-                    Expanded(child: Text(product.name, style: nameStyle)),
+                    Flexible(
+                      child: Text(product.name, style: nameStyle),
+                    ),
                     const SizedBox(width: 8),
                     
                     // TEKİL FİYAT (Eğer VARYANT YOKSA noktalı çizgi ve fiyatı göster)
@@ -847,7 +854,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                           ),
                         )
                       else
-                        const Expanded(child: SizedBox()),
+                        const Expanded(child: SizedBox()), // Çizgi kapalıysa bile boşluk esnemeli
                       const SizedBox(width: 8),
                       Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
                     ],
@@ -872,12 +879,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const SizedBox(width: 32), // Alt varyantlara şık bir girinti (indent)
-                              Text(
-                                variant.name, 
-                                style: descStyle.copyWith(fontWeight: FontWeight.w600, fontStyle: FontStyle.normal),
-                              ),
-                              const SizedBox(width: 8),
+                              // SOL TARAFTAKİ BOŞLUĞU NOKTALARLA DOLDUR (Girinti yerine)
                               if (_appearance.pmShowDottedLine)
                                 Expanded(
                                   child: Padding(
@@ -889,7 +891,21 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                 )
                               else
                                 const Expanded(child: SizedBox()),
+                              
+                              const SizedBox(width: 12),
+                              
+                              // VARYANT İSMİ (Fiyatın hemen solunda)
+                              Text(
+                                variant.name, 
+                                style: GoogleFonts.lora(
+                                  fontSize: 15,
+                                  color: _appearance.variantTextColor, // YENİ RENK BURAYA BAĞLANDI
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                               const SizedBox(width: 8),
+                              
+                              // FİYAT
                               Text('${variant.price} ${tenant.currencySymbol}', style: priceStyle.copyWith(fontSize: 15)),
                             ],
                           ),

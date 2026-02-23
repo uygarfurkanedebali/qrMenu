@@ -33,6 +33,7 @@ class _AppearanceSettingsScreenState
   Color _categoryTitleColor = const Color(0xFF000000);
   Color _categoryAccentColor = const Color(0xFF2196F3);
   Color _productTitleColor = const Color(0xDD000000);
+  Color _variantTextColor = const Color(0x8A000000);
   Color _productPriceColor = const Color(0xDD000000);
   Color _productDescColor = const Color(0x8A000000);
   Color _pmDottedLineColor = const Color(0x42000000);
@@ -78,6 +79,7 @@ class _AppearanceSettingsScreenState
     _categoryTitleColor = _parseHex(dc['category_title_color'] as String?, const Color(0xFF000000));
     _categoryAccentColor = _parseHex(dc['category_accent_color'] as String?, _parseHex(dc['global_accent_color'] as String? ?? dc['accent_color'] as String?, const Color(0xFF2196F3)));
     _productTitleColor = _parseHex(dc['product_title_color'] as String? ?? dc['product_text_color'] as String?, const Color(0xDD000000));
+    _variantTextColor = _parseHex(dc['variant_text_color'] as String?, _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000)));
     _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
     _productDescColor = _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000));
     _pmDottedLineColor = _parseHex(dc['pm_dotted_line_color'] as String?, const Color(0x42000000));
@@ -111,6 +113,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['category_title_color'] = _colorToHex(_categoryTitleColor);
       currentDesignConfig['category_accent_color'] = _colorToHex(_categoryAccentColor);
       currentDesignConfig['product_title_color'] = _colorToHex(_productTitleColor);
+      currentDesignConfig['variant_text_color'] = _colorToHex(_variantTextColor);
       currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
       currentDesignConfig['product_desc_color'] = _colorToHex(_productDescColor);
       currentDesignConfig['pm_dotted_line_color'] = _colorToHex(_pmDottedLineColor);
@@ -494,6 +497,8 @@ class _AppearanceSettingsScreenState
                     _buildColorTile('Kategori Ayırıcı Rengi', _categoryDividerColor, (c) => _categoryDividerColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Ürün İsmi Rengi', _productTitleColor, (c) => _productTitleColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Varyant Yazı Rengi', _variantTextColor, (c) => _variantTextColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Ürün Fiyat Rengi', _productPriceColor, (c) => _productPriceColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
