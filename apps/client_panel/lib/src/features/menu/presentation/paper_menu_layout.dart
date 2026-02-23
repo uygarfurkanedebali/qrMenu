@@ -833,11 +833,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       const SizedBox(width: 8),
                     ],
                     
-                    // SOLA DAYALI İSİM
+                    // SOLA DAYALI İSİM (KESİNLİKLE TEK SATIR)
                     Flexible(
                       child: Text(
                         product.name, 
                         style: nameStyle,
+                        maxLines: 1, // Sadece 1 satır
+                        overflow: TextOverflow.ellipsis, // Uzarsa üç nokta koy
                       ),
                     ),
                     
