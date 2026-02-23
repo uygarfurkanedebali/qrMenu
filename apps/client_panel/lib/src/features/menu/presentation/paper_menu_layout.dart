@@ -821,54 +821,59 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
           // 2. MEVCUT METİN VE FİYAT YAPISI (Emoji ve varyant eklendi)
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch, // TÜM SATIRLARI SAĞ KENARA KADAR ZORLA
               children: [
-                // 1. EMOJİ, İSİM VE TEKİL FİYAT SATIRI
+                // ─── 1. ANA ÜRÜN SATIRI (İSİM + NOKTA + FİYAT) ───
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // EMOJİ (Varsa ve doluysa)
+                    // EMOJİ
                     if (product.emoji != null && product.emoji!.isNotEmpty) ...[
-                      Text(
-                        product.emoji!,
-                        style: const TextStyle(fontSize: 22), // Metinden bir tık büyük
-                      ),
+                      Text(product.emoji!, style: const TextStyle(fontSize: 22)),
                       const SizedBox(width: 8),
                     ],
                     
-                    // ÜRÜN İSMİ
+                    // ÜRÜN İSMİ (Sola dayalı, uzarsa alt satıra geçer)
                     Flexible(
-                      child: Text(product.name, style: nameStyle),
+                      child: Text(
+                        product.name, 
+                        style: nameStyle, 
+                        maxLines: 2, 
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const SizedBox(width: 8),
                     
-                    // TEKİL FİYAT (Eğer VARYANT YOKSA noktalı çizgi ve fiyatı göster)
+                    // VARYANT YOKSA NOKTALAR VE FİYAT GÖSTER
                     if (product.variants == null || product.variants!.isEmpty) ...[
+                      const SizedBox(width: 8),
+                      
+                      // NOKTALAR (Kalan tüm boşluğu esneyerek doldurur, fiyatı en sağa iter)
                       if (_appearance.pmShowDottedLine)
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 6),
-                            child: CustomPaint(
-                              painter: _DottedLinePainter(color: _appearance.pmDottedLineColor),
-                            ),
+                            child: CustomPaint(painter: _DottedLinePainter(color: _appearance.pmDottedLineColor)),
                           ),
                         )
                       else
-                        const Expanded(child: SizedBox()), // Çizgi kapalıysa bile boşluk esnemeli
+                        const Spacer(), // Nokta yoksa bile boşluğu esnet, fiyatı sağa yapıştır
+                      
                       const SizedBox(width: 8),
+                      
+                      // FİYAT (En sağa dayalı)
                       Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
                     ],
                   ],
                 ),
-                
-                // 2. AÇIKLAMA
+
+                // ─── 2. ÜRÜN AÇIKLAMASI ───
                 if (product.description != null && product.description!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6, right: 30),
                     child: Text(product.description!, style: descStyle),
                   ),
 
-                // 3. VARYANTLAR / GRAMAJLAR (Varsa alt alta listele)
+                // ─── 3. VARYANTLAR / GRAMAJLAR SATIRI ───
                 if (product.variants != null && product.variants!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
@@ -879,33 +884,38 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              // SOL TARAFTAKİ BOŞLUĞU NOKTALARLA DOLDUR (Girinti yerine)
+                              const SizedBox(width: 24), // Gramaj için hafif sol girinti
+                              
+                              // GRAMAJ İSMİ (Sola dayalı)
+                              Flexible(
+                                child: Text(
+                                  variant.name, 
+                                  style: GoogleFonts.lora(
+                                    fontSize: 15,
+                                    color: _appearance.variantTextColor,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              
+                              const SizedBox(width: 8),
+                              
+                              // NOKTALAR (Gramaj ile fiyat arasını doldurur, fiyatı en sağa iter)
                               if (_appearance.pmShowDottedLine)
                                 Expanded(
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 6),
-                                    child: CustomPaint(
-                                      painter: _DottedLinePainter(color: _appearance.pmDottedLineColor),
-                                    ),
+                                    child: CustomPaint(painter: _DottedLinePainter(color: _appearance.pmDottedLineColor)),
                                   ),
                                 )
                               else
-                                const Expanded(child: SizedBox()),
+                                const Spacer(),
                               
-                              const SizedBox(width: 12),
-                              
-                              // VARYANT İSMİ (Fiyatın hemen solunda)
-                              Text(
-                                variant.name, 
-                                style: GoogleFonts.lora(
-                                  fontSize: 15,
-                                  color: _appearance.variantTextColor, // YENİ RENK BURAYA BAĞLANDI
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
                               const SizedBox(width: 8),
                               
-                              // FİYAT
+                              // GRAMAJ FİYATI (En sağa dayalı)
                               Text('${variant.price} ${tenant.currencySymbol}', style: priceStyle.copyWith(fontSize: 15)),
                             ],
                           ),
