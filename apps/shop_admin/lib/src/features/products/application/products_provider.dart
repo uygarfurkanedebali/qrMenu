@@ -56,6 +56,8 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     required String name,
     required double price,
     String? description,
+    String? emoji,
+    List<ProductVariant>? variants,
     String? imageUrl,
     String? categoryId,
   }) async {
@@ -83,6 +85,8 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
         name: name,
         price: price,
         description: description,
+        emoji: emoji,
+        variants: variants,
         imageUrl: imageUrl,
         categoryId: categoryId,
         isAvailable: true,

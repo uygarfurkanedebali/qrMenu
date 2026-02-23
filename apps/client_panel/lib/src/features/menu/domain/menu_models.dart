@@ -4,6 +4,8 @@
 /// a list of products for menu rendering.
 library;
 
+import 'package:shared_core/shared_core.dart';
+
 /// Category with nested products for menu display
 class MenuCategory {
   final String id;
@@ -34,6 +36,8 @@ class MenuProduct {
   final String categoryId;
   final String name;
   final String? description;
+  final String? emoji;
+  final List<ProductVariant>? variants;
   final double price;
   final String? imageUrl;
   final bool isAvailable;
@@ -47,6 +51,8 @@ class MenuProduct {
     required this.categoryId,
     required this.name,
     this.description,
+    this.emoji,
+    this.variants,
     required this.price,
     this.imageUrl,
     this.isAvailable = true,

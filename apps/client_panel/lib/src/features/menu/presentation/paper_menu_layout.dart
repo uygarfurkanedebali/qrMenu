@@ -808,40 +808,89 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
             const SizedBox(width: 16), // Görsel ile metin arası boşluk
           ],
 
-          // 2. MEVCUT METİN VE FİYAT YAPISI
+          // 2. MEVCUT METİN VE FİYAT YAPISI (Emoji ve varyant eklendi)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 1. EMOJİ, İSİM VE TEKİL FİYAT SATIRI
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    // EMOJİ (Varsa ve doluysa)
+                    if (product.emoji != null && product.emoji!.isNotEmpty) ...[
+                      Text(
+                        product.emoji!,
+                        style: const TextStyle(fontSize: 22), // Metinden bir tık büyük
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    
+                    // ÜRÜN İSMİ
                     Expanded(child: Text(product.name, style: nameStyle)),
                     const SizedBox(width: 8),
-                    if (_appearance.pmShowDottedLine)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: CustomPaint(
-                            painter: _DottedLinePainter(
-                              color: _appearance.pmDottedLineColor,
+                    
+                    // TEKİL FİYAT (Eğer VARYANT YOKSA noktalı çizgi ve fiyatı göster)
+                    if (product.variants == null || product.variants!.isEmpty) ...[
+                      if (_appearance.pmShowDottedLine)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: CustomPaint(
+                              painter: _DottedLinePainter(color: _appearance.pmDottedLineColor),
                             ),
                           ),
-                        ),
-                      )
-                    else
-                      const Expanded(child: SizedBox()),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${product.price} ${tenant.currencySymbol}',
-                      style: priceStyle,
-                    ),
+                        )
+                      else
+                        const Expanded(child: SizedBox()),
+                      const SizedBox(width: 8),
+                      Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
+                    ],
                   ],
                 ),
+                
+                // 2. AÇIKLAMA
                 if (product.description != null && product.description!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6, right: 30),
                     child: Text(product.description!, style: descStyle),
+                  ),
+
+                // 3. VARYANTLAR / GRAMAJLAR (Varsa alt alta listele)
+                if (product.variants != null && product.variants!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      children: product.variants!.map((variant) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const SizedBox(width: 32), // Alt varyantlara şık bir girinti (indent)
+                              Text(
+                                variant.name, 
+                                style: descStyle.copyWith(fontWeight: FontWeight.w600, fontStyle: FontStyle.normal),
+                              ),
+                              const SizedBox(width: 8),
+                              if (_appearance.pmShowDottedLine)
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: CustomPaint(
+                                      painter: _DottedLinePainter(color: _appearance.pmDottedLineColor),
+                                    ),
+                                  ),
+                                )
+                              else
+                                const Expanded(child: SizedBox()),
+                              const SizedBox(width: 8),
+                              Text('${variant.price} ${tenant.currencySymbol}', style: priceStyle.copyWith(fontSize: 15)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
               ],
             ),

@@ -31,6 +31,9 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
   late TextEditingController _nameController;
   late TextEditingController _priceController;
   late TextEditingController _descController;
+  late TextEditingController _emojiController;
+  
+  List<ProductVariant> _variants = [];
   
   String? _selectedCategory;
   String? _imageUrl;
@@ -44,6 +47,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     _nameController = TextEditingController();
     _priceController = TextEditingController();
     _descController = TextEditingController();
+    _emojiController = TextEditingController();
   }
 
   @override
@@ -69,6 +73,8 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
      _nameController.text = product.name;
      _priceController.text = product.price.toString();
      _descController.text = product.description ?? '';
+     _emojiController.text = product.emoji ?? '';
+     _variants = product.variants?.toList() ?? [];
      _selectedCategory = product.categoryId;
      _imageUrl = product.imageUrl;
      _isAvailable = product.isAvailable;
@@ -80,6 +86,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     _nameController.dispose();
     _priceController.dispose();
     _descController.dispose();
+    _emojiController.dispose();
     super.dispose();
   }
 
@@ -132,6 +139,8 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           name: _nameController.text,
           price: double.parse(_priceController.text),
           description: _descController.text.isEmpty ? null : _descController.text,
+          emoji: _emojiController.text.isEmpty ? null : _emojiController.text,
+          variants: _variants.isEmpty ? null : _variants,
           categoryId: _selectedCategory,
           imageUrl: _imageUrl,
         );
@@ -144,6 +153,8 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           name: _nameController.text,
           price: double.parse(_priceController.text),
           description: _descController.text.isEmpty ? null : _descController.text,
+          emoji: _emojiController.text.isEmpty ? null : _emojiController.text,
+          variants: _variants.isEmpty ? null : _variants,
           categoryId: _selectedCategory,
           imageUrl: _imageUrl,
           isAvailable: _isAvailable,
@@ -167,6 +178,53 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  void _showAddVariantDialog() {
+    final vNameController = TextEditingController();
+    final vPriceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Variant'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: vNameController,
+                decoration: const InputDecoration(labelText: 'Variant Name (e.g. 130 gr)'),
+              ),
+              TextField(
+                controller: vPriceController,
+                decoration: const InputDecoration(labelText: 'Price'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = vNameController.text.trim();
+                final price = double.tryParse(vPriceController.text.trim());
+                if (name.isNotEmpty && price != null) {
+                  setState(() {
+                    _variants.add(ProductVariant(name: name, price: price));
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -249,6 +307,17 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Emoji Field
+              TextFormField(
+                controller: _emojiController,
+                decoration: const InputDecoration(
+                  labelText: 'Emoji (e.g. 🍔)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLength: 5,
+              ),
+              const SizedBox(height: 16),
 
               // Fields
               TextFormField(
@@ -347,7 +416,54 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                 maxLines: 3,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+              
+              // Variants section
+              const Text('Variants / Grammage (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              ..._variants.asMap().entries.map((entry) {
+                final index = entry.key;
+                final variant = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${variant.name} - \$${variant.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 15)),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _variants.removeAt(index);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: _showAddVariantDialog,
+                  icon: const Icon(Icons.add_circle_outline, size: 18),
+                  label: const Text('Add Variant'),
+                  style: FilledButton.styleFrom(backgroundColor: Colors.grey.shade300, foregroundColor: Colors.black87),
+                ),
+              ),
+
+              const SizedBox(height: 24),
               
                SwitchListTile(
                 title: const Text('Available'),

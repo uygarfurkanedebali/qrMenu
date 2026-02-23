@@ -55,6 +55,10 @@ class SupabaseMenuRepository implements MenuRepository {
         categoryId: json['category_id'] ?? 'uncategorized',
         name: json['name'],
         description: json['description'],
+        emoji: json['emoji'],
+        variants: (json['variants'] as List<dynamic>?)
+            ?.map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+            .toList(),
         price: (json['price'] as num).toDouble(),
         imageUrl: json['image_url'],
         isAvailable: json['is_available'] ?? true,

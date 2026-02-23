@@ -13,6 +13,8 @@ class Product {
   final List<String> categoryIds; // New Field (Phase 1)
   final String name;
   final String? description;
+  final String? emoji;
+  final List<ProductVariant>? variants;
   final double price;
   final String? imageUrl;
   final bool isAvailable;
@@ -27,6 +29,8 @@ class Product {
     this.categoryIds = const [], // Default empty
     required this.name,
     this.description,
+    this.emoji,
+    this.variants,
     required this.price,
     this.imageUrl,
     this.isAvailable = true,
@@ -48,6 +52,10 @@ class Product {
           [],
       name: json['name'] as String,
       description: json['description'] as String?,
+      emoji: json['emoji'] as String?,
+      variants: (json['variants'] as List<dynamic>?)
+          ?.map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+          .toList(),
       price: (json['price'] as num).toDouble(),
       imageUrl: json['image_url'] as String?,
       isAvailable: json['is_available'] as bool? ?? true,
@@ -65,6 +73,9 @@ class Product {
         if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
         'name': name,
         'description': description,
+        if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
+        if (variants != null && variants!.isNotEmpty) 
+          'variants': variants!.map((v) => v.toJson()).toList(),
         'price': price,
         'image_url': imageUrl,
         'is_available': isAvailable,
@@ -79,6 +90,9 @@ class Product {
         if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
         'name': name,
         'description': description,
+        if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
+        if (variants != null && variants!.isNotEmpty) 
+          'variants': variants!.map((v) => v.toJson()).toList(),
         'price': price,
         'image_url': imageUrl,
         'is_available': isAvailable,
@@ -98,6 +112,8 @@ class Product {
     List<String>? categoryIds,
     String? name,
     String? description,
+    String? emoji,
+    List<ProductVariant>? variants,
     double? price,
     String? imageUrl,
     bool? isAvailable,
@@ -112,6 +128,8 @@ class Product {
       categoryIds: categoryIds ?? this.categoryIds,
       name: name ?? this.name,
       description: description ?? this.description,
+      emoji: emoji ?? this.emoji,
+      variants: variants ?? this.variants,
       price: price ?? this.price,
       imageUrl: imageUrl ?? this.imageUrl,
       isAvailable: isAvailable ?? this.isAvailable,
@@ -131,4 +149,27 @@ class Product {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+/// Represents a product variant (e.g. grammage, size)
+class ProductVariant {
+  final String name;
+  final double price;
+
+  const ProductVariant({
+    required this.name,
+    required this.price,
+  });
+
+  factory ProductVariant.fromJson(Map<String, dynamic> json) {
+    return ProductVariant(
+      name: json['name'] as String,
+      price: (json['price'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'price': price,
+  };
 }
