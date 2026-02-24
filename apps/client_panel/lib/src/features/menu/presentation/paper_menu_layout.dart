@@ -866,39 +866,49 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 //     Dinamik Köprü: Noktalar (Expanded → her pikseli doldurur)
                 //     Sağ Anchor: Fiyat (intrinsic width → sağ duvara kilitli)
                 // ─────────────────────────────────────────────────────────────
+                // DIŞ SATIR: Fiyatı kesin olarak sağa iter
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // ── SOL BLOK: İsim + Köprü (tüm boşluğu kaplar) ──
+                    // SOL BLOK: İsim ve Noktalar (Tüm alanı kaplar)
                     Expanded(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          // EMOJİ
+                          // EMOJİ (Varsa)
                           if (hasEmoji) ...[
                             SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
                             const SizedBox(width: 6),
                           ],
                           
-                          // SOL ANCHOR: Ürün İsmi
+                          // İSİM
                           Flexible(
                             child: Text(product.name, style: nameStyle),
                           ),
                           
-                          // DİNAMİK BOŞLUK (Noktalar tamamen kaldırıldı, sadece fiyatı sağa iten şeffaf boşluk)
+                          // NOKTALAR
                           if (!hasVariants) ...[
-                            const Spacer(),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: SizedBox(
+                                  height: 10,
+                                  child: CustomPaint(
+                                    painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                           ],
                         ],
                       ),
                     ),
                     
-                    // SAĞ ANCHOR: Kendi doğal genişliğinde (Sıfır ekstra kutu/genişlik!)
+                    // SAĞ BLOK: Fiyat
                     if (!hasVariants)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
-                      ),
+                      Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
                   ],
                 ),
 
@@ -923,37 +933,39 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       children: product.variants!.map((variant) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 6.0),
-                          // KESİNTİSİZ KÖPRÜ (Fluid Bridge) – Varyant Satırı
+                          // VARYANT DIŞ SATIRI
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              // Emoji hizalama ofseti
                               if (hasEmoji) const SizedBox(width: 32),
                               
-                              // SOL BLOK: Varyant İsmi + Köprü
+                              // VARYANT SOL BLOK
                               Expanded(
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    // SOL ANCHOR: Varyant İsmi
                                     Flexible(
-                                      child: Text(
-                                        variant.name, 
-                                        style: variantNameStyle,
+                                      child: Text(variant.name, style: variantNameStyle),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(bottom: 6),
+                                        child: SizedBox(
+                                          height: 10,
+                                          child: CustomPaint(
+                                            painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    
-                                    // DİNAMİK BOŞLUK
-                                    const Spacer(),
+                                    const SizedBox(width: 8),
                                   ],
                                 ),
                               ),
                               
-                              // SAĞ ANCHOR: Kendi doğal genişliğinde Varyant Fiyatı
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
-                              ),
+                              // VARYANT SAĞ BLOK (Fiyat)
+                              Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
                             ],
                           ),
                         );
@@ -1018,5 +1030,26 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ),
     );
   }
+}
+
+class _WebSafeDotPainter extends CustomPainter {
+  final Color color;
+  _WebSafeDotPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    double currentX = size.width; // Fiyatın yanından (sağdan) başla
+    while (currentX > 0) {
+      canvas.drawCircle(Offset(currentX, size.height / 2), 1.5, paint);
+      currentX -= 6.0; // Noktalar arası boşluk
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WebSafeDotPainter oldDelegate) => oldDelegate.color != color;
 }
 
