@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -842,17 +843,16 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                     if (product.variants == null || product.variants!.isEmpty) ...[
                       const SizedBox(width: 8),
                       
-                      // DİNAMİK NOKTA (Kalan TÜM boşluğu doldurup fiyatı EN SAĞA kilitler)
+                      // DİNAMİK NOKTA (Kalan alanı doldurur, fiyatı en sağa kilitler)
                       if (_appearance.pmShowDottedLine)
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              '.' * 1000,
-                              maxLines: 1,
-                              softWrap: false, // Noktaların asla alt satıra geçmesini engeller
-                              overflow: TextOverflow.clip,
-                              style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: SizedBox(
+                              height: 10,
+                              child: CustomPaint(
+                                painter: _MenuDottedLinePainter(color: _appearance.pmDottedLineColor),
+                              ),
                             ),
                           ),
                         )
@@ -906,13 +906,12 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                 if (_appearance.pmShowDottedLine)
                                   Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: Text(
-                                        '.' * 1000,
-                                        maxLines: 1,
-                                        softWrap: false, // Kesinlikle tek satır kalsın
-                                        overflow: TextOverflow.clip,
-                                        style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: SizedBox(
+                                        height: 10,
+                                        child: CustomPaint(
+                                          painter: _MenuDottedLinePainter(color: _appearance.pmDottedLineColor),
+                                        ),
                                       ),
                                     ),
                                   )
@@ -987,4 +986,29 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ),
     );
   }
+}
+
+class _MenuDottedLinePainter extends CustomPainter {
+  final Color color;
+  _MenuDottedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    const spacing = 5.0; // Noktalar arası boşluk
+    double startX = 0;
+
+    while (startX < size.width) {
+      // Noktaları piksel piksel çiz (fiyatı asla ittirmez)
+      canvas.drawPoints(PointMode.points, [Offset(startX, size.height / 2)], paint);
+      startX += spacing;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MenuDottedLinePainter oldDelegate) => oldDelegate.color != color;
 }
