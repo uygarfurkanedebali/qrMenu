@@ -822,20 +822,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     final bool hasEmoji = product.emoji != null && product.emoji!.isNotEmpty;
     final bool hasVariants = product.variants != null && product.variants!.isNotEmpty;
 
-    // ── Ayırıcı Çizgi Oluşturucu (DRY – tekrar kullanılır) ──
-    Widget buildSeparatorLine() {
-      if (_appearance.pmShowDottedLine) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 7, left: 8, right: 8),
-            height: _appearance.pmLineThickness,
-            color: _appearance.pmDottedLineColor,
-          ),
-        );
-      }
-      return const Expanded(child: SizedBox.shrink());
-    }
-
     // ═══════════════════════════════════════════════════════════════════════════
     // 1. EN DIŞ KAPSAYICI – Sabit padding ile satırı ekran sınırlarından uzak tut
     // ═══════════════════════════════════════════════════════════════════════════
@@ -898,17 +884,23 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       child: Text(product.name, style: nameStyle),
                     ),
 
-                    // ── Varyant YOKSA → Çizgi + Fiyat ──
+                    // ── Varyant YOKSA → Spacer + Fiyat ──
                     if (!hasVariants) ...[
-                      // ORTA ELEMAN: Expanded çizgi – aradaki TÜM boşluğu doldurur
-                      buildSeparatorLine(),
+                      // ARADAKİ TÜM BOŞLUĞU İTEN GÖRÜNMEZ GÜÇ (Çizgi yok)
+                      const Spacer(),
 
-                      // SAĞ ELEMAN: Fiyat – DOĞAL genişlik, sabit width YOK
-                      // Expanded çizgi onu acımasızca sağ duvara iterek hizalar
-                      Text(
-                        '${product.price} ${tenant.currencySymbol}',
-                        style: priceStyle,
-                        textAlign: TextAlign.right,
+                      const SizedBox(width: 8),
+
+                      // EN SAĞA DAYALI, TEST İÇİN KIRMIZI ARKA PLANLI FİYAT
+                      Container(
+                        width: 85, // Tüm fiyatların aynı hizada başlaması için
+                        alignment: Alignment.centerRight, // Metni sağa yasla
+                        color: Colors.red.withOpacity(0.3), // TEST İÇİN GEÇİCİ RENK
+                        child: Text(
+                          '${product.price} ${tenant.currencySymbol}',
+                          style: priceStyle,
+                          textAlign: TextAlign.right,
+                        ),
                       ),
                     ],
                   ],
@@ -947,14 +939,21 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                     style: variantNameStyle),
                               ),
 
-                              // ORTA: Çizgi
-                              buildSeparatorLine(),
+                              // ORTA: Spacer
+                              const Spacer(),
 
-                              // SAĞ: Fiyat (doğal genişlik)
-                              Text(
-                                '${variant.price} ${tenant.currencySymbol}',
-                                style: variantPriceStyle,
-                                textAlign: TextAlign.right,
+                              const SizedBox(width: 8),
+
+                              // SAĞ: Varyant Fiyatı (Kırmızı Test Kutusu)
+                              Container(
+                                width: 85,
+                                alignment: Alignment.centerRight,
+                                color: Colors.red.withOpacity(0.3), // TEST İÇİN GEÇİCİ RENK
+                                child: Text(
+                                  '${variant.price} ${tenant.currencySymbol}',
+                                  style: variantPriceStyle,
+                                  textAlign: TextAlign.right,
+                                ),
                               ),
                             ],
                           ),
