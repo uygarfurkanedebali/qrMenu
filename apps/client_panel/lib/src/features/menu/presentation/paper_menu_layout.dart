@@ -1,4 +1,4 @@
-// dart:ui artık gerekli değil (CustomPainter kaldırıldı)
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -887,25 +887,25 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                             child: Text(product.name, style: nameStyle),
                           ),
                           
-                          // NOKTALAR (İsimden arta kalan alanı kaplar)
-                          if (!hasVariants) ...[
-                            const SizedBox(width: 8),
-                            if (_appearance.pmShowDottedLine)
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 5),
-                                  child: Text(
-                                    '.' * 1000,
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    overflow: TextOverflow.clip,
-                                    style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
+                            // NOKTALAR (İsimden arta kalan alanı kaplar)
+                            if (!hasVariants) ...[
+                              const SizedBox(width: 8),
+                              // DİNAMİK NOKTALAR (Layout'u bozmaz, sadece boşluğu boyar)
+                              if (_appearance.pmShowDottedLine)
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: SizedBox(
+                                      height: 10,
+                                      child: CustomPaint(
+                                        painter: _PerfectDotPainter(color: _appearance.pmDottedLineColor),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              )
-                            else
-                              const Spacer(),
-                          ],
+                                )
+                              else
+                                const Spacer(),
+                            ],
                         ],
                       ),
                     ),
@@ -962,13 +962,16 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                     const SizedBox(width: 8),
                                     
                                     // NOKTALAR
+                                    // DİNAMİK NOKTALAR (Layout'u bozmaz, sadece boşluğu boyar)
                                     if (_appearance.pmShowDottedLine)
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(bottom: 5),
-                                          child: Text(
-                                            '.' * 1000, maxLines: 1, softWrap: false, overflow: TextOverflow.clip,
-                                            style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
+                                          padding: const EdgeInsets.only(bottom: 6),
+                                          child: SizedBox(
+                                            height: 10,
+                                            child: CustomPaint(
+                                              painter: _PerfectDotPainter(color: _appearance.pmDottedLineColor),
+                                            ),
                                           ),
                                         ),
                                       )
@@ -1045,4 +1048,29 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ),
     );
   }
+  }
+}
+
+class _PerfectDotPainter extends CustomPainter {
+  final Color color;
+  _PerfectDotPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    // ÇİZİME SAĞDAN (FİYATIN DİBİNDEN) BAŞLA
+    double currentX = size.width;
+    
+    while (currentX > 0) {
+      canvas.drawPoints(PointMode.points, [Offset(currentX, size.height / 2)], paint);
+      currentX -= 6.0; // Noktalar arası boşluk
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PerfectDotPainter oldDelegate) => oldDelegate.color != color;
 }
