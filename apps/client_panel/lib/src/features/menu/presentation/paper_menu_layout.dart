@@ -885,13 +885,14 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                             child: Text(product.name, style: nameStyle),
                           ),
                           
-                            // DİNAMİK KÖPRÜ (150 Nokta + Duvarı Geçeni Kes)
+                          // DİNAMİK KÖPRÜ (1000 Nokta + Duvarı Geçeni Kes)
+                          if (!hasVariants) ...[
                             if (_appearance.pmShowDottedLine)
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4),
                                   child: Text(
-                                    ' .' * 150, // Aralıklı 150 adet nokta üretir
+                                    ' .' * 1000, // Aralıklı 1000 adet nokta üretir
                                     maxLines: 1,
                                     softWrap: false, // Asla alt satıra geçmesin
                                     overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
@@ -904,14 +905,15 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                               )
                             else
                               const Spacer(),
+                          ],
                         ],
                       ),
                     ),
                     
-                    // SAĞ ANCHOR: Fiyat (Expanded sol blok sayesinde %100 sağa kilitli)
+                    // SAĞ ANCHOR: Kendi doğal genişliğinde (Sıfır ekstra kutu/genişlik!)
                     if (!hasVariants)
                       Padding(
-                        padding: const EdgeInsets.only(left: 4),
+                        padding: const EdgeInsets.only(left: 6),
                         child: Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
                       ),
                   ],
@@ -958,13 +960,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                       ),
                                     ),
                                     
-                                    // DİNAMİK KÖPRÜ (150 Nokta + Duvarı Geçeni Kes)
+                                    // DİNAMİK KÖPRÜ (1000 Nokta + Duvarı Geçeni Kes)
                                     if (_appearance.pmShowDottedLine)
                                       Expanded(
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 4),
                                           child: Text(
-                                            ' .' * 150, // Aralıklı 150 adet nokta üretir
+                                            ' .' * 1000, // Aralıklı 1000 adet nokta üretir
                                             maxLines: 1,
                                             softWrap: false, // Asla alt satıra geçmesin
                                             overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
@@ -981,9 +983,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                 ),
                               ),
                               
-                              // SAĞ ANCHOR: Varyant Fiyatı
+                              // SAĞ ANCHOR: Kendi doğal genişliğinde Varyant Fiyatı
                               Padding(
-                                padding: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.only(left: 6),
                                 child: Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
                               ),
                             ],
