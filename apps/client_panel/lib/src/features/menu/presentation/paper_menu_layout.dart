@@ -885,26 +885,9 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                             child: Text(product.name, style: nameStyle),
                           ),
                           
-                          // DİNAMİK KÖPRÜ (1000 Nokta + Duvarı Geçeni Kes)
+                          // DİNAMİK BOŞLUK (Noktalar tamamen kaldırıldı, sadece fiyatı sağa iten şeffaf boşluk)
                           if (!hasVariants) ...[
-                            if (_appearance.pmShowDottedLine)
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                                  child: Text(
-                                    ' .' * 1000, // Aralıklı 1000 adet nokta üretir
-                                    maxLines: 1,
-                                    softWrap: false, // Asla alt satıra geçmesin
-                                    overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
-                                    style: TextStyle(
-                                      color: _appearance.pmDottedLineColor,
-                                      letterSpacing: 2.0,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              const Spacer(),
+                            const Spacer(),
                           ],
                         ],
                       ),
@@ -960,25 +943,8 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                       ),
                                     ),
                                     
-                                    // DİNAMİK KÖPRÜ (1000 Nokta + Duvarı Geçeni Kes)
-                                    if (_appearance.pmShowDottedLine)
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            ' .' * 1000, // Aralıklı 1000 adet nokta üretir
-                                            maxLines: 1,
-                                            softWrap: false, // Asla alt satıra geçmesin
-                                            overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
-                                            style: TextStyle(
-                                              color: _appearance.pmDottedLineColor,
-                                              letterSpacing: 2.0,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      const Spacer(),
+                                    // DİNAMİK BOŞLUK
+                                    const Spacer(),
                                   ],
                                 ),
                               ),
