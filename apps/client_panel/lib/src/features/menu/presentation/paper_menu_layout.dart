@@ -1048,7 +1048,6 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ),
     );
   }
-  }
 }
 
 class _PerfectDotPainter extends CustomPainter {
