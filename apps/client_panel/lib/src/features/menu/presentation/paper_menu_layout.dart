@@ -869,53 +869,38 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // ── SOL BLOK: İsim + Köprü (tüm boşluğu kaplar) ──
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // EMOJİ
-                          if (hasEmoji) ...[
-                            SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
-                            const SizedBox(width: 6),
-                          ],
-                          
-                          // SOL ANCHOR: Ürün İsmi
-                          Flexible(
-                            child: Text(product.name, style: nameStyle),
-                          ),
-                          
-                          // DİNAMİK KÖPRÜ (1000 Nokta + Duvarı Geçeni Kes)
-                          if (!hasVariants) ...[
-                            if (_appearance.pmShowDottedLine)
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                                  child: Text(
-                                    ' .' * 1000, // Aralıklı 1000 adet nokta üretir
-                                    maxLines: 1,
-                                    softWrap: false, // Asla alt satıra geçmesin
-                                    overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
-                                    style: TextStyle(
-                                      color: _appearance.pmDottedLineColor,
-                                      letterSpacing: 2.0,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              const Spacer(),
-                          ],
-                        ],
-                      ),
+                    // 1. EMOJİ (Opsiyonel)
+                    if (hasEmoji) ...[
+                      SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
+                      const SizedBox(width: 6),
+                    ],
+                    
+                    // 2. SOL ANCHOR: Ürün İsmi (Sadece kendi uzunluğu kadar yer kaplar)
+                    Flexible(
+                      child: Text(product.name, style: nameStyle),
                     ),
                     
-                    // SAĞ ANCHOR: Kendi doğal genişliğinde (Sıfır ekstra kutu/genişlik!)
-                    if (!hasVariants)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
-                      ),
+                    // 3. DİNAMİK KÖPRÜ (Açgözlü Expanded - Aradaki boşluğu sömürür)
+                    if (!hasVariants) ...[
+                      if (_appearance.pmShowDottedLine)
+                        Expanded(
+                          child: Text(
+                            ' .' * 1000,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.clip,
+                            style: TextStyle(
+                              color: _appearance.pmDottedLineColor,
+                              letterSpacing: 2.0,
+                            ),
+                          ),
+                        )
+                      else
+                        const Spacer(),
+                        
+                      // 4. SAĞ ANCHOR: Fiyat (Kendi doğal genişliği ve en sağa itilir)
+                      Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
+                    ],
                   ],
                 ),
 
@@ -940,54 +925,40 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       children: product.variants!.map((variant) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 6.0),
-                          // KESİNTİSİZ KÖPRÜ (Fluid Bridge) – Varyant Satırı
+                          // FLAT FLEX MİMARİSİ – Varyant Satırı
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              // Emoji hizalama ofseti
+                              // 1. EMOJİ HİZALAMA OFSETİ
                               if (hasEmoji) const SizedBox(width: 32),
                               
-                              // SOL BLOK: Varyant İsmi + Köprü
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    // SOL ANCHOR: Varyant İsmi
-                                    Flexible(
-                                      child: Text(
-                                        variant.name, 
-                                        style: variantNameStyle,
-                                      ),
-                                    ),
-                                    
-                                    // DİNAMİK KÖPRÜ (1000 Nokta + Duvarı Geçeni Kes)
-                                    if (_appearance.pmShowDottedLine)
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            ' .' * 1000, // Aralıklı 1000 adet nokta üretir
-                                            maxLines: 1,
-                                            softWrap: false, // Asla alt satıra geçmesin
-                                            overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
-                                            style: TextStyle(
-                                              color: _appearance.pmDottedLineColor,
-                                              letterSpacing: 2.0,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      const Spacer(),
-                                  ],
+                              // 2. SOL ANCHOR: Varyant İsmi
+                              Flexible(
+                                child: Text(
+                                  variant.name, 
+                                  style: variantNameStyle,
                                 ),
                               ),
                               
-                              // SAĞ ANCHOR: Kendi doğal genişliğinde Varyant Fiyatı
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
-                              ),
+                              // 3. DİNAMİK KÖPRÜ
+                              if (_appearance.pmShowDottedLine)
+                                Expanded(
+                                  child: Text(
+                                    ' .' * 1000,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.clip,
+                                    style: TextStyle(
+                                      color: _appearance.pmDottedLineColor,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                                )
+                              else
+                                const Spacer(),
+                                
+                              // 4. SAĞ ANCHOR: Kendi doğal genişliğinde Varyant Fiyatı
+                              Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
                             ],
                           ),
                         );
