@@ -32,6 +32,7 @@ class _AppearanceSettingsScreenState
   bool _showProductImages = true;
   Color _categoryTitleColor = const Color(0xFF000000);
   Color _categoryAccentColor = const Color(0xFF2196F3);
+  Color _categoryInactiveTextColor = const Color(0x73000000);
   Color _productTitleColor = const Color(0xDD000000);
   Color _variantTextColor = const Color(0x8A000000);
   Color _productPriceColor = const Color(0xDD000000);
@@ -78,6 +79,7 @@ class _AppearanceSettingsScreenState
     _showProductImages = dc['show_product_images'] as bool? ?? true;
     _categoryTitleColor = _parseHex(dc['category_title_color'] as String?, const Color(0xFF000000));
     _categoryAccentColor = _parseHex(dc['category_accent_color'] as String?, _parseHex(dc['global_accent_color'] as String? ?? dc['accent_color'] as String?, const Color(0xFF2196F3)));
+    _categoryInactiveTextColor = _parseHex(dc['category_inactive_text_color'] as String?, const Color(0x73000000));
     _productTitleColor = _parseHex(dc['product_title_color'] as String? ?? dc['product_text_color'] as String?, const Color(0xDD000000));
     _variantTextColor = _parseHex(dc['variant_text_color'] as String?, _parseHex(dc['product_desc_color'] as String?, const Color(0x8A000000)));
     _productPriceColor = _parseHex(dc['product_price_color'] as String?, const Color(0xDD000000));
@@ -112,6 +114,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['show_product_images'] = _showProductImages;
       currentDesignConfig['category_title_color'] = _colorToHex(_categoryTitleColor);
       currentDesignConfig['category_accent_color'] = _colorToHex(_categoryAccentColor);
+      currentDesignConfig['category_inactive_text_color'] = _colorToHex(_categoryInactiveTextColor);
       currentDesignConfig['product_title_color'] = _colorToHex(_productTitleColor);
       currentDesignConfig['variant_text_color'] = _colorToHex(_variantTextColor);
       currentDesignConfig['product_price_color'] = _colorToHex(_productPriceColor);
@@ -493,6 +496,8 @@ class _AppearanceSettingsScreenState
                     _buildColorTile('Kategori Başlık Rengi', _categoryTitleColor, (c) => _categoryTitleColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Kategori Vurgu Rengi', _categoryAccentColor, (c) => _categoryAccentColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    _buildColorTile('Pasif Kategori Metin Rengi', _categoryInactiveTextColor, (c) => _categoryInactiveTextColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Kategori Ayırıcı Rengi', _categoryDividerColor, (c) => _categoryDividerColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
