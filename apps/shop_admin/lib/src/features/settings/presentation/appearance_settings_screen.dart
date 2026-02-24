@@ -41,6 +41,7 @@ class _AppearanceSettingsScreenState
   Color _categoryDividerColor = const Color(0x73000000);
   String _categoryDividerType = 'star';
   double _categoryDividerLength = 160.0;
+  double _pmLineThickness = 1.0;
 
   String _colorToHex(Color c) {
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
@@ -88,6 +89,7 @@ class _AppearanceSettingsScreenState
     _categoryDividerColor = _parseHex(dc['category_divider_color'] as String?, const Color(0x73000000));
     _categoryDividerType = dc['category_divider_type'] as String? ?? 'star';
     _categoryDividerLength = (dc['category_divider_length'] as num?)?.toDouble() ?? 160.0;
+    _pmLineThickness = (dc['pm_line_thickness'] as num?)?.toDouble() ?? 1.0;
   }
 
   Future<void> _save() async {
@@ -123,6 +125,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['category_divider_color'] = _colorToHex(_categoryDividerColor);
       currentDesignConfig['category_divider_type'] = _categoryDividerType;
       currentDesignConfig['category_divider_length'] = _categoryDividerLength;
+      currentDesignConfig['pm_line_thickness'] = _pmLineThickness;
 
       await saveSettings(
         ref: ref,
@@ -509,7 +512,52 @@ class _AppearanceSettingsScreenState
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     _buildColorTile('Ürün Açıklama Rengi', _productDescColor, (c) => _productDescColor = c),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
-                    _buildColorTile('Noktalı Çizgi Rengi (Ürün Arası)', _pmDottedLineColor, (c) => _pmDottedLineColor = c),
+                    _buildColorTile('Ürün Ara Çizgi Rengi', _pmDottedLineColor, (c) => _pmDottedLineColor = c),
+                    Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Ürün Ara Çizgi Kalınlığı (px)',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Slider(
+                                  value: _pmLineThickness,
+                                  min: 0.5,
+                                  max: 5.0,
+                                  divisions: 45, // 0.1 adımlar
+                                  activeColor: Colors.black,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _pmLineThickness = val;
+                                    });
+                                  },
+                                ),
+                              ),
+                              SizedBox(
+                                width: 40,
+                                child: Text(
+                                  '${_pmLineThickness.toStringAsFixed(1)}px',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                     Divider(height: 1, color: Colors.grey.shade100, indent: 16),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

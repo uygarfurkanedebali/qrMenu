@@ -33,6 +33,7 @@ class PaperMenuAppearance {
   final double pmNoiseOpacity;
   final Color pmDottedLineColor;
   final bool pmShowDottedLine;
+  final double pmLineThickness;
 
   PaperMenuAppearance(Map<String, dynamic> dc)
     : globalBgColor = _parseHex(
@@ -89,7 +90,8 @@ class PaperMenuAppearance {
         dc['pm_dotted_line_color'],
         const Color(0x42000000),
       ), // Colors.black26
-      pmShowDottedLine = dc['pm_show_dotted_line'] as bool? ?? true;
+      pmShowDottedLine = dc['pm_show_dotted_line'] as bool? ?? true,
+      pmLineThickness = (dc['pm_line_thickness'] as num?)?.toDouble() ?? 1.0;
 
   static Color _parseHex(dynamic hexStr, Color fallback) {
     if (hexStr is! String || hexStr.isEmpty) return fallback;
@@ -843,16 +845,14 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                     if (product.variants == null || product.variants!.isEmpty) ...[
                       const SizedBox(width: 8),
                       
-                      // DİNAMİK NOKTA (Kalan alanı doldurur, fiyatı en sağa kilitler)
+                      // DİNAMİK DÜZ ÇİZGİ (Kalan tüm alanı 100% doldurur, fiyatı sağa kilitler)
                       if (_appearance.pmShowDottedLine)
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: SizedBox(
-                              height: 10,
-                              child: CustomPaint(
-                                painter: _MenuDottedLinePainter(color: _appearance.pmDottedLineColor),
-                              ),
+                            padding: const EdgeInsets.only(bottom: 7, left: 8, right: 8), // Metin alt çizgisine (baseline) hizalama ve nefes boşluğu
+                            child: Container(
+                              height: _appearance.pmLineThickness, // DİNAMİK KALINLIK
+                              color: _appearance.pmDottedLineColor, // DİNAMİK RENK
                             ),
                           ),
                         )
@@ -908,16 +908,14 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                 
                                 const SizedBox(width: 8),
                                 
-                                // DİNAMİK NOKTA (Kalan alanı doldurur, fiyatı en sağa iter)
+                                // DİNAMİK DÜZ ÇİZGİ
                                 if (_appearance.pmShowDottedLine)
                                   Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.only(bottom: 6),
-                                      child: SizedBox(
-                                        height: 10,
-                                        child: CustomPaint(
-                                          painter: _MenuDottedLinePainter(color: _appearance.pmDottedLineColor),
-                                        ),
+                                      padding: const EdgeInsets.only(bottom: 7, left: 8, right: 8),
+                                      child: Container(
+                                        height: _appearance.pmLineThickness,
+                                        color: _appearance.pmDottedLineColor,
                                       ),
                                     ),
                                   )
@@ -998,29 +996,4 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       ),
     );
   }
-}
-
-class _MenuDottedLinePainter extends CustomPainter {
-  final Color color;
-  _MenuDottedLinePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
-    const spacing = 6.0; // Biraz daha ferah bir nokta aralığı
-    // DİKKAT: Çizime soldan değil, SAĞDAN (fiyatın hemen dibinden) başlıyoruz!
-    double startX = size.width;
-
-    while (startX > 0) {
-      canvas.drawPoints(PointMode.points, [Offset(startX, size.height / 2)], paint);
-      startX -= spacing;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MenuDottedLinePainter oldDelegate) => oldDelegate.color != color;
 }
