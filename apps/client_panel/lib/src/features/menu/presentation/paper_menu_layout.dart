@@ -857,12 +857,18 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                           ),
                         )
                       else
-                        const Spacer(), // Nokta kapalıysa bile fiyatı sağa it
+                        const Spacer(),
                         
-                      const SizedBox(width: 8),
-                      
-                      // EN SAĞA DAYALI FİYAT
-                      Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
+                      // EN SAĞA DAYALI, SABİT GENİŞLİKLİ FİYAT KUTUSU
+                      Container(
+                        width: 85, // Tüm fiyatların alt alta jilet gibi hizalanmasını sağlar
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${product.price} ${tenant.currencySymbol}', 
+                          style: priceStyle,
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -918,10 +924,16 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                 else
                                   const Spacer(),
                                   
-                                const SizedBox(width: 8),
-                                
-                                // EN SAĞA DAYALI VARYANT FİYATI
-                                Text('${variant.price} ${tenant.currencySymbol}', style: priceStyle.copyWith(fontSize: 15)),
+                                // EN SAĞA DAYALI VARYANT FİYATI KUTUSU
+                                Container(
+                                  width: 85,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    '${variant.price} ${tenant.currencySymbol}', 
+                                    style: priceStyle.copyWith(fontSize: 15),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -999,13 +1011,13 @@ class _MenuDottedLinePainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
-    const spacing = 5.0; // Noktalar arası boşluk
-    double startX = 0;
+    const spacing = 6.0; // Biraz daha ferah bir nokta aralığı
+    // DİKKAT: Çizime soldan değil, SAĞDAN (fiyatın hemen dibinden) başlıyoruz!
+    double startX = size.width;
 
-    while (startX < size.width) {
-      // Noktaları piksel piksel çiz (fiyatı asla ittirmez)
+    while (startX > 0) {
       canvas.drawPoints(PointMode.points, [Offset(startX, size.height / 2)], paint);
-      startX += spacing;
+      startX -= spacing;
     }
   }
 
