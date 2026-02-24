@@ -1055,14 +1055,14 @@ class _PerfectDotPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
+      ..style = PaintingStyle.fill; // Noktaların içinin dolu ve net olmasını sağlar
 
-    // ÇİZİME SAĞDAN (FİYATIN DİBİNDEN) BAŞLA
+    // Fiyatın olduğu sağ duvardan (size.width) isme doğru (0) çiz
     double currentX = size.width;
-    
+
     while (currentX > 0) {
-      canvas.drawPoints(PointMode.points, [Offset(currentX, size.height / 2)], paint);
+      // PointMode.points yerine garantili olan drawCircle kullanıyoruz (Yarıçap: 1.5)
+      canvas.drawCircle(Offset(currentX, size.height / 2), 1.5, paint);
       currentX -= 6.0; // Noktalar arası boşluk
     }
   }
