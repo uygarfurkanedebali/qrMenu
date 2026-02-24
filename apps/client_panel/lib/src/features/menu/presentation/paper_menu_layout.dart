@@ -862,16 +862,15 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // ─────────────────────────────────────────────────────────────
-                // 2a. ANA ÜRÜN İSMİ + (Çizgi + Fiyat – sadece varyant yoksa)
+                // 2a. KESİNTİSİZ KÖPRÜ (Fluid Bridge) MİMARİSİ
+                //     Sol Anchor: İsim (Flexible → intrinsic width)
+                //     Dinamik Köprü: Noktalar (Expanded → her pikseli doldurur)
+                //     Sağ Anchor: Fiyat (intrinsic width → sağ duvara kilitli)
                 // ─────────────────────────────────────────────────────────────
-                // ─────────────────────────────────────────────────────────────
-                // 2a. ANA ÜRÜN İSMİ + (Çizgi + Fiyat – sadece varyant yoksa)
-                // ─────────────────────────────────────────────────────────────
-                // DIŞ SATIR: İsim/Nokta grubunu dev bir alana yayar, Fiyatı sağa kilitler
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // 1. SOL BLOK (İsim + Noktalar -> Tüm boşluğu kaplar)
+                    // ── SOL BLOK: İsim + Köprü (tüm boşluğu kaplar) ──
                     Expanded(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -879,42 +878,41 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                           // EMOJİ
                           if (hasEmoji) ...[
                             SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
-                            const SizedBox(width: 6), // Toplam: 32 px
+                            const SizedBox(width: 6),
                           ],
                           
-                          // ÜRÜN İSMİ (Kendi sınırlarını bilir, uzunsa alt satıra geçer)
+                          // SOL ANCHOR: Ürün İsmi
                           Flexible(
                             child: Text(product.name, style: nameStyle),
                           ),
                           
-                            // NOKTALAR (İsimden arta kalan alanı kaplar)
-                            if (!hasVariants) ...[
-                              const SizedBox(width: 8),
-                              // DİNAMİK NOKTALAR (Layout'u bozmaz, sadece boşluğu boyar)
-                              if (_appearance.pmShowDottedLine)
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: SizedBox(
-                                      height: 10,
-                                      child: CustomPaint(
-                                        painter: _PerfectDotPainter(color: _appearance.pmDottedLineColor),
-                                      ),
+                          // DİNAMİK KÖPRÜ: İsmin son pikselinden fiyatın ilk pikseline
+                          if (!hasVariants) ...[
+                            if (_appearance.pmShowDottedLine)
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: SizedBox(
+                                    height: 10,
+                                    child: CustomPaint(
+                                      painter: _PerfectDotPainter(color: _appearance.pmDottedLineColor),
                                     ),
                                   ),
-                                )
-                              else
-                                const Spacer(),
-                            ],
+                                ),
+                              )
+                            else
+                              const Spacer(),
+                          ],
                         ],
                       ),
                     ),
                     
-                    // 2. SAĞ BLOK (Fiyat -> Yukarıdaki Expanded sayesinde %100 sağa yaslanır)
-                    if (!hasVariants) ...[
-                      const SizedBox(width: 8),
-                      Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
-                    ],
+                    // SAĞ ANCHOR: Fiyat (Expanded sol blok sayesinde %100 sağa kilitli)
+                    if (!hasVariants)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
+                      ),
                   ],
                 ),
 
@@ -939,19 +937,19 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       children: product.variants!.map((variant) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 6.0),
-                          // DIŞ SATIR (Varyant)
+                          // KESİNTİSİZ KÖPRÜ (Fluid Bridge) – Varyant Satırı
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              // Emoji hizalama ofseti (varsa 32px, yoksa 0)
+                              // Emoji hizalama ofseti
                               if (hasEmoji) const SizedBox(width: 32),
                               
-                              // 1. SOL BLOK (Varyant İsmi + Noktalar)
+                              // SOL BLOK: Varyant İsmi + Köprü
                               Expanded(
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    // VARYANT İSMİ
+                                    // SOL ANCHOR: Varyant İsmi
                                     Flexible(
                                       child: Text(
                                         variant.name, 
@@ -959,14 +957,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                       ),
                                     ),
                                     
-                                    const SizedBox(width: 8),
-                                    
-                                    // NOKTALAR
-                                    // DİNAMİK NOKTALAR (Layout'u bozmaz, sadece boşluğu boyar)
+                                    // DİNAMİK KÖPRÜ
                                     if (_appearance.pmShowDottedLine)
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(bottom: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 4),
                                           child: SizedBox(
                                             height: 10,
                                             child: CustomPaint(
@@ -981,9 +976,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                 ),
                               ),
                               
-                              // 2. SAĞ BLOK (Varyant Fiyatı -> Kesin sağa yaslı)
-                              const SizedBox(width: 8),
-                              Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
+                              // SAĞ ANCHOR: Varyant Fiyatı
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
+                              ),
                             ],
                           ),
                         );
