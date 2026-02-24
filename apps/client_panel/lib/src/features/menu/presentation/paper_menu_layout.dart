@@ -1,4 +1,4 @@
-import 'dart:ui';
+// dart:ui artık gerekli değil (CustomPainter kaldırıldı)
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -775,7 +775,26 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     );
   }
 
+  /// ────────────────────────────────────────────────────────────────────────────
+  /// ÜRÜN SATIRI – SAF FLEX MİMARİSİ
+  /// ────────────────────────────────────────────────────────────────────────────
+  ///
+  /// Hiyerarşi:
+  ///  Padding (dış kenar boşluğu – satır ekrana çarpmaz)
+  ///   └─ Row (Ana Satır)
+  ///        ├─ [Opsiyonel] Ürün Görseli (sabit 72×72)
+  ///        └─ Expanded (Metin bloğu – görselden arta kalan TÜM alanı kaplar)
+  ///              └─ Column (crossAxisAlignment: stretch)
+  ///                    ├─ Row (İsim + Çizgi + Fiyat)
+  ///                    │     ├─ [Opsiyonel] Emoji  (sabit 26px + 6px boşluk = 32px)
+  ///                    │     ├─ Flexible (İsim – sadece ihtiyaç duyduğu kadar alan alır)
+  ///                    │     ├─ Expanded (Çizgi – kalan TÜMÜNÜ doldurur, fiyatı duvara iter)
+  ///                    │     └─ Text (Fiyat – doğal/intrinsic genişlik, asla sabit width yok)
+  ///                    ├─ [Opsiyonel] Açıklama
+  ///                    └─ [Opsiyonel] Varyant Listesi (her biri aynı 3'lü Row kalıbı)
+  /// ────────────────────────────────────────────────────────────────────────────
   Widget _buildProductRow(MenuProduct product, Tenant tenant) {
+    // ── Stil Tanımları ──
     final nameStyle = GoogleFonts.lora(
       fontSize: 17,
       fontWeight: FontWeight.w700,
@@ -792,13 +811,40 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
       color: _appearance.productDescColor,
       height: 1.3,
     );
+    final variantNameStyle = GoogleFonts.lora(
+      fontSize: 15,
+      color: _appearance.variantTextColor,
+      fontStyle: FontStyle.italic,
+    );
+    final variantPriceStyle = priceStyle.copyWith(fontSize: 15);
 
+    // Emoji olup olmadığını bir kere hesapla (tekrar tekrar kontrol etmeye gerek yok)
+    final bool hasEmoji = product.emoji != null && product.emoji!.isNotEmpty;
+    final bool hasVariants = product.variants != null && product.variants!.isNotEmpty;
+
+    // ── Ayırıcı Çizgi Oluşturucu (DRY – tekrar kullanılır) ──
+    Widget buildSeparatorLine() {
+      if (_appearance.pmShowDottedLine) {
+        return Expanded(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 7, left: 8, right: 8),
+            height: _appearance.pmLineThickness,
+            color: _appearance.pmDottedLineColor,
+          ),
+        );
+      }
+      return const Expanded(child: SizedBox.shrink());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 1. EN DIŞ KAPSAYICI – Sabit padding ile satırı ekran sınırlarından uzak tut
+    // ═══════════════════════════════════════════════════════════════════════════
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. ÜRÜN GÖRSELİ (Eğer ayar açıksa ve görsel varsa)
+          // ─── ÜRÜN GÖRSELİ (Opsiyonel, sabit boyut) ───
           if (_appearance.showProductImages &&
               product.imageUrl != null &&
               product.imageUrl!.isNotEmpty) ...[
@@ -818,126 +864,104 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 ),
               ),
             ),
-            const SizedBox(width: 16), // Görsel ile metin arası boşluk
+            const SizedBox(width: 16),
           ],
 
-          // 2. MEVCUT METİN VE FİYAT YAPISI (Emoji ve varyant eklendi)
+          // ═════════════════════════════════════════════════════════════════════
+          // 2. METİN BLOĞU – Görselden arta kalan TÜM yatay alanı kaplar
+          //    Bu Expanded sayesinde içteki Row'lar kesin genişlik bilir.
+          // ═════════════════════════════════════════════════════════════════════
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ─── 1. ANA ÜRÜN İSMİ VE FİYAT SATIRI ───
+                // ─────────────────────────────────────────────────────────────
+                // 2a. ANA ÜRÜN İSMİ + (Çizgi + Fiyat – sadece varyant yoksa)
+                // ─────────────────────────────────────────────────────────────
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // EMOJİ (Hizalamayı korumak için sabit genişlikli bir kutu içine alındı)
-                    if (product.emoji != null && product.emoji!.isNotEmpty) ...[
-                      SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
-                      const SizedBox(width: 6), // Toplam 32px
+                    // ── Emoji (sabit genişlik, hizalama bozulmasın) ──
+                    if (hasEmoji) ...[
+                      SizedBox(
+                        width: 26,
+                        child: Text(product.emoji!,
+                            style: const TextStyle(fontSize: 22)),
+                      ),
+                      const SizedBox(width: 6), // Toplam: 32 px
                     ],
-                    
-                    // SOLA DAYALI İSİM (Sadece gerektiği kadar yer kaplar, uzarsa alt satıra geçer)
+
+                    // ── SOL ELEMAN: Ürün İsmi ──
+                    // Flexible: Sadece ihtiyaç duyduğu kadar yer alır.
+                    // Metin uzunsa alt satıra geçer, kısa ise orada biter.
                     Flexible(
                       child: Text(product.name, style: nameStyle),
                     ),
-                    
-                    // EĞER VARYANT YOKSA DİNAMİK NOKTALAR VE FİYAT
-                    if (product.variants == null || product.variants!.isEmpty) ...[
-                      const SizedBox(width: 8),
-                      
-                      // DİNAMİK DÜZ ÇİZGİ (Kalan tüm alanı 100% doldurur, fiyatı sağa kilitler)
-                      if (_appearance.pmShowDottedLine)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 7, left: 8, right: 8), // Metin alt çizgisine (baseline) hizalama ve nefes boşluğu
-                            child: Container(
-                              height: _appearance.pmLineThickness, // DİNAMİK KALINLIK
-                              color: _appearance.pmDottedLineColor, // DİNAMİK RENK
-                            ),
-                          ),
-                        )
-                      else
-                        const Spacer(),
-                        
-                      // EN SAĞA DAYALI, SABİT GENİŞLİKLİ FİYAT KUTUSU
-                      Container(
-                        width: 85, // Tüm fiyatların alt alta jilet gibi hizalanmasını sağlar
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '${product.price} ${tenant.currencySymbol}', 
-                          style: priceStyle,
-                          textAlign: TextAlign.right,
-                        ),
+
+                    // ── Varyant YOKSA → Çizgi + Fiyat ──
+                    if (!hasVariants) ...[
+                      // ORTA ELEMAN: Expanded çizgi – aradaki TÜM boşluğu doldurur
+                      buildSeparatorLine(),
+
+                      // SAĞ ELEMAN: Fiyat – DOĞAL genişlik, sabit width YOK
+                      // Expanded çizgi onu acımasızca sağ duvara iterek hizalar
+                      Text(
+                        '${product.price} ${tenant.currencySymbol}',
+                        style: priceStyle,
+                        textAlign: TextAlign.right,
                       ),
                     ],
                   ],
                 ),
 
-                // ─── 2. ÜRÜN AÇIKLAMASI ───
-                if (product.description != null && product.description!.isNotEmpty)
+                // ─────────────────────────────────────────────────────────────
+                // 2b. ÜRÜN AÇIKLAMASI (Opsiyonel)
+                // ─────────────────────────────────────────────────────────────
+                if (product.description != null &&
+                    product.description!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6, right: 30),
                     child: Text(product.description!, style: descStyle),
                   ),
 
-                  if (product.variants != null && product.variants!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Column(
-                        children: product.variants!.map((variant) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6.0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                // VARYANT İSMİNİ ANA ÜRÜN İSMİYLE HİZALAMAK İÇİN
-                                if (product.emoji != null && product.emoji!.isNotEmpty)
-                                  const SizedBox(width: 32), // Üstteki emoji genişliği (26) + boşluk (6) kadar ittir
-                                
-                                // SOLA DAYALI VARYANT İSMİ
-                                Flexible(
-                                  child: Text(
-                                    variant.name, 
-                                    style: GoogleFonts.lora(
-                                      fontSize: 15,
-                                      color: _appearance.variantTextColor,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                                
-                                const SizedBox(width: 8),
-                                
-                                // DİNAMİK DÜZ ÇİZGİ
-                                if (_appearance.pmShowDottedLine)
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(bottom: 7, left: 8, right: 8),
-                                      child: Container(
-                                        height: _appearance.pmLineThickness,
-                                        color: _appearance.pmDottedLineColor,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  const Spacer(),
-                                  
-                                // EN SAĞA DAYALI VARYANT FİYATI KUTUSU
-                                Container(
-                                  width: 85,
-                                  alignment: Alignment.centerRight,
-                                  child: Text(
-                                    '${variant.price} ${tenant.currencySymbol}', 
-                                    style: priceStyle.copyWith(fontSize: 15),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                // ─────────────────────────────────────────────────────────────
+                // 2c. VARYANT / GRAMAJ LİSTESİ
+                //     Her satır aynı 3'lü kalıp: Flexible(isim) + Expanded(çizgi) + Text(fiyat)
+                // ─────────────────────────────────────────────────────────────
+                if (hasVariants)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      children: product.variants!.map((variant) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              // Emoji hizalama ofseti (varsa 32px, yoksa 0)
+                              if (hasEmoji) const SizedBox(width: 32),
+
+                              // SOL: Varyant İsmi
+                              Flexible(
+                                child: Text(variant.name,
+                                    style: variantNameStyle),
+                              ),
+
+                              // ORTA: Çizgi
+                              buildSeparatorLine(),
+
+                              // SAĞ: Fiyat (doğal genişlik)
+                              Text(
+                                '${variant.price} ${tenant.currencySymbol}',
+                                style: variantPriceStyle,
+                                textAlign: TextAlign.right,
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
+                  ),
               ],
             ),
           ),
