@@ -827,46 +827,41 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // EMOJİ
+                    // EMOJİ (Hizalamayı korumak için sabit genişlikli bir kutu içine alındı)
                     if (product.emoji != null && product.emoji!.isNotEmpty) ...[
-                      Text(product.emoji!, style: const TextStyle(fontSize: 22)),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
+                      const SizedBox(width: 6), // Toplam 32px
                     ],
                     
-                    // SOLA DAYALI İSİM (TÜMÜ GÖRÜNECEK, FİYATA DOĞRU UZAYACAK)
+                    // SOLA DAYALI İSİM (Sadece gerektiği kadar yer kaplar, uzarsa alt satıra geçer)
                     Flexible(
-                      flex: 4, // Alandaki hakkın %80'ini isme ayır
-                      child: Text(
-                        product.name, 
-                        style: nameStyle,
-                        // maxLines ve overflow kısıtlamaları kaldırıldı!
-                      ),
+                      child: Text(product.name, style: nameStyle),
                     ),
                     
-                    const SizedBox(width: 8),
-                    
-                    // EĞER VARYANT YOKSA DİNAMİK NOKTALAR VE FİYAT GELSİN
+                    // EĞER VARYANT YOKSA DİNAMİK NOKTALAR VE FİYAT
                     if (product.variants == null || product.variants!.isEmpty) ...[
-                      // DİNAMİK NOKTA (Kısa isimde tüm boşluğu doldurur, fiyatı sağa çiviler)
+                      const SizedBox(width: 8),
+                      
+                      // DİNAMİK NOKTA (Kalan TÜM boşluğu doldurup fiyatı EN SAĞA kilitler)
                       if (_appearance.pmShowDottedLine)
                         Expanded(
-                          flex: 1, // Kalan %20'lik alanı (ve ismin kullanmadığı tüm boşluğu) noktalar alır
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Text(
-                              '.' * 1000, // 200 az geliyordu, 1000 yaparak limiti kaldırdık
+                              '.' * 1000,
                               maxLines: 1,
+                              softWrap: false, // Noktaların asla alt satıra geçmesini engeller
                               overflow: TextOverflow.clip,
                               style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
                             ),
                           ),
                         )
                       else
-                        const Expanded(child: SizedBox()), // Nokta yoksa bile boşluk itmeye devam etsin
+                        const Spacer(), // Nokta kapalıysa bile fiyatı sağa it
                         
                       const SizedBox(width: 8),
                       
-                      // SAĞA DAYALI FİYAT
+                      // EN SAĞA DAYALI FİYAT
                       Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
                     ],
                   ],
@@ -879,58 +874,61 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                     child: Text(product.description!, style: descStyle),
                   ),
 
-                // ─── 3. VARYANTLAR / GRAMAJLAR SATIRI ───
-                if (product.variants != null && product.variants!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Column(
-                      children: product.variants!.map((variant) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const SizedBox(width: 24), // Hafif içeri girinti
-                              
-                              // SOLA DAYALI GRAMAJ İSMİ
-                              Text(
-                                variant.name, 
-                                style: GoogleFonts.lora(
-                                  fontSize: 15,
-                                  color: _appearance.variantTextColor,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                              
-                              const SizedBox(width: 8),
-                              
-                              // DİNAMİK NOKTA
-                              if (_appearance.pmShowDottedLine)
-                                Expanded(
-                                  flex: 1,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      '.' * 1000,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.clip,
-                                      style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
+                  if (product.variants != null && product.variants!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        children: product.variants!.map((variant) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                // VARYANT İSMİNİ ANA ÜRÜN İSMİYLE HİZALAMAK İÇİN
+                                if (product.emoji != null && product.emoji!.isNotEmpty)
+                                  const SizedBox(width: 32), // Üstteki emoji genişliği (26) + boşluk (6) kadar ittir
+                                
+                                // SOLA DAYALI VARYANT İSMİ
+                                Flexible(
+                                  child: Text(
+                                    variant.name, 
+                                    style: GoogleFonts.lora(
+                                      fontSize: 15,
+                                      color: _appearance.variantTextColor,
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
-                                )
-                              else
-                                const Expanded(child: SizedBox()),
+                                ),
                                 
-                              const SizedBox(width: 8),
-                              
-                              // SAĞA DAYALI GRAMAJ FİYATI
-                              Text('${variant.price} ${tenant.currencySymbol}', style: priceStyle.copyWith(fontSize: 15)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                                const SizedBox(width: 8),
+                                
+                                // DİNAMİK NOKTA (Kalan alanı doldurur, fiyatı en sağa iter)
+                                if (_appearance.pmShowDottedLine)
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(
+                                        '.' * 1000,
+                                        maxLines: 1,
+                                        softWrap: false, // Kesinlikle tek satır kalsın
+                                        overflow: TextOverflow.clip,
+                                        style: TextStyle(color: _appearance.pmDottedLineColor, letterSpacing: 3),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  const Spacer(),
+                                  
+                                const SizedBox(width: 8),
+                                
+                                // EN SAĞA DAYALI VARYANT FİYATI
+                                Text('${variant.price} ${tenant.currencySymbol}', style: priceStyle.copyWith(fontSize: 15)),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
               ],
             ),
           ),
