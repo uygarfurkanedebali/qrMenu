@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -886,23 +885,25 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                             child: Text(product.name, style: nameStyle),
                           ),
                           
-                          // DİNAMİK KÖPRÜ: İsmin son pikselinden fiyatın ilk pikseline
-                          if (!hasVariants) ...[
+                            // DİNAMİK KÖPRÜ (150 Nokta + Duvarı Geçeni Kes)
                             if (_appearance.pmShowDottedLine)
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                                  child: SizedBox(
-                                    height: 10,
-                                    child: CustomPaint(
-                                      painter: _PerfectDotPainter(color: _appearance.pmDottedLineColor),
+                                  child: Text(
+                                    ' .' * 150, // Aralıklı 150 adet nokta üretir
+                                    maxLines: 1,
+                                    softWrap: false, // Asla alt satıra geçmesin
+                                    overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
+                                    style: TextStyle(
+                                      color: _appearance.pmDottedLineColor,
+                                      letterSpacing: 2.0,
                                     ),
                                   ),
                                 ),
                               )
                             else
                               const Spacer(),
-                          ],
                         ],
                       ),
                     ),
@@ -957,15 +958,19 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                                       ),
                                     ),
                                     
-                                    // DİNAMİK KÖPRÜ
+                                    // DİNAMİK KÖPRÜ (150 Nokta + Duvarı Geçeni Kes)
                                     if (_appearance.pmShowDottedLine)
                                       Expanded(
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: SizedBox(
-                                            height: 10,
-                                            child: CustomPaint(
-                                              painter: _PerfectDotPainter(color: _appearance.pmDottedLineColor),
+                                          child: Text(
+                                            ' .' * 150, // Aralıklı 150 adet nokta üretir
+                                            maxLines: 1,
+                                            softWrap: false, // Asla alt satıra geçmesin
+                                            overflow: TextOverflow.clip, // DUVARI GEÇENİ KESİP ATAR
+                                            style: TextStyle(
+                                              color: _appearance.pmDottedLineColor,
+                                              letterSpacing: 2.0,
                                             ),
                                           ),
                                         ),
@@ -1047,26 +1052,3 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   }
 }
 
-class _PerfectDotPainter extends CustomPainter {
-  final Color color;
-  _PerfectDotPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill; // Noktaların içinin dolu ve net olmasını sağlar
-
-    // Fiyatın olduğu sağ duvardan (size.width) isme doğru (0) çiz
-    double currentX = size.width;
-
-    while (currentX > 0) {
-      // PointMode.points yerine garantili olan drawCircle kullanıyoruz (Yarıçap: 1.5)
-      canvas.drawCircle(Offset(currentX, size.height / 2), 1.5, paint);
-      currentX -= 6.0; // Noktalar arası boşluk
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PerfectDotPainter oldDelegate) => oldDelegate.color != color;
-}
