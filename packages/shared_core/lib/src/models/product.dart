@@ -56,10 +56,11 @@ class Product {
       description: json['description'] as String?,
       emoji: json['emoji'] as String?,
       variants: (json['variants'] as List<dynamic>?)
-          ?.map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+          ?.whereType<Map<String, dynamic>>()
+          .map((v) => ProductVariant.fromJson(v))
           .toList(),
-      ingredients: (json['ingredients'] as List<dynamic>?)
-          ?.map((e) => e as String)
+      ingredients: (json['variants'] as List<dynamic>?)
+          ?.whereType<String>()
           .toList() ?? const [],
       price: (json['price'] as num).toDouble(),
       imageUrl: json['image_url'] as String?,
@@ -72,41 +73,47 @@ class Product {
 
   /// Converts the Product to JSON for database insertion
   /// Does NOT include 'id' - let database auto-generate UUID
-  Map<String, dynamic> toJsonForInsert() => {
-        'tenant_id': tenantId,
-        // Only include category_id if it's a valid non-empty string
-        if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
-        'name': name,
-        'description': description,
-        if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
-        if (variants != null && variants!.isNotEmpty) 
-          'variants': variants!.map((v) => v.toJson()).toList(),
-        if (ingredients.isNotEmpty) 'ingredients': ingredients,
-        'price': price,
-        'image_url': imageUrl,
-        'is_available': isAvailable,
-        'sort_order': sortOrder,
-      };
+  Map<String, dynamic> toJsonForInsert() {
+    final List<dynamic> combinedVariants = [];
+    if (variants != null) combinedVariants.addAll(variants!.map((v) => v.toJson()));
+    if (ingredients.isNotEmpty) combinedVariants.addAll(ingredients);
+
+    return {
+      'tenant_id': tenantId,
+      if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
+      'name': name,
+      'description': description,
+      if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
+      if (combinedVariants.isNotEmpty) 'variants': combinedVariants,
+      'price': price,
+      'image_url': imageUrl,
+      'is_available': isAvailable,
+      'sort_order': sortOrder,
+    };
+  }
 
   /// Converts the Product to JSON for updates (includes id)
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'tenant_id': tenantId,
-        // Only include category_id if it's a valid non-empty string
-        if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
-        'name': name,
-        'description': description,
-        if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
-        if (variants != null && variants!.isNotEmpty) 
-          'variants': variants!.map((v) => v.toJson()).toList(),
-        if (ingredients.isNotEmpty) 'ingredients': ingredients,
-        'price': price,
-        'image_url': imageUrl,
-        'is_available': isAvailable,
-        'sort_order': sortOrder,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    final List<dynamic> combinedVariants = [];
+    if (variants != null) combinedVariants.addAll(variants!.map((v) => v.toJson()));
+    if (ingredients.isNotEmpty) combinedVariants.addAll(ingredients);
+
+    return {
+      'id': id,
+      'tenant_id': tenantId,
+      if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
+      'name': name,
+      'description': description,
+      if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
+      if (combinedVariants.isNotEmpty) 'variants': combinedVariants,
+      'price': price,
+      'image_url': imageUrl,
+      'is_available': isAvailable,
+      'sort_order': sortOrder,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
 
   /// Returns formatted price string
   String get formattedPrice => '\$${price.toStringAsFixed(2)}';
