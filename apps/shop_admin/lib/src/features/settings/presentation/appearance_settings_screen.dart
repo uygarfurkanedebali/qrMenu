@@ -43,6 +43,9 @@ class _AppearanceSettingsScreenState
   double _categoryDividerLength = 160.0;
   double _pmLineThickness = 1.0;
 
+  // WhatsApp Sipariş
+  bool _whatsappOrderingEnabled = false;
+
   String _colorToHex(Color c) {
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
   }
@@ -90,6 +93,7 @@ class _AppearanceSettingsScreenState
     _categoryDividerType = dc['category_divider_type'] as String? ?? 'star';
     _categoryDividerLength = (dc['category_divider_length'] as num?)?.toDouble() ?? 160.0;
     _pmLineThickness = (dc['pm_line_thickness'] as num?)?.toDouble() ?? 1.0;
+    _whatsappOrderingEnabled = dc['whatsapp_ordering_enabled'] as bool? ?? false;
   }
 
   Future<void> _save() async {
@@ -126,6 +130,7 @@ class _AppearanceSettingsScreenState
       currentDesignConfig['category_divider_type'] = _categoryDividerType;
       currentDesignConfig['category_divider_length'] = _categoryDividerLength;
       currentDesignConfig['pm_line_thickness'] = _pmLineThickness;
+      currentDesignConfig['whatsapp_ordering_enabled'] = _whatsappOrderingEnabled;
 
       await saveSettings(
         ref: ref,
@@ -371,6 +376,26 @@ class _AppearanceSettingsScreenState
                     ),
                     onTap: () => _openColorPicker(
                         'Vurgu Rengi', _accentColor, (c) => _accentColor = c),
+                  ),
+                  Divider(height: 1, color: Colors.grey.shade100, indent: 16),
+                  SwitchListTile(
+                    title: const Text('WhatsApp Sipariş Hattı',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87)),
+                    subtitle: const Text(
+                        'Aktif olduğunda müşteriler menüden WhatsApp ile sipariş verebilir',
+                        style:
+                            TextStyle(fontSize: 13, color: Colors.black54)),
+                    value: _whatsappOrderingEnabled,
+                    activeColor: const Color(0xFF25D366),
+                    onChanged: (val) =>
+                        setState(() => _whatsappOrderingEnabled = val),
+                    secondary: Icon(
+                      Icons.shopping_cart_outlined,
+                      color: _whatsappOrderingEnabled ? const Color(0xFF25D366) : Colors.grey,
+                    ),
                   ),
                 ],
               ),

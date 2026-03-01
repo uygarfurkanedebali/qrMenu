@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_core/shared_core.dart';
 import '../../menu/domain/menu_models.dart';
 import '../domain/cart_model.dart';
 
@@ -19,9 +20,15 @@ class CartNotifier extends Notifier<List<CartItem>> {
     return []; // Start with empty cart
   }
 
-  /// Adds a product to cart or increments quantity if exists
-  void addItem(MenuProduct product) {
-    final existingIndex = state.indexWhere((item) => item.product.id == product.id);
+  /// Generates a unique key for product + variant combination
+  String _itemKey(MenuProduct product, ProductVariant? variant) {
+    return variant != null ? '${product.id}_${variant.name}' : product.id;
+  }
+
+  /// Adds a product (optionally with variant) to cart or increments quantity
+  void addItem(MenuProduct product, {ProductVariant? variant}) {
+    final key = _itemKey(product, variant);
+    final existingIndex = state.indexWhere((item) => item.uniqueKey == key);
     
     if (existingIndex >= 0) {
       // Product exists, increment quantity
@@ -34,13 +41,14 @@ class CartNotifier extends Notifier<List<CartItem>> {
       ];
     } else {
       // New product, add to cart
-      state = [...state, CartItem(product: product)];
+      state = [...state, CartItem(product: product, variant: variant)];
     }
   }
 
   /// Decrements quantity or removes if quantity becomes 0
-  void removeItem(MenuProduct product) {
-    final existingIndex = state.indexWhere((item) => item.product.id == product.id);
+  void removeItem(MenuProduct product, {ProductVariant? variant}) {
+    final key = _itemKey(product, variant);
+    final existingIndex = state.indexWhere((item) => item.uniqueKey == key);
     
     if (existingIndex < 0) return;
     
@@ -48,7 +56,7 @@ class CartNotifier extends Notifier<List<CartItem>> {
     
     if (currentItem.quantity <= 1) {
       // Remove entirely
-      state = state.where((item) => item.product.id != product.id).toList();
+      state = state.where((item) => item.uniqueKey != key).toList();
     } else {
       // Decrement quantity
       state = [
@@ -62,24 +70,33 @@ class CartNotifier extends Notifier<List<CartItem>> {
   }
 
   /// Removes a product entirely from cart
-  void removeProductEntirely(MenuProduct product) {
-    state = state.where((item) => item.product.id != product.id).toList();
+  void removeProductEntirely(MenuProduct product, {ProductVariant? variant}) {
+    final key = _itemKey(product, variant);
+    state = state.where((item) => item.uniqueKey != key).toList();
   }
 
   /// Updates quantity for a specific product
-  void updateQuantity(MenuProduct product, int quantity) {
+  void updateQuantity(MenuProduct product, int quantity, {ProductVariant? variant}) {
     if (quantity <= 0) {
-      removeProductEntirely(product);
+      removeProductEntirely(product, variant: variant);
       return;
     }
     
+    final key = _itemKey(product, variant);
     state = [
       for (final item in state)
-        if (item.product.id == product.id)
+        if (item.uniqueKey == key)
           item.copyWith(quantity: quantity)
         else
           item,
     ];
+  }
+
+  /// Returns quantity of a specific product+variant in cart
+  int getQuantity(MenuProduct product, {ProductVariant? variant}) {
+    final key = variant != null ? '${product.id}_${variant.name}' : product.id;
+    final item = state.where((item) => item.uniqueKey == key).firstOrNull;
+    return item?.quantity ?? 0;
   }
 
   /// Clears all items from cart

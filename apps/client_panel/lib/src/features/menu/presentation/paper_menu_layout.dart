@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_core/shared_core.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../domain/menu_models.dart';
 import 'components/noise_painter.dart';
+import '../../cart/application/cart_provider.dart';
+import '../../cart/domain/cart_model.dart';
 
 class PaperMenuAppearance {
   final Color globalBgColor;
@@ -103,7 +106,7 @@ class PaperMenuAppearance {
   }
 }
 
-class PaperMenuLayout extends StatefulWidget {
+class PaperMenuLayout extends ConsumerStatefulWidget {
   final Tenant tenant;
   final List<MenuCategory> categories;
 
@@ -114,10 +117,10 @@ class PaperMenuLayout extends StatefulWidget {
   });
 
   @override
-  State<PaperMenuLayout> createState() => _PaperMenuLayoutState();
+  ConsumerState<PaperMenuLayout> createState() => _PaperMenuLayoutState();
 }
 
-class _PaperMenuLayoutState extends State<PaperMenuLayout> {
+class _PaperMenuLayoutState extends ConsumerState<PaperMenuLayout> {
   // Ana Liste Kontrolcüleri
   final ItemScrollController _mainScrollController = ItemScrollController();
   final ItemPositionsListener _mainPositionsListener =
@@ -411,6 +414,11 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   @override
   Widget build(BuildContext context) {
     final tenant = widget.tenant;
+    final dc = tenant.designConfig as Map<String, dynamic>? ?? {};
+    final whatsappEnabled = dc['whatsapp_ordering_enabled'] as bool? ?? false;
+    final cartItemCount = whatsappEnabled ? ref.watch(cartItemCountProvider) : 0;
+    final cartTotal = whatsappEnabled ? ref.watch(cartTotalProvider) : 0.0;
+    final showCartBar = whatsappEnabled && cartItemCount > 0;
 
     return Scaffold(
       backgroundColor: _appearance.globalBgColor,
@@ -429,14 +437,13 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
               itemCount: _flatList.length,
               itemScrollController: _mainScrollController,
               itemPositionsListener: _mainPositionsListener,
-              padding: const EdgeInsets.only(bottom: 100),
+              padding: EdgeInsets.only(bottom: showCartBar ? 160 : 100),
               itemBuilder: (context, index) {
                 final item = _flatList[index];
 
                 if (item == 'TENANT_HEADER') {
                   return _buildTenantHeader(tenant);
                 } else if (item == 'CATEGORY_BAR') {
-                  // Listenin içindeki placeholder da sticky ile aynı görünüme sahip olmalı
                   return _buildStickyHeaderContent(
                     controller: _inlineTabController,
                     isOverlay: false,
@@ -448,7 +455,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                 } else if (item is MenuCategory) {
                   return _buildCategoryTitle(item);
                 } else if (item is MenuProduct) {
-                  return _buildProductRow(item, tenant);
+                  return _buildProductRow(item, tenant, whatsappEnabled: whatsappEnabled);
                 }
                 return const SizedBox.shrink();
               },
@@ -472,6 +479,20 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
               ),
             ),
           ),
+
+          // LAYER 3: SEPET ALT BARI
+          if (whatsappEnabled)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                offset: showCartBar ? Offset.zero : const Offset(0, 1),
+                child: _buildCartBar(cartItemCount, cartTotal, tenant),
+              ),
+            ),
         ],
       ),
     );
@@ -792,7 +813,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
   ///                    ├─ [Opsiyonel] Açıklama
   ///                    └─ [Opsiyonel] Varyant Listesi (her biri aynı 3'lü Row kalıbı)
   /// ────────────────────────────────────────────────────────────────────────────
-  Widget _buildProductRow(MenuProduct product, Tenant tenant) {
+  Widget _buildProductRow(MenuProduct product, Tenant tenant, {bool whatsappEnabled = false}) {
     // ── Stil Tanımları ──
     final nameStyle = GoogleFonts.lora(
       fontSize: 17,
@@ -817,13 +838,10 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
     );
     final variantPriceStyle = priceStyle.copyWith(fontSize: 15);
 
-    // Emoji olup olmadığını bir kere hesapla (tekrar tekrar kontrol etmeye gerek yok)
+    // Emoji olup olmadığını bir kere hesapla
     final bool hasEmoji = product.emoji != null && product.emoji!.isNotEmpty;
     final bool hasVariants = product.variants != null && product.variants!.isNotEmpty;
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 1. EN DIŞ KAPSAYICI – Sabit padding ile satırı ekran sınırlarından uzak tut
-    // ═══════════════════════════════════════════════════════════════════════════
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       child: Row(
@@ -852,41 +870,27 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
             const SizedBox(width: 16),
           ],
 
-          // ═════════════════════════════════════════════════════════════════════
-          // 2. METİN BLOĞU – Görselden arta kalan TÜM yatay alanı kaplar
-          //    Bu Expanded sayesinde içteki Row'lar kesin genişlik bilir.
-          // ═════════════════════════════════════════════════════════════════════
+          // METİN BLOĞU
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ─────────────────────────────────────────────────────────────
-                // 2a. KESİNTİSİZ KÖPRÜ (Fluid Bridge) MİMARİSİ
-                //     Sol Anchor: İsim (Flexible → intrinsic width)
-                //     Dinamik Köprü: Noktalar (Expanded → her pikseli doldurur)
-                //     Sağ Anchor: Fiyat (intrinsic width → sağ duvara kilitli)
-                // ─────────────────────────────────────────────────────────────
-                // DIŞ SATIR: Fiyatı kesin olarak sağa iter
+                // 2a. KESİNTİSİZ KÖPRÜ (Fluid Bridge)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // SOL BLOK: İsim ve Noktalar (Tüm alanı kaplar)
+                    // SOL BLOK: İsim ve Noktalar
                     Expanded(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          // EMOJİ (Varsa)
                           if (hasEmoji) ...[
                             SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
                             const SizedBox(width: 6),
                           ],
-                          
-                          // İSİM
                           Flexible(
                             child: Text(product.name, style: nameStyle),
                           ),
-                          
-                          // NOKTALAR
                           if (!hasVariants) ...[
                             const SizedBox(width: 8),
                             Expanded(
@@ -905,16 +909,23 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                         ],
                       ),
                     ),
-                    
                     // SAĞ BLOK: Fiyat
                     if (!hasVariants)
                       Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
                   ],
                 ),
 
-                // ─────────────────────────────────────────────────────────────
-                // 2b. ÜRÜN AÇIKLAMASI (Opsiyonel)
-                // ─────────────────────────────────────────────────────────────
+                // 2a+. SEPET BUTONU (varyantsız ürün için)
+                if (whatsappEnabled && !hasVariants)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: _buildCartButton(product, null),
+                    ),
+                  ),
+
+                // 2b. ÜRÜN AÇIKLAMASI
                 if (product.description != null &&
                     product.description!.isNotEmpty)
                   Padding(
@@ -922,10 +933,7 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                     child: Text(product.description!, style: descStyle),
                   ),
 
-                // ─────────────────────────────────────────────────────────────
                 // 2c. VARYANT / GRAMAJ LİSTESİ
-                //     Her satır aynı 3'lü kalıp: Flexible(isim) + Expanded(çizgi) + Text(fiyat)
-                // ─────────────────────────────────────────────────────────────
                 if (hasVariants)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
@@ -933,39 +941,48 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
                       children: product.variants!.map((variant) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 6.0),
-                          // VARYANT DIŞ SATIRI
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          child: Column(
                             children: [
-                              if (hasEmoji) const SizedBox(width: 32),
-                              
-                              // VARYANT SOL BLOK
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Flexible(
-                                      child: Text(variant.name, style: variantNameStyle),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(bottom: 6),
-                                        child: SizedBox(
-                                          height: 10,
-                                          child: CustomPaint(
-                                            painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
+                              // VARYANT DIŞ SATIRI
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (hasEmoji) const SizedBox(width: 32),
+                                  Expanded(
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Flexible(
+                                          child: Text(variant.name, style: variantNameStyle),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(bottom: 6),
+                                            child: SizedBox(
+                                              height: 10,
+                                              child: CustomPaint(
+                                                painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 8),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                ),
+                                  ),
+                                  Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
+                                ],
                               ),
-                              
-                              // VARYANT SAĞ BLOK (Fiyat)
-                              Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
+                              // VARYANT SEPET BUTONU
+                              if (whatsappEnabled)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: _buildCartButton(product, variant),
+                                  ),
+                                ),
                             ],
                           ),
                         );
@@ -978,6 +995,366 @@ class _PaperMenuLayoutState extends State<PaperMenuLayout> {
         ],
       ),
     );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // SEPET BUTONLARI VE CART BAR
+  // ═════════════════════════════════════════════════════════════════════
+
+  /// +/- sayaç butonu Widgetı
+  Widget _buildCartButton(MenuProduct product, ProductVariant? variant) {
+    final quantity = ref.watch(cartProvider.select(
+      (cart) {
+        final key = variant != null ? '${product.id}_${variant.name}' : product.id;
+        final item = cart.where((i) => i.uniqueKey == key).firstOrNull;
+        return item?.quantity ?? 0;
+      },
+    ));
+
+    final accentColor = _appearance.globalAccentColor;
+
+    if (quantity == 0) {
+      // Tek + butonu
+      return InkWell(
+        onTap: () => ref.read(cartProvider.notifier).addItem(product, variant: variant),
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: accentColor.withOpacity(0.4)),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add, size: 16, color: accentColor),
+              const SizedBox(width: 4),
+              Text('Ekle', style: GoogleFonts.lora(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: accentColor,
+              )),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // [ - ]  2  [ + ] sayaç
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: accentColor.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: () => ref.read(cartProvider.notifier).removeItem(product, variant: variant),
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Icon(Icons.remove, size: 16, color: accentColor),
+            ),
+          ),
+          Container(
+            constraints: const BoxConstraints(minWidth: 28),
+            alignment: Alignment.center,
+            child: Text(
+              '$quantity',
+              style: GoogleFonts.lora(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _appearance.productTitleColor,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: () => ref.read(cartProvider.notifier).addItem(product, variant: variant),
+            borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Icon(Icons.add, size: 16, color: accentColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sepet Alt Barı
+  Widget _buildCartBar(int itemCount, double total, Tenant tenant) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.92),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: InkWell(
+          onTap: () => _showWhatsAppOrderSheet(tenant),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              children: [
+                // Sol: Ürün sayısı ve toplam
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '$itemCount Ürün  \u2022  ${total.toStringAsFixed(0)} ${tenant.currencySymbol}',
+                        style: GoogleFonts.lora(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Sağ: Siparişi Tamamla butonu
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF25D366),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Siparişi Tamamla',
+                    style: GoogleFonts.lora(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// WhatsApp Sipariş Özet Sayfası
+  void _showWhatsAppOrderSheet(Tenant tenant) {
+    final cartItems = ref.read(cartProvider);
+    final cartTotal = ref.read(cartTotalProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Başlık
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Sipariş Özeti',
+                      style: GoogleFonts.lora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+                      tooltip: 'Sepeti Temizle',
+                      onPressed: () {
+                        ref.read(cartProvider.notifier).clearCart();
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              // Ürün Listesi
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: cartItems.length,
+                  separatorBuilder: (_, __) => Divider(height: 24, color: Colors.grey.shade100),
+                  itemBuilder: (context, index) {
+                    final item = cartItems[index];
+                    return Row(
+                      children: [
+                        // Adet
+                        Container(
+                          width: 28,
+                          height: 28,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${item.quantity}x',
+                            style: GoogleFonts.lora(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Ürün Adı
+                        Expanded(
+                          child: Text(
+                            item.displayName,
+                            style: GoogleFonts.lora(
+                              fontSize: 15,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        // Fiyat
+                        Text(
+                          '${item.totalPrice.toStringAsFixed(0)} ${tenant.currencySymbol}',
+                          style: GoogleFonts.lora(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              // Toplam + WhatsApp Butonu
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Toplam Tutar',
+                            style: GoogleFonts.lora(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            '${cartTotal.toStringAsFixed(0)} ${tenant.currencySymbol}',
+                            style: GoogleFonts.lora(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _sendWhatsAppOrder(tenant, cartItems, cartTotal),
+                          icon: const Icon(Icons.send, size: 20),
+                          label: Text(
+                            'WhatsApp ile Sipariş Ver',
+                            style: GoogleFonts.lora(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// WhatsApp mesajını formatla ve gönder
+  void _sendWhatsAppOrder(Tenant tenant, List<CartItem> cartItems, double totalAmount) {
+    String message = "Merhaba, sipari\u015f vermek istiyorum:\n\n";
+    for (var item in cartItems) {
+      message += "${item.quantity}x ${item.displayName} - ${item.totalPrice.toStringAsFixed(0)} ${tenant.currencySymbol}\n";
+    }
+    message += "\nToplam Tutar: ${totalAmount.toStringAsFixed(0)} ${tenant.currencySymbol}";
+
+    if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty) {
+      final phone = _formatWhatsApp(tenant.phoneNumber!, forUrl: true);
+      final url = 'https://wa.me/$phone?text=${Uri.encodeComponent(message)}';
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('İ\u015fletmenin telefon numaras\u0131 tan\u0131ml\u0131 de\u011fil.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    // Sipariş gönderildikten sonra sepeti temizle ve bottom sheet'i kapat
+    ref.read(cartProvider.notifier).clearCart();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Widget _buildNoResults() {
