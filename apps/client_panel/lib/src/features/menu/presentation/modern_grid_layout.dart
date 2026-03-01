@@ -6,8 +6,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../domain/menu_models.dart';
+import '../../cart/application/cart_provider.dart';
+import '../../cart/domain/cart_model.dart';
+import 'product_detail_sheet.dart';
 
 class ModernGridAppearance {
   final Color globalBgColor;
@@ -87,7 +93,7 @@ class ModernGridAppearance {
   }
 }
 
-class ModernGridLayout extends StatefulWidget {
+class ModernGridLayout extends ConsumerStatefulWidget {
   final Tenant tenant;
   final List<MenuCategory> categories;
   final ThemeData theme;
@@ -100,10 +106,10 @@ class ModernGridLayout extends StatefulWidget {
   });
 
   @override
-  State<ModernGridLayout> createState() => _ModernGridLayoutState();
+  ConsumerState<ModernGridLayout> createState() => _ModernGridLayoutState();
 }
 
-class _ModernGridLayoutState extends State<ModernGridLayout> {
+class _ModernGridLayoutState extends ConsumerState<ModernGridLayout> {
   String? _selectedMainCategoryId;
   String? _selectedSubCategoryId;
   String _searchQuery = "";
@@ -210,369 +216,648 @@ class _ModernGridLayoutState extends State<ModernGridLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final dc = widget.tenant.designConfig as Map<String, dynamic>? ?? {};
+    final whatsappEnabled = dc['whatsapp_ordering_enabled'] as bool? ?? false;
+    final cartItemCount = whatsappEnabled ? ref.watch(cartItemCountProvider) : 0;
+    final cartTotal = whatsappEnabled ? ref.watch(cartTotalProvider) : 0.0;
+    final showCartBar = whatsappEnabled && cartItemCount > 0;
     final bool isRootScreen = _selectedMainCategoryId == null;
 
     return Scaffold(
       backgroundColor: _appearance.globalBgColor,
-      body: CustomScrollView(
-        slivers: [
-          // 1. Dükkan Banner'ı
-          SliverAppBar(
-            expandedHeight: isRootScreen ? 200 : 180,
-            pinned: true,
-            stretch: true,
-            backgroundColor: _appearance.globalBgColor,
-            surfaceTintColor: Colors.transparent,
-            automaticallyImplyLeading: false,
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
-              titlePadding: const EdgeInsets.only(bottom: 16),
-              title: Text(
-                isRootScreen
-                    ? widget.tenant.name
-                    : (widget.categories
-                            .where((c) => c.id == _selectedMainCategoryId)
-                            .firstOrNull
-                            ?.name ??
-                        (_selectedMainCategoryId == 'all_products'
-                            ? 'Tüm Ürünler'
-                            : '')),
-                style: TextStyle(
-                  color: _appearance
-                      .textColor, // Kullanici istegine gore Ana Metin Rengi burayi ezdi
-                  fontWeight: FontWeight.bold,
-                  fontSize: isRootScreen ? 22 : 20,
-                  fontFamily: widget.tenant.fontFamily,
-                  shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              // 1. Dükkan Banner'ı
+              SliverAppBar(
+                expandedHeight: isRootScreen ? 200 : 180,
+                pinned: true,
+                stretch: true,
+                backgroundColor: _appearance.globalBgColor,
+                surfaceTintColor: Colors.transparent,
+                automaticallyImplyLeading: false,
+                flexibleSpace: FlexibleSpaceBar(
+                  centerTitle: true,
+                  titlePadding: const EdgeInsets.only(bottom: 16),
+                  title: Text(
+                    isRootScreen
+                        ? widget.tenant.name
+                        : (widget.categories
+                                .where((c) => c.id == _selectedMainCategoryId)
+                                .firstOrNull
+                                ?.name ??
+                            (_selectedMainCategoryId == 'all_products'
+                                ? 'Tüm Ürünler'
+                                : '')),
+                    style: TextStyle(
+                      color: _appearance.textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isRootScreen ? 22 : 20,
+                      fontFamily: widget.tenant.fontFamily,
+                      shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
+                    ),
+                  ),
+                  background: _buildBannerBackground(
+                    isRootScreen
+                        ? widget.tenant.bannerUrl
+                        : (widget.categories
+                                .where((c) => c.id == _selectedMainCategoryId)
+                                .firstOrNull
+                                ?.iconUrl ??
+                            widget.tenant.bannerUrl),
+                  ),
                 ),
-              ),
-              background: _buildBannerBackground(
-                isRootScreen
-                    ? widget.tenant.bannerUrl
-                    : (widget.categories
-                            .where((c) => c.id == _selectedMainCategoryId)
-                            .firstOrNull
-                            ?.iconUrl ??
-                        widget.tenant.bannerUrl),
-              ),
-            ),
-            leading: isRootScreen
-                ? null
-                : Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Material(
-                      color: Colors.black.withOpacity(0.3),
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _goBack,
-                        child: const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 20,
+                leading: isRootScreen
+                    ? null
+                    : Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Material(
+                          color: Colors.black.withOpacity(0.3),
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: _goBack,
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.arrow_back_ios_new,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-          ),
-
-          // 2. Statik Arama Çubuğu
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: _appearance.globalBgColor == Colors.white
-                      ? const Color(0xFFF5F5F5)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _searchFocusNode.hasFocus
-                        ? _appearance.globalAccentColor
-                        : Colors.transparent,
-                    width: 1.5,
-                  ),
-                  boxShadow: _searchFocusNode.hasFocus
-                      ? [
-                          BoxShadow(
-                            color: _appearance.globalAccentColor.withOpacity(
-                              0.15,
-                            ),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: TextField(
-                  focusNode: _searchFocusNode,
-                  onChanged: (val) {
-                    setState(() => _searchQuery = val);
-                  },
-                  controller: TextEditingController.fromValue(
-                    TextEditingValue(
-                      text: _searchQuery,
-                      selection: TextSelection.collapsed(
-                        offset: _searchQuery.length,
-                      ),
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 15, color: Colors.black87),
-                  decoration: InputDecoration(
-                    hintText: "Ürün veya içerik ara...",
-                    hintStyle: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: _searchFocusNode.hasFocus
-                          ? _appearance.globalAccentColor
-                          : Colors.black54,
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(
-                              Icons.clear,
-                              color: Colors.black54,
-                            ),
-                            onPressed: () {
-                              setState(() => _searchQuery = "");
-                              _searchFocusNode.unfocus();
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ARAMA YAPILDIYSA VEYA KATEGORİ SEÇİLDİYSE EKRAN B (Ürünler)
-          if (_searchQuery.isNotEmpty || !isRootScreen) ...[
-            if (!isRootScreen && _searchQuery.isEmpty)
-              Builder(
-                builder: (context) {
-                  final isAllProductsSelected =
-                      _selectedMainCategoryId == 'all_products';
-                  final filterCategories = isAllProductsSelected
-                      ? _mainCategories
-                          .where((c) => c.id != 'all_products')
-                          .toList()
-                      : _getSubCategories(_selectedMainCategoryId!);
-
-                  if (filterCategories.isEmpty) {
-                    return const SliverToBoxAdapter(child: SizedBox.shrink());
-                  }
-
-                  // 4. Alt Kategoriler (Chips)
-                  return SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _SubCategoryChipsDelegate(
-                      appearance: _appearance,
-                      subCategories: filterCategories,
-                      selectedId: _selectedSubCategoryId,
-                      showAllTab: true,
-                      onSelected: (id) {
-                        setState(() => _selectedSubCategoryId = id);
-                      },
-                      onAllSelected: () {
-                        setState(() => _selectedSubCategoryId = null);
-                      },
-                    ),
-                  );
-                },
               ),
 
-            // Arama veya Seçilen Kategoriye Ait Ürünlerin Hesaplanması
-            Builder(
-              builder: (context) {
-                List<MenuProduct> displayProducts;
-
-                if (_searchQuery.isNotEmpty) {
-                  final q = _searchQuery.toLowerCase();
-                  displayProducts = _allProducts.where((p) {
-                    return p.name.toLowerCase().contains(q) ||
-                        (p.description?.toLowerCase().contains(q) ?? false);
-                  }).toList();
-                } else {
-                  final isAllProductsSelected =
-                      _selectedMainCategoryId == 'all_products';
-                  final filterCategories = isAllProductsSelected
-                      ? _mainCategories
-                          .where((c) => c.id != 'all_products')
-                          .toList()
-                      : _getSubCategories(_selectedMainCategoryId!);
-                  final mainCat = widget.categories
-                      .where((c) => c.id == _selectedMainCategoryId)
-                      .firstOrNull;
-
-                  if (isAllProductsSelected) {
-                    if (_selectedSubCategoryId == null) {
-                      displayProducts = _allProducts;
-                    } else {
-                      displayProducts = _getAllProductsForMain(
-                        _selectedSubCategoryId!,
-                      );
-                    }
-                  } else {
-                    if (filterCategories.isEmpty) {
-                      displayProducts = mainCat?.products ?? [];
-                    } else if (_selectedSubCategoryId == null) {
-                      displayProducts = _getAllProductsForMain(
-                        _selectedMainCategoryId!,
-                      );
-                    } else {
-                      displayProducts = widget.categories
-                          .where((c) => c.id == _selectedSubCategoryId)
-                          .expand((c) => c.products)
-                          .toList();
-                    }
-                  }
-                  displayProducts.sort(
-                    (a, b) => a.sortOrder.compareTo(b.sortOrder),
-                  );
-                }
-
-                if (displayProducts.isEmpty) {
-                  return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 56,
-                            color: _appearance.categoryInactiveTextColor
-                                .withOpacity(0.3),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _searchQuery.isNotEmpty
-                                ? 'Ürün bulunamadı'
-                                : 'Bu kategoride ürün yok',
-                            style: TextStyle(
-                              color: _appearance.categoryInactiveTextColor,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index == 0) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-                        child: Text(
-                          _searchQuery.isNotEmpty
-                              ? 'Arama Sonuçları (${displayProducts.length} ürün)'
-                              : '${displayProducts.length} ürün',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _appearance.categoryInactiveTextColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }
-                    return _ModernProductTile(
-                      appearance: _appearance,
-                      product: displayProducts[index - 1],
-                      currencySymbol: widget.tenant.currencySymbol,
-                    );
-                  }, childCount: displayProducts.length + 1),
-                );
-              },
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ]
-          // EKRAN A (Root)
-          else ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Text(
-                  'Kategoriler',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: _appearance.categoryTitleColor,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-            ),
-
-            if (_appearance.showCategoryDivider)
+              // 2. Statik Arama Çubuğu
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 0,
-                  ),
-                  child: Divider(
-                    color: _appearance.mgCardBorderColor,
-                    height: 1,
-                  ),
-                ),
-              ),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-            // 3. Ana Kategoriler Grid'i (2'li kolon)
-            if (_mainCategories.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Text(
-                    'Kategori bulunamadı',
-                    style: TextStyle(
-                      color: _appearance.categoryInactiveTextColor,
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: _appearance.globalBgColor == Colors.white
+                          ? const Color(0xFFF5F5F5)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _searchFocusNode.hasFocus
+                            ? _appearance.globalAccentColor
+                            : Colors.transparent,
+                        width: 1.5,
+                      ),
+                      boxShadow: _searchFocusNode.hasFocus
+                          ? [
+                              BoxShadow(
+                                color: _appearance.globalAccentColor.withOpacity(
+                                  0.15,
+                                ),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: TextField(
+                      focusNode: _searchFocusNode,
+                      onChanged: (val) {
+                        setState(() => _searchQuery = val);
+                      },
+                      controller: TextEditingController.fromValue(
+                        TextEditingValue(
+                          text: _searchQuery,
+                          selection: TextSelection.collapsed(
+                            offset: _searchQuery.length,
+                          ),
+                        ),
+                      ),
+                      style: const TextStyle(fontSize: 15, color: Colors.black87),
+                      decoration: InputDecoration(
+                        hintText: "Ürün veya içerik ara...",
+                        hintStyle: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 14,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: _searchFocusNode.hasFocus
+                              ? _appearance.globalAccentColor
+                              : Colors.black54,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.clear,
+                                  color: Colors.black54,
+                                ),
+                                onPressed: () {
+                                  setState(() => _searchQuery = "");
+                                  _searchFocusNode.unfocus();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 0,
-                ),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.95,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _MainCategoryCard(
-                      appearance: _appearance,
-                      category: _mainCategories[index],
-                      onTap: () => _openCategory(_mainCategories[index].id),
-                    ),
-                    childCount: _mainCategories.length,
-                  ),
-                ),
               ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ],
+              // ARAMA YAPILDIYSA VEYA KATEGORİ SEÇİLDİYSE EKRAN B (Ürünler)
+              if (_searchQuery.isNotEmpty || !isRootScreen) ...[
+                if (!isRootScreen && _searchQuery.isEmpty)
+                  Builder(
+                    builder: (context) {
+                      final isAllProductsSelected =
+                          _selectedMainCategoryId == 'all_products';
+                      final filterCategories = isAllProductsSelected
+                          ? _mainCategories
+                              .where((c) => c.id != 'all_products')
+                              .toList()
+                          : _getSubCategories(_selectedMainCategoryId!);
+
+                      if (filterCategories.isEmpty) {
+                        return const SliverToBoxAdapter(child: SizedBox.shrink());
+                      }
+
+                      // 4. Alt Kategoriler (Chips)
+                      return SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _SubCategoryChipsDelegate(
+                          appearance: _appearance,
+                          subCategories: filterCategories,
+                          selectedId: _selectedSubCategoryId,
+                          showAllTab: true,
+                          onSelected: (id) {
+                            setState(() => _selectedSubCategoryId = id);
+                          },
+                          onAllSelected: () {
+                            setState(() => _selectedSubCategoryId = null);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+
+                // Arama veya Seçilen Kategoriye Ait Ürünlerin Hesaplanması
+                Builder(
+                  builder: (context) {
+                    List<MenuProduct> displayProducts;
+
+                    if (_searchQuery.isNotEmpty) {
+                      final q = _searchQuery.toLowerCase();
+                      displayProducts = _allProducts.where((p) {
+                        return p.name.toLowerCase().contains(q) ||
+                            (p.description?.toLowerCase().contains(q) ?? false);
+                      }).toList();
+                    } else {
+                      final isAllProductsSelected =
+                          _selectedMainCategoryId == 'all_products';
+                      final filterCategories = isAllProductsSelected
+                          ? _mainCategories
+                              .where((c) => c.id != 'all_products')
+                              .toList()
+                          : _getSubCategories(_selectedMainCategoryId!);
+                      final mainCat = widget.categories
+                          .where((c) => c.id == _selectedMainCategoryId)
+                          .firstOrNull;
+
+                      if (isAllProductsSelected) {
+                        if (_selectedSubCategoryId == null) {
+                          displayProducts = _allProducts;
+                        } else {
+                          displayProducts = _getAllProductsForMain(
+                            _selectedSubCategoryId!,
+                          );
+                        }
+                      } else {
+                        if (filterCategories.isEmpty) {
+                          displayProducts = mainCat?.products ?? [];
+                        } else if (_selectedSubCategoryId == null) {
+                          displayProducts = _getAllProductsForMain(
+                            _selectedMainCategoryId!,
+                          );
+                        } else {
+                          displayProducts = widget.categories
+                              .where((c) => c.id == _selectedSubCategoryId)
+                              .expand((c) => c.products)
+                              .toList();
+                        }
+                      }
+                      displayProducts.sort(
+                        (a, b) => a.sortOrder.compareTo(b.sortOrder),
+                      );
+                    }
+
+                    if (displayProducts.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 56,
+                                color: _appearance.categoryInactiveTextColor
+                                    .withOpacity(0.3),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _searchQuery.isNotEmpty
+                                    ? 'Ürün bulunamadı'
+                                    : 'Bu kategoride ürün yok',
+                                style: TextStyle(
+                                  color: _appearance.categoryInactiveTextColor,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                            child: Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'Arama Sonuçları (${displayProducts.length} ürün)'
+                                  : '${displayProducts.length} ürün',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _appearance.categoryInactiveTextColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        }
+                        final product = displayProducts[index - 1];
+                        return _ModernProductTile(
+                          appearance: _appearance,
+                          product: product,
+                          currencySymbol: widget.tenant.currencySymbol,
+                          onTap: whatsappEnabled
+                              ? () => showProductDetailSheet(context, product: product, tenant: widget.tenant)
+                              : null,
+                        );
+                      }, childCount: displayProducts.length + 1),
+                    );
+                  },
+                ),
+                SliverToBoxAdapter(child: SizedBox(height: showCartBar ? 140 : 80)),
+              ]
+              // EKRAN A (Root)
+              else ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: Text(
+                      'Kategoriler',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: _appearance.categoryTitleColor,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ),
+
+                if (_appearance.showCategoryDivider)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 0,
+                      ),
+                      child: Divider(
+                        color: _appearance.mgCardBorderColor,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+                // 3. Ana Kategoriler Grid'i (2'li kolon)
+                if (_mainCategories.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Text(
+                        'Kategori bulunamadı',
+                        style: TextStyle(
+                          color: _appearance.categoryInactiveTextColor,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 0,
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 0.95,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _MainCategoryCard(
+                          appearance: _appearance,
+                          category: _mainCategories[index],
+                          onTap: () => _openCategory(_mainCategories[index].id),
+                        ),
+                        childCount: _mainCategories.length,
+                      ),
+                    ),
+                  ),
+
+                const SliverToBoxAdapter(child: SizedBox(height: 80)),
+              ],
+            ],
+          ),
+
+          // CART BAR
+          if (whatsappEnabled)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                offset: showCartBar ? Offset.zero : const Offset(0, 1),
+                child: _buildCartBar(cartItemCount, cartTotal),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Widget _buildCartBar(int itemCount, double total) {
+    final tenant = widget.tenant;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.92),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: InkWell(
+          onTap: () => _showWhatsAppOrderSheet(tenant),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '$itemCount Ürün  •  ${total.toStringAsFixed(0)} ${tenant.currencySymbol}',
+                        style: GoogleFonts.lora(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF25D366),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Siparişi Tamamla',
+                    style: GoogleFonts.lora(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showWhatsAppOrderSheet(Tenant tenant) {
+    final cartItems = ref.read(cartProvider);
+    final cartTotal = ref.read(cartTotalProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Sipariş Özeti',
+                      style: GoogleFonts.lora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+                      tooltip: 'Sepeti Temizle',
+                      onPressed: () {
+                        ref.read(cartProvider.notifier).clearCart();
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: cartItems.length,
+                  separatorBuilder: (_, __) => Divider(height: 24, color: Colors.grey.shade100),
+                  itemBuilder: (context, index) {
+                    final item = cartItems[index];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${item.quantity}x',
+                                style: GoogleFonts.lora(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                item.displayName,
+                                style: GoogleFonts.lora(fontSize: 15, color: Colors.black87),
+                              ),
+                            ),
+                            Text(
+                              '${item.totalPrice.toStringAsFixed(0)} ${tenant.currencySymbol}',
+                              style: GoogleFonts.lora(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+                            ),
+                          ],
+                        ),
+                        if (item.removedIngredients.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 40),
+                            child: Text(
+                              '✕ ${item.removedIngredients.join(', ')}',
+                              style: TextStyle(fontSize: 12, color: Colors.red.shade400, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Toplam Tutar', style: GoogleFonts.lora(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87)),
+                          Text('${cartTotal.toStringAsFixed(0)} ${tenant.currencySymbol}', style: GoogleFonts.lora(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _sendWhatsAppOrder(tenant, cartItems, cartTotal),
+                          icon: const Icon(Icons.send, size: 20),
+                          label: Text('WhatsApp ile Sipariş Ver', style: GoogleFonts.lora(fontSize: 16, fontWeight: FontWeight.w700)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _sendWhatsAppOrder(Tenant tenant, List<CartItem> cartItems, double totalAmount) {
+    String message = "Merhaba, sipariş vermek istiyorum:\n\n";
+    for (var item in cartItems) {
+      message += "${item.quantity}x ${item.displayName} - ${item.totalPrice.toStringAsFixed(0)} ${tenant.currencySymbol}\n";
+      if (item.removedIngredients.isNotEmpty) {
+        message += "   * Çıkarılacaklar: ${item.removedIngredients.join(', ')}\n";
+      }
+    }
+    message += "\nToplam Tutar: ${totalAmount.toStringAsFixed(0)} ${tenant.currencySymbol}";
+
+    if (tenant.phoneNumber != null && tenant.phoneNumber!.isNotEmpty) {
+      String phone = tenant.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+      if (phone.startsWith('0')) phone = '90${phone.substring(1)}';
+      if (!phone.startsWith('+')) phone = '+$phone';
+      phone = phone.replaceAll('+', '');
+      final url = 'https://wa.me/$phone?text=${Uri.encodeComponent(message)}';
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('İşletmenin telefon numarası tanımlı değil.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    ref.read(cartProvider.notifier).clearCart();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Widget _buildBannerBackground(String? imageUrl) {
@@ -885,18 +1170,23 @@ class _ModernProductTile extends StatelessWidget {
   final ModernGridAppearance appearance;
   final MenuProduct product;
   final String currencySymbol;
+  final VoidCallback? onTap;
 
   const _ModernProductTile({
     required this.appearance,
     required this.product,
     required this.currencySymbol,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasImage = product.imageUrl != null && product.imageUrl!.isNotEmpty;
 
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1005,6 +1295,7 @@ class _ModernProductTile extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

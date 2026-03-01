@@ -10,6 +10,7 @@ import '../domain/menu_models.dart';
 import 'components/noise_painter.dart';
 import '../../cart/application/cart_provider.dart';
 import '../../cart/domain/cart_model.dart';
+import 'product_detail_sheet.dart';
 
 class PaperMenuAppearance {
   final Color globalBgColor;
@@ -842,245 +843,143 @@ class _PaperMenuLayoutState extends ConsumerState<PaperMenuLayout> {
     final bool hasEmoji = product.emoji != null && product.emoji!.isNotEmpty;
     final bool hasVariants = product.variants != null && product.variants!.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ─── ÜRÜN GÖRSELİ (Opsiyonel, sabit boyut) ───
-          if (_appearance.showProductImages &&
-              product.imageUrl != null &&
-              product.imageUrl!.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                product.imageUrl!,
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
+    return InkWell(
+      onTap: whatsappEnabled ? () => showProductDetailSheet(context, product: product, tenant: tenant) : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── ÜRÜN GÖRSELİ (Opsiyonel, sabit boyut) ───
+            if (_appearance.showProductImages &&
+                product.imageUrl != null &&
+                product.imageUrl!.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  product.imageUrl!,
                   width: 72,
                   height: 72,
-                  color: Colors.grey.withOpacity(0.1),
-                  child: const Icon(Icons.image_not_supported,
-                      color: Colors.grey, size: 24),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 72,
+                    height: 72,
+                    color: Colors.grey.withOpacity(0.1),
+                    child: const Icon(Icons.image_not_supported,
+                        color: Colors.grey, size: 24),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-          ],
+              const SizedBox(width: 16),
+            ],
 
-          // METİN BLOĞU
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 2a. KESİNTİSİZ KÖPRÜ (Fluid Bridge)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // SOL BLOK: İsim ve Noktalar
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (hasEmoji) ...[
-                            SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
-                            const SizedBox(width: 6),
-                          ],
-                          Flexible(
-                            child: Text(product.name, style: nameStyle),
-                          ),
-                          if (!hasVariants) ...[
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: SizedBox(
-                                  height: 10,
-                                  child: CustomPaint(
-                                    painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
+            // METİN BLOĞU
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 2a. KESİNTİSİZ KÖPRÜ (Fluid Bridge)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // SOL BLOK: İsim ve Noktalar
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (hasEmoji) ...[
+                              SizedBox(width: 26, child: Text(product.emoji!, style: const TextStyle(fontSize: 22))),
+                              const SizedBox(width: 6),
+                            ],
+                            Flexible(
+                              child: Text(product.name, style: nameStyle),
+                            ),
+                            if (!hasVariants) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: SizedBox(
+                                    height: 10,
+                                    child: CustomPaint(
+                                      painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
+                              const SizedBox(width: 8),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    // SAĞ BLOK: Fiyat
-                    if (!hasVariants)
-                      Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
-                  ],
-                ),
-
-                // 2a+. SEPET BUTONU (varyantsız ürün için)
-                if (whatsappEnabled && !hasVariants)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: _buildCartButton(product, null),
-                    ),
+                      // SAĞ BLOK: Fiyat
+                      if (!hasVariants)
+                        Text('${product.price} ${tenant.currencySymbol}', style: priceStyle),
+                    ],
                   ),
 
-                // 2b. ÜRÜN AÇIKLAMASI
-                if (product.description != null &&
-                    product.description!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, right: 30),
-                    child: Text(product.description!, style: descStyle),
-                  ),
+                  // 2b. ÜRÜN AÇIKLAMASI
+                  if (product.description != null &&
+                      product.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, right: 30),
+                      child: Text(product.description!, style: descStyle),
+                    ),
 
-                // 2c. VARYANT / GRAMAJ LİSTESİ
-                if (hasVariants)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Column(
-                      children: product.variants!.map((variant) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6.0),
-                          child: Column(
-                            children: [
-                              // VARYANT DIŞ SATIRI
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  if (hasEmoji) const SizedBox(width: 32),
-                                  Expanded(
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Flexible(
-                                          child: Text(variant.name, style: variantNameStyle),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(bottom: 6),
-                                            child: SizedBox(
-                                              height: 10,
-                                              child: CustomPaint(
-                                                painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
-                                              ),
+                  // 2c. VARYANT / GRAMAJ LİSTESİ
+                  if (hasVariants)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        children: product.variants!.map((variant) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (hasEmoji) const SizedBox(width: 32),
+                                Expanded(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Flexible(
+                                        child: Text(variant.name, style: variantNameStyle),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(bottom: 6),
+                                          child: SizedBox(
+                                            height: 10,
+                                            child: CustomPaint(
+                                              painter: _WebSafeDotPainter(color: _appearance.pmDottedLineColor),
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                      ],
-                                    ),
-                                  ),
-                                  Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
-                                ],
-                              ),
-                              // VARYANT SEPET BUTONU
-                              if (whatsappEnabled)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: _buildCartButton(product, variant),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
                                   ),
                                 ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                                Text('${variant.price} ${tenant.currencySymbol}', style: variantPriceStyle),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  // SEPET BUTONLARI VE CART BAR
-  // ═════════════════════════════════════════════════════════════════════
-
-  /// +/- sayaç butonu Widgetı
-  Widget _buildCartButton(MenuProduct product, ProductVariant? variant) {
-    final quantity = ref.watch(cartProvider.select(
-      (cart) {
-        final key = variant != null ? '${product.id}_${variant.name}' : product.id;
-        final item = cart.where((i) => i.uniqueKey == key).firstOrNull;
-        return item?.quantity ?? 0;
-      },
-    ));
-
-    final accentColor = _appearance.globalAccentColor;
-
-    if (quantity == 0) {
-      // Tek + butonu
-      return InkWell(
-        onTap: () => ref.read(cartProvider.notifier).addItem(product, variant: variant),
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(color: accentColor.withOpacity(0.4)),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.add, size: 16, color: accentColor),
-              const SizedBox(width: 4),
-              Text('Ekle', style: GoogleFonts.lora(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: accentColor,
-              )),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // [ - ]  2  [ + ] sayaç
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: accentColor.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: () => ref.read(cartProvider.notifier).removeItem(product, variant: variant),
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Icon(Icons.remove, size: 16, color: accentColor),
-            ),
-          ),
-          Container(
-            constraints: const BoxConstraints(minWidth: 28),
-            alignment: Alignment.center,
-            child: Text(
-              '$quantity',
-              style: GoogleFonts.lora(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: _appearance.productTitleColor,
+                ],
               ),
             ),
-          ),
-          InkWell(
-            onTap: () => ref.read(cartProvider.notifier).addItem(product, variant: variant),
-            borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Icon(Icons.add, size: 16, color: accentColor),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // SEPET CART BAR
+  // ═════════════════════════════════════════════════════════════════════
 
   /// Sepet Alt Barı
   Widget _buildCartBar(int itemCount, double total, Tenant tenant) {
@@ -1331,9 +1230,12 @@ class _PaperMenuLayoutState extends ConsumerState<PaperMenuLayout> {
 
   /// WhatsApp mesajını formatla ve gönder
   void _sendWhatsAppOrder(Tenant tenant, List<CartItem> cartItems, double totalAmount) {
-    String message = "Merhaba, sipari\u015f vermek istiyorum:\n\n";
+    String message = "Merhaba, sipariş vermek istiyorum:\n\n";
     for (var item in cartItems) {
       message += "${item.quantity}x ${item.displayName} - ${item.totalPrice.toStringAsFixed(0)} ${tenant.currencySymbol}\n";
+      if (item.removedIngredients.isNotEmpty) {
+        message += "   * Çıkarılacaklar: ${item.removedIngredients.join(', ')}\n";
+      }
     }
     message += "\nToplam Tutar: ${totalAmount.toStringAsFixed(0)} ${tenant.currencySymbol}";
 
@@ -1345,7 +1247,7 @@ class _PaperMenuLayoutState extends ConsumerState<PaperMenuLayout> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('İ\u015fletmenin telefon numaras\u0131 tan\u0131ml\u0131 de\u011fil.'),
+            content: Text('İşletmenin telefon numarası tanımlı değil.'),
             backgroundColor: Colors.red,
           ),
         );

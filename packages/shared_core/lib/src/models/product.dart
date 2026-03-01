@@ -15,6 +15,7 @@ class Product {
   final String? description;
   final String? emoji;
   final List<ProductVariant>? variants;
+  final List<String> ingredients;
   final double price;
   final String? imageUrl;
   final bool isAvailable;
@@ -31,6 +32,7 @@ class Product {
     this.description,
     this.emoji,
     this.variants,
+    this.ingredients = const [],
     required this.price,
     this.imageUrl,
     this.isAvailable = true,
@@ -56,6 +58,9 @@ class Product {
       variants: (json['variants'] as List<dynamic>?)
           ?.map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
           .toList(),
+      ingredients: (json['ingredients'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ?? const [],
       price: (json['price'] as num).toDouble(),
       imageUrl: json['image_url'] as String?,
       isAvailable: json['is_available'] as bool? ?? true,
@@ -76,6 +81,7 @@ class Product {
         if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
         if (variants != null && variants!.isNotEmpty) 
           'variants': variants!.map((v) => v.toJson()).toList(),
+        if (ingredients.isNotEmpty) 'ingredients': ingredients,
         'price': price,
         'image_url': imageUrl,
         'is_available': isAvailable,
@@ -93,6 +99,7 @@ class Product {
         if (emoji != null && emoji!.isNotEmpty) 'emoji': emoji,
         if (variants != null && variants!.isNotEmpty) 
           'variants': variants!.map((v) => v.toJson()).toList(),
+        if (ingredients.isNotEmpty) 'ingredients': ingredients,
         'price': price,
         'image_url': imageUrl,
         'is_available': isAvailable,
@@ -114,6 +121,7 @@ class Product {
     String? description,
     String? emoji,
     List<ProductVariant>? variants,
+    List<String>? ingredients,
     double? price,
     String? imageUrl,
     bool? isAvailable,
@@ -130,6 +138,7 @@ class Product {
       description: description ?? this.description,
       emoji: emoji ?? this.emoji,
       variants: variants ?? this.variants,
+      ingredients: ingredients ?? this.ingredients,
       price: price ?? this.price,
       imageUrl: imageUrl ?? this.imageUrl,
       isAvailable: isAvailable ?? this.isAvailable,

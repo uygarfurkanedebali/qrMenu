@@ -38,6 +38,7 @@ class MenuProduct {
   final String? description;
   final String? emoji;
   final List<ProductVariant>? variants;
+  final List<String> ingredients;
   final double price;
   final String? imageUrl;
   final bool isAvailable;
@@ -53,6 +54,7 @@ class MenuProduct {
     this.description,
     this.emoji,
     this.variants,
+    this.ingredients = const [],
     required this.price,
     this.imageUrl,
     this.isAvailable = true,

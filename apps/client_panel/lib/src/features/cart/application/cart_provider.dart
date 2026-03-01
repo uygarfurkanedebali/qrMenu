@@ -20,34 +20,33 @@ class CartNotifier extends Notifier<List<CartItem>> {
     return []; // Start with empty cart
   }
 
-  /// Generates a unique key for product + variant combination
-  String _itemKey(MenuProduct product, ProductVariant? variant) {
-    return variant != null ? '${product.id}_${variant.name}' : product.id;
-  }
-
-  /// Adds a product (optionally with variant) to cart or increments quantity
-  void addItem(MenuProduct product, {ProductVariant? variant}) {
-    final key = _itemKey(product, variant);
-    final existingIndex = state.indexWhere((item) => item.uniqueKey == key);
+  /// Adds a fully configured CartItem to cart
+  /// If an item with the same uniqueKey (product + variant + removedIngredients)
+  /// already exists, increments its quantity by [quantity].
+  void addCartItem(CartItem item) {
+    final existingIndex = state.indexWhere((i) => i.uniqueKey == item.uniqueKey);
     
     if (existingIndex >= 0) {
-      // Product exists, increment quantity
       state = [
         for (int i = 0; i < state.length; i++)
           if (i == existingIndex)
-            state[i].copyWith(quantity: state[i].quantity + 1)
+            state[i].copyWith(quantity: state[i].quantity + item.quantity)
           else
             state[i],
       ];
     } else {
-      // New product, add to cart
-      state = [...state, CartItem(product: product, variant: variant)];
+      state = [...state, item];
     }
+  }
+
+  /// Legacy helper: add product with optional variant (no ingredient removal)
+  void addItem(MenuProduct product, {ProductVariant? variant}) {
+    addCartItem(CartItem(product: product, variant: variant));
   }
 
   /// Decrements quantity or removes if quantity becomes 0
   void removeItem(MenuProduct product, {ProductVariant? variant}) {
-    final key = _itemKey(product, variant);
+    final key = variant != null ? '${product.id}_${variant.name}' : product.id;
     final existingIndex = state.indexWhere((item) => item.uniqueKey == key);
     
     if (existingIndex < 0) return;
@@ -55,10 +54,8 @@ class CartNotifier extends Notifier<List<CartItem>> {
     final currentItem = state[existingIndex];
     
     if (currentItem.quantity <= 1) {
-      // Remove entirely
       state = state.where((item) => item.uniqueKey != key).toList();
     } else {
-      // Decrement quantity
       state = [
         for (int i = 0; i < state.length; i++)
           if (i == existingIndex)
@@ -69,34 +66,9 @@ class CartNotifier extends Notifier<List<CartItem>> {
     }
   }
 
-  /// Removes a product entirely from cart
-  void removeProductEntirely(MenuProduct product, {ProductVariant? variant}) {
-    final key = _itemKey(product, variant);
-    state = state.where((item) => item.uniqueKey != key).toList();
-  }
-
-  /// Updates quantity for a specific product
-  void updateQuantity(MenuProduct product, int quantity, {ProductVariant? variant}) {
-    if (quantity <= 0) {
-      removeProductEntirely(product, variant: variant);
-      return;
-    }
-    
-    final key = _itemKey(product, variant);
-    state = [
-      for (final item in state)
-        if (item.uniqueKey == key)
-          item.copyWith(quantity: quantity)
-        else
-          item,
-    ];
-  }
-
-  /// Returns quantity of a specific product+variant in cart
-  int getQuantity(MenuProduct product, {ProductVariant? variant}) {
-    final key = variant != null ? '${product.id}_${variant.name}' : product.id;
-    final item = state.where((item) => item.uniqueKey == key).firstOrNull;
-    return item?.quantity ?? 0;
+  /// Removes a cart item entirely by its uniqueKey
+  void removeByKey(String uniqueKey) {
+    state = state.where((item) => item.uniqueKey != uniqueKey).toList();
   }
 
   /// Clears all items from cart
