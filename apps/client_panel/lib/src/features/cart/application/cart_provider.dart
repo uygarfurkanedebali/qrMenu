@@ -71,6 +71,28 @@ class CartNotifier extends Notifier<List<CartItem>> {
     state = state.where((item) => item.uniqueKey != uniqueKey).toList();
   }
 
+  /// Removes a product entirely from cart
+  void removeProductEntirely(MenuProduct product, {ProductVariant? variant}) {
+    final key = variant != null ? '${product.id}_${variant.name}' : product.id;
+    state = state.where((item) => item.uniqueKey != key).toList();
+  }
+
+  /// Updates quantity for a specific product
+  void updateQuantity(MenuProduct product, int quantity, {ProductVariant? variant}) {
+    if (quantity <= 0) {
+      removeProductEntirely(product, variant: variant);
+      return;
+    }
+    final key = variant != null ? '${product.id}_${variant.name}' : product.id;
+    state = [
+      for (final item in state)
+        if (item.uniqueKey == key)
+          item.copyWith(quantity: quantity)
+        else
+          item,
+    ];
+  }
+
   /// Clears all items from cart
   void clearCart() {
     state = [];

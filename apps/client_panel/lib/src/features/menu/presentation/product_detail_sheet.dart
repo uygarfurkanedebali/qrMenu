@@ -224,50 +224,86 @@ class _ProductDetailSheetState extends ConsumerState<ProductDetailSheet> {
                     ),
                   ],
 
-                  // 4. MALZEMELER (İçindekiler)
+                  // 4. MALZEMELER (İçindekiler) — Chip / Wrap Toggle
                   if (hasIngredients) ...[
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                      child: Text(
-                        'İçindekiler',
-                        style: GoogleFonts.lora(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'İçindekiler',
+                            style: GoogleFonts.lora(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '(Çıkarmak için dokunun)',
+                            style: GoogleFonts.lora(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                      child: Column(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: product.ingredients.map((ingredient) {
                           final isRemoved = _removedIngredients.contains(ingredient);
-                          return CheckboxListTile(
-                            value: !isRemoved,
-                            onChanged: (val) {
+                          return GestureDetector(
+                            onTap: () {
                               setState(() {
-                                if (val == true) {
+                                if (isRemoved) {
                                   _removedIngredients.remove(ingredient);
                                 } else {
                                   _removedIngredients.add(ingredient);
                                 }
                               });
                             },
-                            title: Text(
-                              ingredient,
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: isRemoved ? Colors.grey : Colors.black87,
-                                decoration: isRemoved
-                                    ? TextDecoration.lineThrough
-                                    : TextDecoration.none,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isRemoved
+                                    ? Colors.grey.shade100
+                                    : const Color(0xFFE8F5E9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isRemoved
+                                      ? Colors.grey.shade300
+                                      : const Color(0xFF66BB6A),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isRemoved) ...[
+                                    Icon(Icons.close, size: 14, color: Colors.red.shade400),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    ingredient,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isRemoved ? Colors.grey : Colors.green.shade800,
+                                      decoration: isRemoved
+                                          ? TextDecoration.lineThrough
+                                          : TextDecoration.none,
+                                      decorationColor: Colors.red.shade300,
+                                      fontWeight: isRemoved ? FontWeight.w400 : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                            visualDensity: VisualDensity.compact,
-                            activeColor: const Color(0xFF25D366),
                           );
                         }).toList(),
                       ),

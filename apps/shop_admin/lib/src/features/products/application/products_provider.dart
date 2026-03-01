@@ -58,6 +58,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     String? description,
     String? emoji,
     List<ProductVariant>? variants,
+    List<String>? ingredients,
     String? imageUrl,
     String? categoryId,
   }) async {
@@ -87,6 +88,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
         description: description,
         emoji: emoji,
         variants: variants,
+        ingredients: ingredients ?? const [],
         imageUrl: imageUrl,
         categoryId: categoryId,
         isAvailable: true,

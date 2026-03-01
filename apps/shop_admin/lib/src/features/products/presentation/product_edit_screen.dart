@@ -34,12 +34,14 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
   late TextEditingController _emojiController;
   
   List<ProductVariant> _variants = [];
+  List<String> _ingredients = [];
   
   String? _selectedCategory;
   String? _imageUrl;
   bool _isUploading = false;
   bool _isSaving = false;
   bool _isAvailable = true;
+  late TextEditingController _ingredientController;
 
   @override
   void initState() {
@@ -48,6 +50,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     _priceController = TextEditingController();
     _descController = TextEditingController();
     _emojiController = TextEditingController();
+    _ingredientController = TextEditingController();
   }
 
   @override
@@ -75,6 +78,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
      _descController.text = product.description ?? '';
      _emojiController.text = product.emoji ?? '';
      _variants = product.variants?.toList() ?? [];
+     _ingredients = product.ingredients.toList();
      _selectedCategory = product.categoryId;
      _imageUrl = product.imageUrl;
      _isAvailable = product.isAvailable;
@@ -87,6 +91,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     _priceController.dispose();
     _descController.dispose();
     _emojiController.dispose();
+    _ingredientController.dispose();
     super.dispose();
   }
 
@@ -141,6 +146,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           description: _descController.text.isEmpty ? null : _descController.text,
           emoji: _emojiController.text.isEmpty ? null : _emojiController.text,
           variants: _variants.isEmpty ? null : _variants,
+          ingredients: _ingredients.isEmpty ? null : _ingredients,
           categoryId: _selectedCategory,
           imageUrl: _imageUrl,
         );
@@ -155,6 +161,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           description: _descController.text.isEmpty ? null : _descController.text,
           emoji: _emojiController.text.isEmpty ? null : _emojiController.text,
           variants: _variants.isEmpty ? null : _variants,
+          ingredients: _ingredients,
           categoryId: _selectedCategory,
           imageUrl: _imageUrl,
           isAvailable: _isAvailable,
@@ -461,6 +468,72 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                   label: const Text('Add Variant'),
                   style: FilledButton.styleFrom(backgroundColor: Colors.grey.shade300, foregroundColor: Colors.black87),
                 ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ─── MALZEME / İÇİNDEKİLER BÖLÜMÜ ───
+              const Text('Ürün İçerikleri / Malzemeler (Opsiyonel)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 4),
+              const Text('Enter veya virgül ile ekleyin',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 8),
+              if (_ingredients.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: _ingredients.asMap().entries.map((entry) {
+                    return Chip(
+                      label: Text(entry.value),
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      onDeleted: () {
+                        setState(() => _ingredients.removeAt(entry.key));
+                      },
+                      backgroundColor: Colors.green.shade50,
+                      side: BorderSide(color: Colors.green.shade200),
+                      labelStyle: TextStyle(color: Colors.green.shade800, fontSize: 14),
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _ingredientController,
+                decoration: InputDecoration(
+                  hintText: 'Malzeme adı girin (Örn: Domates)',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: () {
+                      final text = _ingredientController.text.trim();
+                      if (text.isNotEmpty && !_ingredients.contains(text)) {
+                        setState(() => _ingredients.add(text));
+                        _ingredientController.clear();
+                      }
+                    },
+                  ),
+                ),
+                onSubmitted: (value) {
+                  final text = value.trim();
+                  if (text.isNotEmpty && !_ingredients.contains(text)) {
+                    setState(() => _ingredients.add(text));
+                    _ingredientController.clear();
+                  }
+                },
+                onChanged: (value) {
+                  // Virgül ile otomatik ekleme
+                  if (value.contains(',')) {
+                    final parts = value.split(',');
+                    for (final part in parts) {
+                      final text = part.trim();
+                      if (text.isNotEmpty && !_ingredients.contains(text)) {
+                        _ingredients.add(text);
+                      }
+                    }
+                    _ingredientController.clear();
+                    setState(() {});
+                  }
+                },
               ),
 
               const SizedBox(height: 24),
